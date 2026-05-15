@@ -1,0 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Kanit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.toolbar-btn,
+.toolbar-btn-primary {
+  min-height: 2.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+.toolbar-btn {
+  background: #ffffff;
+  color: #334155;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: #f8fbff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
+}
+
+.toolbar-btn-primary {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+  box-shadow: 0 14px 24px rgba(37, 99, 235, 0.24);
+}
+
+.toolbar-btn-primary:hover:not(:disabled) {
+  background: #1e40af;
+  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.3);
+}
+
+.toolbar-btn-danger {
+  min-height: 2.75rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.375rem;
+  background: #fff;
+  padding: 0 1rem;
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
+}
+
+.toolbar-btn-danger:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.08);
+}
+
+.toolbar-btn:disabled,
+.toolbar-btn-primary:disabled,
+.toolbar-btn-danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.form-input {
+  height: 2.75rem;
+  width: 100%;
+  border: 1px solid #bfdbfe;
+  padding: 0 0.75rem;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: #2563eb;
+}
+
+@media print {
+  body.detail-print * {
+    visibility: hidden;
+  }
+
+  body.detail-print .print-area,
+  body.detail-print .print-area * {
+    visibility: visible;
+  }
+
+  body.detail-print .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: auto;
+    border: 0;
+    box-shadow: none;
+  }
+
+  body.detail-print .no-print {
+    display: none;
+  }
+}

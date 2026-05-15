@@ -1,0 +1,36 @@
+CREATE TABLE "Member" (
+    "id" TEXT NOT NULL,
+    "guideCode" TEXT NOT NULL,
+    "titleTh" TEXT NOT NULL DEFAULT '',
+    "firstNameTh" TEXT NOT NULL DEFAULT '',
+    "lastNameTh" TEXT NOT NULL DEFAULT '',
+    "titleEn" TEXT NOT NULL DEFAULT '',
+    "firstNameEn" TEXT NOT NULL DEFAULT '',
+    "lastNameEn" TEXT NOT NULL DEFAULT '',
+    "phone" TEXT NOT NULL DEFAULT '',
+    "nickname" TEXT NOT NULL DEFAULT '',
+    "birthDate" TIMESTAMP(3),
+    "nationalId" TEXT NOT NULL DEFAULT '',
+    "cardIssueDate" TIMESTAMP(3),
+    "cardExpireDate" TIMESTAMP(3),
+    "guideType" TEXT NOT NULL DEFAULT '',
+    "guideLicenseNo" TEXT NOT NULL DEFAULT '',
+    "guideLicenseExpireDate" TIMESTAMP(3),
+    "passportNo" TEXT NOT NULL DEFAULT '',
+    "address" TEXT NOT NULL DEFAULT '',
+    "province" TEXT NOT NULL DEFAULT '',
+    "note" TEXT NOT NULL DEFAULT '',
+    "recorder" TEXT NOT NULL DEFAULT '',
+    "fullName" TEXT NOT NULL DEFAULT '',
+    "fullNameTh" TEXT NOT NULL DEFAULT '',
+    "guideCardNo" TEXT NOT NULL DEFAULT '',
+    "company" TEXT NOT NULL DEFAULT '',
+    "guideHo" TEXT NOT NULL DEFAULT '',
+    "imageUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Member_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "Member_guideCode_key" ON "Member"("guideCode");

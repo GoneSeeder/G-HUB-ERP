@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String              @id @default(uuid())
+  username     String              @unique
+  name         String
+  passwordHash String
+  isActive     Boolean             @default(true)
+  roles        UserRole[]
+  apps         UserAppPermission[]
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}
+
+model Role {
+  id          String              @id @default(uuid())
+  code        String              @unique
+  name        String
+  users       UserRole[]
+  permissions RoleAppPermission[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model App {
+  id          String              @id @default(uuid())
+  code        String              @unique
+  name        String
+  description String?
+  roleAccess  RoleAppPermission[]
+  users       UserAppPermission[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RoleAppPermission {
+  roleId    String
+  appId     String
+  canAccess Boolean @default(true)
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  app  App  @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, appId])
+}
+
+model UserAppPermission {
+  userId     String
+  appId      String
+  canAccess  Boolean @default(true)
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  app  App  @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@id([userId, appId])
+}
+
+model BonusCard {
+  id               String   @id @default(uuid())
+  workDate         DateTime
+  bonus            String
+  bonusName        String
+  agentCode        String
+  agentName        String
+  guide            String
+  guideName        String
+  partyCode        String
+  nation           String   @default("CN")
+  adult            Int      @default(0)
+  child            Int      @default(0)
+  tourLeader       Int      @default(0)
+  carCode          String   @default("")
+  shop             String   @default("")
+  hotel            String   @default("")
+  comeFrom         String   @default("")
+  busType          String   @default("")
+  tourIn           String   @default("")
+  tourOut          String   @default("")
+  comment          String   @default("")
+  imageUrl         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Member {
+  id                     String    @id @default(uuid())
+  guideCode              String    @unique
+  titleTh                String    @default("")
+  firstNameTh            String    @default("")
+  lastNameTh             String    @default("")
+  titleEn                String    @default("")
+  firstNameEn            String    @default("")
+  lastNameEn             String    @default("")
+  phone                  String    @default("")
+  nickname               String    @default("")
+  birthDate              DateTime?
+  nationalId             String    @default("")
+  cardIssueDate          DateTime?
+  cardExpireDate         DateTime?
+  guideType              String    @default("")
+  guideLicenseNo         String    @default("")
+  guideLicenseExpireDate DateTime?
+  passportNo             String    @default("")
+  address                String    @default("")
+  province               String    @default("")
+  note                   String    @default("")
+  recorder               String    @default("")
+  fullName               String    @default("")
+  fullNameTh             String    @default("")
+  guideCardNo            String    @default("")
+  company                String    @default("")
+  guideHo                String    @default("")
+  imageUrl               String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}

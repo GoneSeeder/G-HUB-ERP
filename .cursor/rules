@@ -1,0 +1,163 @@
+You are a senior enterprise software engineer.
+
+Project stack:
+- Backend: NestJS
+- Frontend: Next.js
+- Language: TypeScript
+- Database: PostgreSQL
+- ORM: Prisma
+
+Architecture rules:
+- Use modular architecture
+- Follow SOLID principles
+- Use pragmatic clean architecture principles when appropriate
+- Keep business logic inside services
+- Use DTO validation
+- Use repository abstraction only when complexity justifies it
+- Use dependency injection
+- Avoid tight coupling
+
+Code style rules:
+- Never use "any"
+- Use TypeScript strict typing
+- Use async/await
+- Use meaningful variable names
+- Keep functions small and reusable
+- Avoid duplicate logic
+- Use consistent naming conventions
+- Write comments only for non-obvious logic
+- Do not comment self-explanatory code
+- Use JSDoc for public service methods
+
+Database rules:
+- Use Prisma only
+- Never use TypeORM
+- Use UUID as primary keys
+- Use proper indexing
+- Use soft delete when appropriate
+
+Security rules:
+- Hash passwords with bcrypt
+- Never store plain text passwords
+- Validate all input
+- Sanitize request data
+- Use JWT authentication
+- Use RBAC authorization
+- Never trust frontend authorization checks
+
+NestJS rules:
+- Use modules properly
+- Use guards for authorization
+- Use interceptors when needed
+- Use services for business logic
+- Keep controllers thin
+
+Frontend rules:
+- Use App Router
+- Prefer Server Components unless client interactivity is required
+- Use reusable components
+- Avoid large pages
+- Use React hooks correctly
+- Use React Query / SWR for client-side data fetching
+- Do not call API directly from Server Components without error boundaries
+- Use Next.js fetch with proper caching strategy
+- Use responsive design for every page and component
+- Avoid desktop-only layouts
+
+General rules:
+- Write maintainable code
+- Prefer readability over cleverness
+- Avoid overengineering
+- Explain important architectural decisions
+
+API rules:
+- Standard response shape: { data, message, statusCode }
+- Paginated response shape: { data, total, page, limit }
+- Error response shape: { statusCode, message, error }
+- Return typed DTO responses
+- Never expose internal database entities directly
+- Use proper HTTP status codes
+
+Error handling rules:
+- Use centralized exception handling
+- Use NestJS exception filters when appropriate
+- Never expose internal stack traces
+- Use domain-specific error messages
+
+Before generating code:
+- Analyze existing project structure
+- Reuse existing patterns
+- Avoid creating duplicate utilities
+- Check existing modules first
+- Maintain architectural consistency
+
+Logging rules:
+- Log important business actions
+- Add audit logging for sensitive operations
+- Avoid logging secrets or passwords
+
+Prisma rules:
+- Use transactions for critical operations
+- Avoid N+1 query patterns
+- Select only required fields
+- Use pagination for large datasets
+- Never edit migration files after they are applied
+- Use prisma migrate dev for development only
+- Use prisma migrate deploy for production
+
+Environment rules:
+- Never hardcode secrets
+- Use environment variables
+- Validate environment configuration
+
+Authentication rules:
+- Use access token expiration
+- Store refresh tokens securely
+- Use HttpOnly cookies when appropriate
+- Rotate refresh tokens on every use
+- Invalidate old refresh tokens after rotation
+
+Legacy integration rules:
+- Isolate legacy system integrations
+- Use adapter/service layer for legacy APIs
+- Never access legacy systems directly from frontend
+- Keep transformation logic separate
+
+AI behavior rules:
+- Do not introduce new architectural patterns without justification
+- Follow existing project structure first
+- Prefer consistency over novelty
+- Avoid unnecessary abstractions
+- Do not generate unused code
+- Minimize dependencies unless necessary
+
+Testing rules:
+- Write testable code
+- Avoid tightly coupled implementations
+- Use dependency injection for easier testing
+
+Transaction rules:
+- Group related database operations inside transactions
+- Avoid partial writes for critical operations
+
+Performance rules:
+- Avoid unnecessary database queries
+- Use caching only when justified
+- Optimize expensive operations
+- Avoid loading large datasets into memory
+
+Naming rules:
+- Use kebab-case for files
+- Use PascalCase for classes
+- Use camelCase for variables and functions
+
+Responsive UI rules:
+- All frontend pages and components must be responsive by default
+- Design mobile-first, then enhance for tablet and desktop
+- Use Tailwind responsive breakpoints consistently
+- Avoid fixed widths that break on small screens
+- Use max-width containers for desktop layouts
+- Tables must support horizontal scrolling or responsive card layout on mobile
+- Forms must be usable on mobile and desktop
+- Navigation must work on mobile, tablet, and desktop
+- Test layouts for common widths: 360px, 768px, 1024px, and 1440px
