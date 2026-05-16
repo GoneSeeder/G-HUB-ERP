@@ -9,6 +9,8 @@ import { AppsModule } from './apps/apps.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { BonusCardsModule } from './bonus-cards/bonus-cards.module';
 import { MembersModule } from './members/members.module';
+import { BookingsModule } from './bookings/bookings.module';
+import { AgentsModule } from './agents/agents.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { MembersModule } from './members/members.module';
     PermissionsModule,
     BonusCardsModule,
     MembersModule,
+    AgentsModule,
+    BookingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 
 const THAI_ID_BRIDGE_URL = 'http://127.0.0.1:32123';
@@ -38,6 +38,7 @@ type MemberForm = {
 type MeResponse = {
   username: string;
   name: string;
+  roles: string[];
 };
 
 type MemberItem = MemberForm & {
@@ -56,6 +57,61 @@ type MembersResponse = {
 
 type NextGuideCodeResponse = {
   guideCode: string;
+};
+
+type AgentAliasItem = {
+  id?: string;
+  pattern: string;
+  matchType: 'contains';
+};
+
+type AgentForm = {
+  agentCode: string;
+  codeCenter: string;
+  name: string;
+  address: string;
+  nation: string;
+  phone: string;
+  fax: string;
+  contactPerson: string;
+  marketing: string;
+  agentHO: string;
+  typeCenter: string;
+  agentType: string;
+  typeGroup: string;
+  navCode: string;
+  email: string;
+  taxId: string;
+  branch: string;
+  bankName: string;
+  bankBranch: string;
+  bankAccount: string;
+  active: boolean;
+  aliases: AgentAliasItem[];
+};
+
+type AgentItem = AgentForm & {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type AgentsResponse = {
+  items: AgentItem[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+type AgentImportPreviewRow = Pick<
+  AgentForm,
+  'agentCode' | 'name' | 'nation' | 'phone' | 'taxId' | 'contactPerson' | 'typeGroup' | 'active'
+>;
+
+type AgentImportPreviewResponse = {
+  rowCount: number;
+  rows: AgentImportPreviewRow[];
 };
 
 type ThaiIdBridgeResponse = {
@@ -84,6 +140,42 @@ const columns = [
   'เลขบัตรประชาชน',
   'เลข Passport',
   'รหัสมัคคุเทศน์',
+];
+
+const agentColumns = [
+  'Agent Code',
+  'Agent Name',
+  'Nation',
+  'Phone',
+  'Tax ID',
+  'Contact',
+  'TypeGroup',
+  'Active Status',
+];
+
+const typeCenterOptions = [
+  { value: '', label: 'Please select' },
+  { value: 'CT', label: 'CHARTER' },
+  { value: 'VIP', label: 'VIP' },
+  { value: 'OT', label: 'OTHER' },
+  { value: 'OT-TW', label: 'OTHER-TW' },
+  { value: 'OT-PH', label: 'OTHER-PHILIPPINE' },
+  { value: 'OT-HK', label: 'OT-HongKong' },
+  { value: 'OT-VN', label: 'OTHER-VN' },
+  { value: 'OT-ID', label: 'OTHER-ID' },
+  { value: 'OT-MY', label: 'OTHER-Malaysia' },
+  { value: 'OT-MN', label: 'OTHER-MN' },
+  { value: 'OT-RU', label: 'OTHER-RU' },
+  { value: 'OT-IND', label: 'OTHER-IND' },
+  { value: 'OT-KR', label: 'OTHER-KR' },
+  { value: 'OT-TR', label: 'OTHER-TR' },
+];
+
+const agentTypeOptions = [
+  { value: '', label: 'ไม่ระบุ' },
+  { value: 'AGENT', label: 'Agent' },
+  { value: 'OWNER', label: 'Owner Company' },
+  { value: 'TAXI', label: 'Taxi' },
 ];
 
 function createEmptyForm(recorder = ''): MemberForm {
@@ -118,7 +210,35 @@ function createEmptyForm(recorder = ''): MemberForm {
   };
 }
 
+function createEmptyAgentForm(): AgentForm {
+  return {
+    agentCode: '',
+    codeCenter: '',
+    name: '',
+    address: '',
+    nation: '',
+    phone: '',
+    fax: '',
+    contactPerson: '',
+    marketing: '',
+    agentHO: '',
+    typeCenter: '',
+    agentType: 'AGENT',
+    typeGroup: '',
+    navCode: '',
+    email: '',
+    taxId: '',
+    branch: '',
+    bankName: '',
+    bankBranch: '',
+    bankAccount: '',
+    active: true,
+    aliases: [],
+  };
+}
+
 export default function MemberPage() {
+  const [activeTab, setActiveTab] = useState<'guides' | 'agents'>('guides');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [members, setMembers] = useState<MemberItem[]>([]);
@@ -131,12 +251,14 @@ export default function MemberPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<MemberForm>(() => createEmptyForm());
   const [currentUserName, setCurrentUserName] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     apiFetch<MeResponse>('/api/auth/me')
       .then((me) => {
         const displayName = me.name || me.username;
         setCurrentUserName(displayName);
+        setIsAdmin(me.roles.includes('admin'));
         setForm((current) => ({
           ...current,
           recorder: current.recorder || displayName,
@@ -248,6 +370,25 @@ export default function MemberPage() {
 
   return (
     <section className="space-y-4">
+      <div className="inline-flex rounded-[10px] border border-slate-200 bg-white p-1 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+        <button
+          type="button"
+          onClick={() => setActiveTab('guides')}
+          className={activeTab === 'guides' ? 'toolbar-btn-primary min-h-10 px-5' : 'toolbar-btn min-h-10 px-5'}
+        >
+          Guides
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('agents')}
+          className={activeTab === 'agents' ? 'toolbar-btn-primary min-h-10 px-5' : 'toolbar-btn min-h-10 px-5'}
+        >
+          Agents
+        </button>
+      </div>
+
+      {activeTab === 'guides' ? (
+        <>
       <div className="rounded-[10px] border border-slate-200/80 bg-white/95 px-5 py-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -396,7 +537,356 @@ export default function MemberPage() {
           saveError={modalError}
         />
       ) : null}
+        </>
+      ) : (
+        <AgentManagement isAdmin={isAdmin} />
+      )}
     </section>
+  );
+}
+
+function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
+  const [search, setSearch] = useState('');
+  const [nation, setNation] = useState('');
+  const [activeFilter, setActiveFilter] = useState('');
+  const [typeGroup, setTypeGroup] = useState('');
+  const [page, setPage] = useState(1);
+  const [agents, setAgents] = useState<AgentItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingAgent, setEditingAgent] = useState<AgentItem | null>(null);
+  const [form, setForm] = useState<AgentForm>(() => createEmptyAgentForm());
+  const [modalOpen, setModalOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFileName, setImportFileName] = useState('');
+  const [importBase64, setImportBase64] = useState('');
+  const [importPreview, setImportPreview] = useState<AgentImportPreviewResponse | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadAgents();
+  }, [page, search, nation, activeFilter, typeGroup]);
+
+  const loadAgents = () => {
+    const params = new URLSearchParams({ page: String(page) });
+    if (search.trim()) params.set('search', search.trim());
+    if (nation.trim()) params.set('nation', nation.trim());
+    if (activeFilter) params.set('active', activeFilter);
+    if (typeGroup.trim()) params.set('typeGroup', typeGroup.trim());
+
+    apiFetch<AgentsResponse>(`/api/agents?${params.toString()}`)
+      .then((data) => {
+        setAgents(data.items);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
+        setSelectedId((current) =>
+          current && data.items.some((agent) => agent.id === current) ? current : null,
+        );
+        setError(null);
+      })
+      .catch((loadError) => {
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load agents.');
+      });
+  };
+
+  const selectedAgent = agents.find((agent) => agent.id === selectedId) ?? null;
+
+  const openCreate = () => {
+    setEditingAgent(null);
+    setForm(createEmptyAgentForm());
+    setModalError(null);
+    setModalOpen(true);
+  };
+
+  const openEdit = () => {
+    if (!selectedAgent) {
+      setError('Please select an agent to edit.');
+      return;
+    }
+    setEditingAgent(selectedAgent);
+    setForm(toAgentFormState(selectedAgent));
+    setModalError(null);
+    setError(null);
+    setModalOpen(true);
+  };
+
+  const deleteSelected = async () => {
+    if (!selectedAgent) {
+      setError('Please select an agent to delete.');
+      return;
+    }
+    if (!window.confirm(`Delete agent "${selectedAgent.agentCode}"?`)) {
+      return;
+    }
+    try {
+      await apiFetch(`/api/agents/${selectedAgent.id}`, { method: 'DELETE' });
+      setSelectedId(null);
+      loadAgents();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete agent.');
+    }
+  };
+
+  const submitAgent = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setModalError(null);
+    const payload = normalizeAgentPayload(form);
+    try {
+      if (editingAgent) {
+        await apiFetch<AgentItem>(`/api/agents/${editingAgent.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch<AgentItem>('/api/agents', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
+      setModalOpen(false);
+      setEditingAgent(null);
+      loadAgents();
+    } catch (saveError) {
+      setModalError(saveError instanceof Error ? saveError.message : 'Failed to save agent.');
+    }
+  };
+
+  const previewLegacy = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      setImportLoading(true);
+      const fileBase64 = await fileToBase64(file);
+      const preview = await apiFetch<AgentImportPreviewResponse>('/api/agents/import-legacy-preview', {
+        method: 'POST',
+        body: JSON.stringify({ fileBase64 }),
+      });
+      setImportFileName(file.name);
+      setImportBase64(fileBase64);
+      setImportPreview(preview);
+      setError(null);
+    } catch (importError) {
+      setError(importError instanceof Error ? importError.message : 'Failed to import legacy agents.');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const confirmImportLegacy = async () => {
+    if (!importBase64) {
+      setError('Please choose a legacy database file first.');
+      return;
+    }
+    try {
+      setImportLoading(true);
+      const result = await apiFetch<{ imported: number }>('/api/agents/import-legacy', {
+        method: 'POST',
+        body: JSON.stringify({ fileBase64: importBase64 }),
+      });
+      setError(`Imported ${result.imported} agent records.`);
+      setImportOpen(false);
+      setImportFileName('');
+      setImportBase64('');
+      setImportPreview(null);
+      setPage(1);
+      loadAgents();
+    } catch (importError) {
+      setError(importError instanceof Error ? importError.message : 'Failed to import legacy agents.');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="rounded-[10px] border border-slate-200/80 bg-white/95 px-5 py-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-950">Agent Management</h1>
+            <p className="text-sm text-slate-500">Master data for booking agent matching and import mapping.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {isAdmin ? (
+              <button type="button" className="toolbar-btn" onClick={() => setImportOpen(true)}>
+                Import Legacy DB
+              </button>
+            ) : null}
+            <button type="button" className="toolbar-btn-primary" onClick={openCreate}>
+              Add Agent
+            </button>
+            <button type="button" className="toolbar-btn" onClick={openEdit}>
+              Edit
+            </button>
+            <button type="button" className="toolbar-btn-danger" onClick={deleteSelected}>
+              Delete
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-[1fr_130px_150px_150px_150px]">
+          <input
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
+            placeholder="Search agent code, name, phone, tax id..."
+            className="form-input rounded-md"
+          />
+          <input
+            value={nation}
+            onChange={(event) => {
+              setNation(event.target.value);
+              setPage(1);
+            }}
+            placeholder="Nation"
+            className="form-input rounded-md"
+          />
+          <input
+            value={typeGroup}
+            onChange={(event) => {
+              setTypeGroup(event.target.value);
+              setPage(1);
+            }}
+            placeholder="TypeGroup"
+            className="form-input rounded-md"
+          />
+          <select
+            value={activeFilter}
+            onChange={(event) => {
+              setActiveFilter(event.target.value);
+              setPage(1);
+            }}
+            className="form-input rounded-md"
+          >
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-right">
+            <p className="text-xs text-slate-500">Records</p>
+            <p className="text-xl font-semibold text-blue-800">{total}</p>
+          </div>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
+        <div className="border-b border-slate-200 px-4 py-3 text-sm text-slate-400">
+          Showing {agents.length} of {total} items
+        </div>
+        <div className="max-h-[65vh] overflow-auto">
+          <table className="w-full min-w-[1100px] border-collapse text-sm">
+            <thead className="bg-white">
+              <tr>
+                <th className="w-12 border-b border-slate-200 px-4 py-3 text-left" />
+                {agentColumns.map((column) => (
+                  <th key={column} className="border-b border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase text-slate-400">
+                    {column}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {agents.length > 0 ? (
+                agents.map((agent) => {
+                  const checked = selectedId === agent.id;
+                  return (
+                    <tr
+                      key={agent.id}
+                      onClick={() => setSelectedId(agent.id)}
+                      className={`cursor-pointer transition hover:bg-blue-50 ${checked ? 'bg-blue-50' : ''}`}
+                    >
+                      <td className="border-b border-slate-100 px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => setSelectedId(checked ? null : agent.id)}
+                          onClick={(event) => event.stopPropagation()}
+                          className="h-4 w-4 accent-blue-700"
+                        />
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-3 font-semibold text-slate-900">{agent.agentCode}</td>
+                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{agent.name || '-'}</td>
+                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{agent.nation || '-'}</td>
+                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{agent.phone || '-'}</td>
+                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{agent.taxId || '-'}</td>
+                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{agent.contactPerson || '-'}</td>
+                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{agent.typeGroup || '-'}</td>
+                      <td className="border-b border-slate-100 px-3 py-3">
+                        <span className={agent.active ? 'text-emerald-700' : 'text-slate-400'}>
+                          {agent.active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={agentColumns.length + 1} className="px-4 py-14 text-center text-sm text-slate-400">
+                    No agent records found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {totalPages > 1 ? (
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
+            {getPageNumbers(page, totalPages).map((pageNumber) => (
+              <button
+                key={pageNumber}
+                type="button"
+                onClick={() => setPage(pageNumber)}
+                className={pageNumber === page ? 'toolbar-btn-primary min-h-9 px-3' : 'toolbar-btn min-h-9 px-3'}
+              >
+                {pageNumber}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {modalOpen ? (
+        <AgentModal
+          title={editingAgent ? 'Edit Agent' : 'Add Agent'}
+          form={form}
+          onChange={setForm}
+          onClose={() => {
+            setModalOpen(false);
+            setEditingAgent(null);
+            setModalError(null);
+          }}
+          onSubmit={submitAgent}
+          saveError={modalError}
+        />
+      ) : null}
+
+      {importOpen ? (
+        <AgentImportModal
+          fileName={importFileName}
+          preview={importPreview}
+          loading={importLoading}
+          onFileChange={previewLegacy}
+          onImport={confirmImportLegacy}
+          onClose={() => {
+            setImportOpen(false);
+            setImportFileName('');
+            setImportBase64('');
+            setImportPreview(null);
+          }}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -654,10 +1144,286 @@ function MemberModal({
   );
 }
 
-function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+function AgentImportModal({
+  fileName,
+  preview,
+  loading,
+  onFileChange,
+  onImport,
+  onClose,
+}: {
+  fileName: string;
+  preview: AgentImportPreviewResponse | null;
+  loading: boolean;
+  onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onImport: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+      <div className="max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+          <div>
+            <h2 className="text-[24px] font-semibold leading-tight text-slate-950">Import Agent Legacy DB</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Upload database.txt to preview parsed agent records before saving to database.
+            </p>
+          </div>
+          <button type="button" className="toolbar-btn" onClick={onClose}>
+            Close
+          </button>
+        </div>
+
+        <div className="space-y-4 p-5">
+          <div className="flex min-h-[84px] items-center rounded-[8px] border border-slate-200 bg-slate-50/70 p-4">
+            <label className="toolbar-btn inline-flex cursor-pointer items-center justify-center">
+              Choose File
+              <input type="file" accept=".txt,.csv" className="hidden" onChange={onFileChange} />
+            </label>
+            <span className="ml-3 inline-flex min-h-10 items-center text-sm font-semibold text-slate-700">
+              {fileName || 'No file selected'}
+            </span>
+          </div>
+
+          <div className="overflow-hidden rounded-[8px] border border-slate-200 bg-white">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 text-sm">
+              <span className="font-semibold text-slate-800">Preview Data</span>
+              <span className="text-slate-500">
+                {preview ? `${preview.rowCount} records found` : 'Choose a file to preview'}
+              </span>
+            </div>
+            <div className="max-h-[48vh] overflow-auto">
+              <table className="w-full min-w-[900px] border-collapse text-sm">
+                <thead className="bg-slate-50">
+                  <tr>
+                    {agentColumns.map((column) => (
+                      <th key={column} className="border-b border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase text-slate-400">
+                        {column}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview?.rows.length ? (
+                    preview.rows.map((row, index) => (
+                      <tr key={`${row.agentCode}-${index}`} className="hover:bg-blue-50">
+                        <td className="border-b border-slate-100 px-3 py-3 font-semibold text-slate-900">{row.agentCode}</td>
+                        <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{row.name || '-'}</td>
+                        <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{row.nation || '-'}</td>
+                        <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{row.phone || '-'}</td>
+                        <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{row.taxId || '-'}</td>
+                        <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{row.contactPerson || '-'}</td>
+                        <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{row.typeGroup || '-'}</td>
+                        <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{row.active ? 'Active' : 'Inactive'}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={agentColumns.length} className="px-4 py-12 text-center text-sm text-slate-400">
+                        No preview data.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 border-t border-slate-200 bg-white/95 px-5 py-4">
+          <button type="button" className="toolbar-btn px-5" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="button" className="toolbar-btn-primary px-5" disabled={loading || !preview?.rowCount} onClick={onImport}>
+            {loading ? 'Importing...' : 'Import'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgentModal({
+  title,
+  form,
+  onChange,
+  onClose,
+  onSubmit,
+  saveError,
+}: {
+  title: string;
+  form: AgentForm;
+  onChange: (value: AgentForm) => void;
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  saveError: string | null;
+}) {
+  const setField = (key: keyof AgentForm, value: string | boolean | AgentAliasItem[]) => {
+    onChange({ ...form, [key]: value });
+  };
+
+  const addAlias = () => {
+    setField('aliases', [...form.aliases, { pattern: '', matchType: 'contains' }]);
+  };
+
+  const updateAlias = (index: number, value: string) => {
+    setField(
+      'aliases',
+      form.aliases.map((alias, aliasIndex) =>
+        aliasIndex === index ? { ...alias, pattern: value } : alias,
+      ),
+    );
+  };
+
+  const removeAlias = (index: number) => {
+    setField(
+      'aliases',
+      form.aliases.filter((_, aliasIndex) => aliasIndex !== index),
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+      <form
+        onSubmit={onSubmit}
+        className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+          <div>
+            <h2 className="text-[24px] font-semibold leading-tight text-slate-950">{title}</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Agent master data and alias patterns for booking import matching.
+            </p>
+          </div>
+          <button type="button" className="toolbar-btn" onClick={onClose}>
+            Close
+          </button>
+        </div>
+
+        <div className="space-y-4 p-5">
+          {saveError ? (
+            <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              {saveError}
+            </div>
+          ) : null}
+
+          <FormSection
+            title="Agent Information"
+            headerRight={
+              <label className="flex min-h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={form.active}
+                  onChange={(event) => setField('active', event.target.checked)}
+                  className="h-4 w-4 accent-blue-700"
+                />
+                Active
+              </label>
+            }
+          >
+            <Field label="Agent Code" value={form.agentCode} onChange={(value) => setField('agentCode', value)} required />
+            <Field label="Code Center" value={form.codeCenter} onChange={(value) => setField('codeCenter', value)} />
+            <Field label="Agent Name" value={form.name} onChange={(value) => setField('name', value)} required />
+            <Field label="Nation" value={form.nation} onChange={(value) => setField('nation', value)} />
+            <Field label="Phone" value={form.phone} onChange={(value) => setField('phone', value)} />
+            <Field label="Fax" value={form.fax} onChange={(value) => setField('fax', value)} />
+            <Field label="Contact" value={form.contactPerson} onChange={(value) => setField('contactPerson', value)} />
+            <Field label="Marketing" value={form.marketing} onChange={(value) => setField('marketing', value)} />
+            <Field label="Agent HO" value={form.agentHO} onChange={(value) => setField('agentHO', value)} />
+            <SelectField
+              label="Type Center"
+              value={form.typeCenter}
+              onChange={(value) => setField('typeCenter', value)}
+              options={typeCenterOptions}
+            />
+            <SelectField
+              label="Agent Type"
+              value={form.agentType}
+              onChange={(value) => setField('agentType', value)}
+              options={agentTypeOptions}
+            />
+            <Field label="TypeGroup" value={form.typeGroup} onChange={(value) => setField('typeGroup', value)} />
+            <Field label="NAV Code" value={form.navCode} onChange={(value) => setField('navCode', value)} />
+            <Field label="Email" value={form.email} onChange={(value) => setField('email', value)} />
+          </FormSection>
+
+          <FormSection title="Tax and Banking">
+            <Field label="Tax ID" value={form.taxId} onChange={(value) => setField('taxId', value)} />
+            <Field label="Branch" value={form.branch} onChange={(value) => setField('branch', value)} />
+            <Field label="Bank Name" value={form.bankName} onChange={(value) => setField('bankName', value)} />
+            <Field label="Bank Branch" value={form.bankBranch} onChange={(value) => setField('bankBranch', value)} />
+            <Field label="Bank Account" value={form.bankAccount} onChange={(value) => setField('bankAccount', value)} />
+            <TextArea label="Address" value={form.address} onChange={(value) => setField('address', value)} wide />
+          </FormSection>
+
+          <section className="rounded-[8px] border border-slate-200 bg-slate-50/60 p-4">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800">Alias Matching</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Used by booking import. Matching is contains, case-insensitive, and stored in database.
+                </p>
+              </div>
+              <button type="button" className="toolbar-btn" onClick={addAlias}>
+                Add Alias
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {form.aliases.length > 0 ? (
+                form.aliases.map((alias, index) => (
+                  <div key={`${alias.id ?? 'new'}-${index}`} className="grid gap-2 md:grid-cols-[1fr_140px_90px]">
+                    <input
+                      value={alias.pattern}
+                      onChange={(event) => updateAlias(index, event.target.value)}
+                      placeholder="POPULAR =R="
+                      className="form-input rounded-md"
+                    />
+                    <select value={alias.matchType} disabled className="form-input rounded-md bg-slate-100">
+                      <option value="contains">contains</option>
+                    </select>
+                    <button type="button" className="toolbar-btn-danger min-h-10" onClick={() => removeAlias(index)}>
+                      Remove
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="rounded-md border border-dashed border-slate-200 bg-white px-4 py-6 text-sm text-slate-400">
+                  No alias patterns yet. Add patterns such as POPULAR =R=, ASIAN =R=, or ANANDA =PK=.
+                </p>
+              )}
+            </div>
+          </section>
+        </div>
+
+        <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
+          <button type="button" className="toolbar-btn px-5" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="toolbar-btn-primary px-5">
+            Save
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function FormSection({
+  title,
+  children,
+  headerRight,
+}: {
+  title: string;
+  children: React.ReactNode;
+  headerRight?: React.ReactNode;
+}) {
   return (
     <section className="rounded-[8px] border border-slate-200 bg-slate-50/60 p-4">
-      <h3 className="mb-4 text-sm font-semibold text-slate-800">{title}</h3>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
+        {headerRight}
+      </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{children}</div>
     </section>
   );
@@ -716,7 +1482,7 @@ function SelectField({
   label: string;
   value: string;
   onChange: (value: string) => void;
-  options: string[];
+  options: Array<string | { value: string; label: string }>;
   required?: boolean;
 }) {
   return (
@@ -731,11 +1497,14 @@ function SelectField({
         onChange={(event) => onChange(event.target.value)}
         className="form-input rounded-md"
       >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
+        {options.map((option) => {
+          const normalized = typeof option === 'string' ? { value: option, label: option } : option;
+          return (
+          <option key={normalized.value} value={normalized.value}>
+            {normalized.label}
           </option>
-        ))}
+          );
+        })}
       </select>
     </label>
   );
@@ -891,6 +1660,58 @@ function stripKnownTitle(value: string) {
     .replace(/^(Mr\.?|Mrs\.?|Miss|Ms\.?)\s+/i, '')
     .replace(/^(นาย|นาง|นางสาว|เด็กชาย|เด็กหญิง)\s*/u, '')
     .trim();
+}
+
+function toAgentFormState(agent: AgentItem): AgentForm {
+  return {
+    agentCode: agent.agentCode,
+    codeCenter: agent.codeCenter,
+    name: agent.name,
+    address: agent.address,
+    nation: agent.nation,
+    phone: agent.phone,
+    fax: agent.fax,
+    contactPerson: agent.contactPerson,
+    marketing: agent.marketing,
+    agentHO: agent.agentHO,
+    typeCenter: agent.typeCenter,
+    agentType: agent.agentType,
+    typeGroup: agent.typeGroup,
+    navCode: agent.navCode,
+    email: agent.email,
+    taxId: agent.taxId,
+    branch: agent.branch,
+    bankName: agent.bankName,
+    bankBranch: agent.bankBranch,
+    bankAccount: agent.bankAccount,
+    active: agent.active,
+    aliases: agent.aliases ?? [],
+  };
+}
+
+function normalizeAgentPayload(form: AgentForm): AgentForm {
+  return {
+    ...form,
+    agentCode: form.agentCode.trim(),
+    codeCenter: form.codeCenter.trim(),
+    name: form.name.trim(),
+    nation: form.nation.trim().toUpperCase(),
+    aliases: form.aliases
+      .map((alias) => ({ pattern: alias.pattern.trim(), matchType: 'contains' as const }))
+      .filter((alias) => alias.pattern),
+  };
+}
+
+function fileToBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const value = String(reader.result ?? '');
+      resolve(value.includes(',') ? value.split(',')[1] : value);
+    };
+    reader.onerror = () => reject(reader.error ?? new Error('Unable to read file.'));
+    reader.readAsDataURL(file);
+  });
 }
 
 function validateMemberForm(form: MemberForm) {

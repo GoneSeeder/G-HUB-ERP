@@ -132,3 +132,111 @@ model Member {
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 }
+
+model Agent {
+  id            String       @id @default(uuid())
+  agentCode     String       @unique
+  codeCenter    String       @default("")
+  name          String       @default("")
+  address       String       @default("")
+  nation        String       @default("")
+  phone         String       @default("")
+  fax           String       @default("")
+  contactPerson String       @default("")
+  marketing     String       @default("")
+  agentHO       String       @default("")
+  typeCenter    String       @default("")
+  agentType     String       @default("AGENT")
+  typeGroup     String       @default("")
+  navCode       String       @default("")
+  email         String       @default("")
+  taxId         String       @default("")
+  branch        String       @default("")
+  bankName      String       @default("")
+  bankBranch    String       @default("")
+  bankAccount   String       @default("")
+  active        Boolean      @default(true)
+  aliases       AgentAlias[]
+  bookings      Booking[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([name])
+  @@index([nation])
+  @@index([active])
+  @@index([typeGroup])
+}
+
+model AgentAlias {
+  id        String   @id @default(uuid())
+  agentId   String
+  pattern   String
+  matchType String   @default("contains")
+  createdAt DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, pattern, matchType])
+  @@index([pattern])
+}
+
+model Booking {
+  id           String             @id @default(uuid())
+  importKey    String             @unique @default(uuid())
+  docDate      DateTime
+  docTime      String             @default("")
+  docNo        String             @default("")
+  agentCode    String             @default("")
+  agentId      String?
+  agentName    String             @default("")
+  partyCode    String             @default("")
+  nation       String             @default("")
+  arriveDate   DateTime?
+  departDate   DateTime?
+  guideCode    String             @default("")
+  guideName    String             @default("")
+  telGuide     String             @default("")
+  telDriver    String             @default("")
+  pax          Int                @default(0)
+  carCode      String             @default("")
+  shop         String             @default("")
+  bookRemark   String             @default("")
+  dateBookJw   DateTime?
+  timeBookJw   String             @default("")
+  ptyStartDate DateTime?
+  ptyEndDate   DateTime?
+  faxNo        String             @default("")
+  agentCodeRef String             @default("")
+  partyCodeRef String             @default("")
+  status       Boolean            @default(false)
+  upload       Boolean            @default(false)
+  references   BookingReference[]
+  agent        Agent?             @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([docDate])
+  @@index([agentCode])
+  @@index([agentId])
+  @@index([nation])
+  @@index([status])
+  @@index([upload])
+}
+
+model BookingReference {
+  id        String    @id @default(uuid())
+  bookingId String
+  orderDate DateTime?
+  faxNo     String    @default("")
+  agentCode String    @default("")
+  code      String    @default("")
+  place     String    @default("")
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([faxNo])
+}

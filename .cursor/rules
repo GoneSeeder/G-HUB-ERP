@@ -161,3 +161,33 @@ Responsive UI rules:
 - Forms must be usable on mobile and desktop
 - Navigation must work on mobile, tablet, and desktop
 - Test layouts for common widths: 360px, 768px, 1024px, and 1440px
+
+
+Project locale standard:
+- Language: Thai
+- Date format: DD/MM/YYYY
+- Timezone: Asia/Bangkok
+- Number format: 1,234.00
+
+Date format rule for entire project:
+- Always use DD/MM/YYYY format in UI.
+- Never use MM/DD/YYYY.
+- All displayed dates in frontend must follow Thai/business format:
+  DD/MM/YYYY
+  
+Use this format for:
+- Tables
+- Forms
+- Filters
+- Date labels
+- Print/export screens
+
+Backend/API:
+- API may store ISO format internally if needed
+- But frontend display must always be DD/MM/YYYY
+
+Timezone:
+- Use Asia/Bangkok timezone when formatting dates.
+
+Important:
+- Do not use US date format anywhere in the UI.

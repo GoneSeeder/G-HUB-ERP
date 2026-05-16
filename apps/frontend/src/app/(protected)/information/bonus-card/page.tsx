@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 import { apiFetch, apiUpload } from '@/lib/api';
 
 type BonusCard = {
@@ -68,7 +68,7 @@ const visibleColumns: Array<{ key: keyof BonusCard; label: string; width: string
   { key: 'guide', label: 'Guide', width: '130px' },
   { key: 'guideName', label: 'Guide Name', width: '230px' },
   { key: 'partyCode', label: 'Party Code', width: '170px' },
-  { key: 'comment', label: 'Comment', width: '240px' },
+  { key: 'comment', label: 'Remark', width: '240px' },
 ];
 
 const exportColumns: Array<{ key: keyof BonusCard; label: string }> = [
@@ -91,7 +91,7 @@ const exportColumns: Array<{ key: keyof BonusCard; label: string }> = [
   { key: 'busType', label: 'Bus Type' },
   { key: 'tourIn', label: 'Tour In' },
   { key: 'tourOut', label: 'Tour Out' },
-  { key: 'comment', label: 'Comment' },
+  { key: 'comment', label: 'Remark' },
 ];
 
 export default function BonusCardPage() {
@@ -344,7 +344,11 @@ export default function BonusCardPage() {
                       </td>
                       <td className="px-3 py-3">
                         {row.imageUrl ? (
-                          <img src={getImageSrc(row.imageUrl)} alt="" className="h-9 w-9 rounded-full object-cover" />
+                          <img
+                            src={getImageSrc(row.imageUrl)}
+                            alt=""
+                            className="h-9 w-9 rounded-full bg-white object-cover"
+                          />
                         ) : (
                           <div className="h-9 w-9 rounded-full bg-slate-100" />
                         )}
@@ -438,65 +442,119 @@ function BonusModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-      <form onSubmit={onSubmit} className="max-h-[92vh] w-full max-w-5xl overflow-auto bg-white p-5 shadow-2xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">{mode === 'create' ? 'Add Bonus' : 'Edit Bonus'}</h2>
+      <form
+        onSubmit={onSubmit}
+        className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+          <div>
+            <h2 className="text-[24px] font-semibold leading-tight text-slate-950">
+              {mode === 'create' ? 'Add Bonus' : 'Edit Bonus'}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">Manage bonus card profile, guide, travel, and print details.</p>
+          </div>
           <button type="button" className="toolbar-btn" onClick={onClose}>
             Close
           </button>
         </div>
-        {error ? (
-          <div className="mt-4 border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-            {error}
-          </div>
-        ) : null}
-        <div className="mt-5 grid gap-4 md:grid-cols-[180px_1fr_1fr]">
-          <div className="space-y-3">
-            <div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-full bg-slate-100">
-              {form.imageUrl ? (
-                <img src={getImageSrc(form.imageUrl)} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-sm text-slate-400">No image</span>
-              )}
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(event) => uploadImage(event.target.files?.[0] ?? null)}
-              className="w-full text-sm"
-            />
-          </div>
-          <div className="grid gap-3 md:col-span-2 md:grid-cols-3">
-            <Field label="Work date" value={form.workDate} type="date" onChange={(value) => setField('workDate', value)} />
-            <Field label="Bonus" value={form.bonus} onChange={(value) => setField('bonus', value)} />
-            <Field label="Bonus Name" value={form.bonusName} onChange={(value) => setField('bonusName', value)} />
-            <Field label="Agent Code" value={form.agentCode} onChange={(value) => setField('agentCode', value)} />
-            <Field label="Agent Name" value={form.agentName} onChange={(value) => setField('agentName', value)} />
-            <Field label="Guide" value={form.guide} onChange={(value) => setField('guide', value)} />
-            <Field label="Guide Name" value={form.guideName} onChange={(value) => setField('guideName', value)} />
-            <Field label="Party Code" value={form.partyCode} onChange={(value) => setField('partyCode', value)} />
-            <Field label="Nation" value={form.nation} onChange={(value) => setField('nation', value)} />
-            <Field label="Adult" value={form.adult} type="number" onChange={(value) => setField('adult', Number(value))} />
-            <Field label="Child" value={form.child} type="number" onChange={(value) => setField('child', Number(value))} />
-            <Field label="Tour Leader" value={form.tourLeader} type="number" onChange={(value) => setField('tourLeader', Number(value))} />
-            <Field label="Car Code" value={form.carCode} onChange={(value) => setField('carCode', value)} />
-            <Field label="Shop" value={form.shop} onChange={(value) => setField('shop', value)} />
-            <Field label="Hotel" value={form.hotel} onChange={(value) => setField('hotel', value)} />
-            <Field label="Come From" value={form.comeFrom} onChange={(value) => setField('comeFrom', value)} />
-            <Field label="Bus Type" value={form.busType} onChange={(value) => setField('busType', value)} />
-            <Field label="Tour In" value={form.tourIn} onChange={(value) => setField('tourIn', value)} />
-            <Field label="Tour Out" value={form.tourOut} onChange={(value) => setField('tourOut', value)} />
-            <label className="space-y-1 md:col-span-3">
-              <span className="text-sm font-medium text-slate-600">Comment</span>
-              <textarea
-                value={form.comment}
-                onChange={(event) => setField('comment', event.target.value)}
-                className="min-h-24 w-full border border-slate-200 px-3 py-2 outline-none focus:border-blue-500"
+        <div className="grid gap-5 p-5 lg:grid-cols-[220px_1fr]">
+          <aside className="space-y-4">
+            <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
+              <div className="flex h-52 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white text-sm text-slate-400">
+                {form.imageUrl ? (
+                  <img src={getImageSrc(form.imageUrl)} alt="" className="h-full w-full bg-white object-contain" />
+                ) : (
+                  <span>No image</span>
+                )}
+              </div>
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                Upload guide or guest image. Large files are optimized before saving.
+              </p>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) => uploadImage(event.target.files?.[0] ?? null)}
+                className="mt-3 w-full text-sm"
               />
-            </label>
+            </div>
+
+            <div className="rounded-[8px] border border-blue-100 bg-blue-50/70 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Bonus</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">{form.bonus || '-'}</p>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Main bonus number used for lookup, detail, and slip printing.
+              </p>
+            </div>
+          </aside>
+
+          <div className="space-y-4">
+            {error ? (
+              <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                {error}
+              </div>
+            ) : null}
+
+            <BonusFormSection title="Bonus Information">
+              <Field label="Work date" value={form.workDate} type="date" onChange={(value) => setField('workDate', value)} />
+              <Field label="Bonus" value={form.bonus} onChange={(value) => setField('bonus', value)} />
+              <Field
+                label="Bonus Name"
+                value={form.bonusName}
+                onChange={(value) => setField('bonusName', value)}
+                wide
+              />
+              <Field label="Party Code" value={form.partyCode} onChange={(value) => setField('partyCode', value)} />
+              <Field label="Nation" value={form.nation} onChange={(value) => setField('nation', value)} />
+            </BonusFormSection>
+
+            <BonusFormSection title="Agent & Guide">
+              <Field label="Agent Code" value={form.agentCode} onChange={(value) => setField('agentCode', value)} />
+              <Field
+                label="Agent Name"
+                value={form.agentName}
+                onChange={(value) => setField('agentName', value)}
+                wide
+              />
+              <Field label="Guide" value={form.guide} onChange={(value) => setField('guide', value)} />
+              <Field
+                label="Guide Name"
+                value={form.guideName}
+                onChange={(value) => setField('guideName', value)}
+                wide
+              />
+            </BonusFormSection>
+
+            <BonusFormSection title="Passenger & Travel">
+              <Field label="Adult" value={form.adult} type="number" onChange={(value) => setField('adult', Number(value))} />
+              <Field label="Child" value={form.child} type="number" onChange={(value) => setField('child', Number(value))} />
+              <Field
+                label="Tour Leader"
+                value={form.tourLeader}
+                type="number"
+                onChange={(value) => setField('tourLeader', Number(value))}
+              />
+              <Field label="Car Code" value={form.carCode} onChange={(value) => setField('carCode', value)} />
+              <Field label="Shop" value={form.shop} onChange={(value) => setField('shop', value)} />
+              <Field label="Hotel" value={form.hotel} onChange={(value) => setField('hotel', value)} />
+              <Field label="Come From" value={form.comeFrom} onChange={(value) => setField('comeFrom', value)} />
+              <Field label="Bus Type" value={form.busType} onChange={(value) => setField('busType', value)} />
+              <Field label="Tour In" value={form.tourIn} onChange={(value) => setField('tourIn', value)} />
+              <Field label="Tour Out" value={form.tourOut} onChange={(value) => setField('tourOut', value)} />
+            </BonusFormSection>
+
+            <BonusFormSection title="Remark">
+              <label className="space-y-2 md:col-span-2 xl:col-span-3">
+                <span className="text-sm font-semibold text-slate-700">Remark</span>
+                <textarea
+                  value={form.comment}
+                  onChange={(event) => setField('comment', event.target.value)}
+                  className="min-h-24 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                />
+              </label>
+            </BonusFormSection>
           </div>
         </div>
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
           <button type="button" className="toolbar-btn" onClick={onClose}>
             Cancel
           </button>
@@ -509,21 +567,37 @@ function BonusModal({
   );
 }
 
+function BonusFormSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-[8px] border border-slate-200 bg-slate-50/60 p-4">
+      <h3 className="mb-4 text-sm font-semibold text-slate-800">{title}</h3>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{children}</div>
+    </section>
+  );
+}
+
 function Field({
   label,
   value,
   type = 'text',
   onChange,
+  wide = false,
 }: {
   label: string;
   value: string | number;
   type?: string;
   onChange: (value: string) => void;
+  wide?: boolean;
 }) {
   return (
-    <label className="space-y-1">
-      <span className="text-sm font-medium text-slate-600">{label}</span>
-      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} className="form-input" />
+    <label className={`space-y-2 ${wide ? 'md:col-span-2' : ''}`}>
+      <span className="text-sm font-semibold text-slate-700">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="form-input rounded-md"
+      />
     </label>
   );
 }
@@ -637,35 +711,32 @@ function ExportModal({
 
 function PrintModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
   const pax = row.adult + row.child + row.tourLeader;
-  const detailRows: Array<[string, string | number]> = [
-    ['Work Date', formatDate(row.workDate)],
+  const bonusRows: Array<[string, string | number]> = [
+    ['Work date', formatDate(row.workDate)],
     ['Bonus', row.bonus],
-    ['Bonus Name', row.bonusName],
-    ['Agent Code', row.agentCode],
-    ['Agent Name', row.agentName],
-    ['Guide', row.guide],
-    ['Guide Name', row.guideName],
-    ['Party Code', row.partyCode],
+    ['Bonus name', row.bonusName],
+    ['Party code', row.partyCode],
     ['Nation', row.nation],
+  ];
+  const agentRows: Array<[string, string | number]> = [
+    ['Agent code', row.agentCode],
+    ['Agent name', row.agentName],
+    ['Guide', row.guide],
+    ['Guide name', row.guideName],
+  ];
+  const travelRows: Array<[string, string | number]> = [
     ['Adult', row.adult],
     ['Child', row.child],
-    ['Tour Leader', row.tourLeader],
-    ['Pax Total', pax],
-    ['Car Code', row.carCode],
+    ['Tour leader', row.tourLeader],
+    ['Pax total', pax],
+    ['Car code', row.carCode],
     ['Shop', row.shop],
     ['Hotel', row.hotel],
-    ['Come From', row.comeFrom],
-    ['Bus Type', row.busType],
-    ['Tour In', row.tourIn],
-    ['Tour Out', row.tourOut],
-    ['Comment', row.comment || '-'],
+    ['Come from', row.comeFrom],
+    ['Bus type', row.busType],
+    ['Tour in', row.tourIn],
+    ['Tour out', row.tourOut],
   ];
-  const printDetail = () => {
-    document.body.classList.add('detail-print');
-    window.print();
-    window.setTimeout(() => document.body.classList.remove('detail-print'), 300);
-  };
-
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -679,47 +750,63 @@ function PrintModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-      <div className="max-h-[92vh] w-full max-w-5xl overflow-auto bg-white shadow-2xl">
-        <div className="no-print flex items-center justify-between border-b border-slate-200 px-5 py-4">
+      <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur">
+        <div className="no-print flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <div>
-            <h2 className="text-xl font-semibold">Bonus Detail</h2>
-            <p className="text-sm text-slate-500">This action prints all visible and hidden fields for the selected row.</p>
+            <h2 className="text-[24px] font-semibold leading-tight text-slate-950">Bonus Detail</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Review all visible and hidden fields for the selected bonus card.
+            </p>
           </div>
           <button className="toolbar-btn" onClick={onClose}>
             Close
           </button>
         </div>
-        <div className="grid gap-5 p-5 md:grid-cols-[260px_1fr]">
-          <div className="no-print space-y-4">
-            <div className="flex h-44 w-44 items-center justify-center overflow-hidden rounded-full bg-slate-100">
-              {row.imageUrl ? (
-                <img src={getImageSrc(row.imageUrl)} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-sm text-slate-400">No image</span>
-              )}
-            </div>
-            <button className="toolbar-btn-primary w-full" onClick={printDetail}>
-              Print Detail
-            </button>
-          </div>
-          <div className="print-area border border-slate-200 bg-white p-5">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
-              <div>
-                <p className="text-xs font-semibold uppercase text-blue-700">Bonus Card Detail</p>
-                <h3 className="mt-1 text-2xl font-semibold text-slate-950">
-                  {row.bonus} {row.bonusName}
-                </h3>
-                <p className="text-sm text-slate-500">
-                  {row.agentCode} {row.agentName}
-                </p>
+        <div className="grid gap-5 p-5 lg:grid-cols-[220px_1fr]">
+          <aside className="no-print space-y-4">
+            <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
+              <div className="flex h-52 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white text-sm text-slate-400">
+                {row.imageUrl ? (
+                  <img src={getImageSrc(row.imageUrl)} alt="" className="h-full w-full bg-white object-contain" />
+                ) : (
+                  <span>No image</span>
+                )}
               </div>
-              <p className="text-sm font-medium text-slate-500">{formatDate(row.workDate)}</p>
             </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {detailRows.map(([label, value]) => (
-                <DetailLine key={label} label={label} value={String(value ?? '')} />
-              ))}
+
+            <div className="rounded-[8px] border border-blue-100 bg-blue-50/70 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Selected Bonus</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">{row.bonus}</p>
+              <p className="mt-2 text-xs leading-5 text-slate-500">{row.guideName || row.bonusName || '-'}</p>
             </div>
+
+          </aside>
+
+          <div className="print-area space-y-4">
+            <div className="rounded-[8px] border border-slate-200 bg-white p-5">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase text-blue-700">Bonus Card Detail</p>
+                  <h3 className="mt-1 text-2xl font-semibold text-slate-950">
+                    {row.bonus} {row.bonusName}
+                  </h3>
+                  <p className="text-sm text-slate-500">
+                    {row.agentCode} {row.agentName}
+                  </p>
+                </div>
+                <p className="text-sm font-medium text-slate-500">{formatDate(row.workDate)}</p>
+              </div>
+            </div>
+
+            <BonusDetailSection title="Bonus Information" rows={bonusRows} />
+            <BonusDetailSection title="Agent & Guide" rows={agentRows} />
+            <BonusDetailSection title="Passenger & Travel" rows={travelRows} />
+            <section className="rounded-[8px] border border-slate-200 bg-slate-50/60 p-4">
+              <h3 className="mb-4 text-sm font-semibold text-slate-800">Remark</h3>
+              <div className="rounded-md border border-slate-100 bg-white px-3 py-3">
+                <p className="text-sm font-medium text-slate-800">{row.comment || '-'}</p>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -727,9 +814,22 @@ function PrintModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
   );
 }
 
+function BonusDetailSection({ title, rows }: { title: string; rows: Array<[string, string | number]> }) {
+  return (
+    <section className="rounded-[8px] border border-slate-200 bg-slate-50/60 p-4">
+      <h3 className="mb-4 text-sm font-semibold text-slate-800">{title}</h3>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {rows.map(([label, value]) => (
+          <DetailLine key={label} label={label} value={String(value ?? '')} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function DetailLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border border-slate-100 bg-slate-50 px-3 py-2">
+    <div className="rounded-md border border-slate-100 bg-white px-3 py-2">
       <p className="text-xs font-semibold uppercase text-slate-400">{label}</p>
       <p className="mt-1 text-sm font-medium text-slate-800">{value || '-'}</p>
     </div>
@@ -790,6 +890,8 @@ function resizeImageToFile(file: File, maxSize = 512, quality = 0.82) {
           reject(new Error('Canvas is not available.'));
           return;
         }
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, width, height);
         context.drawImage(image, 0, 0, width, height);
         canvas.toBlob(
           (blob) => {

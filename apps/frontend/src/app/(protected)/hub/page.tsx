@@ -30,6 +30,7 @@ const informationApps = [
 const appHrefByCode: Record<string, string | undefined> = {
   'information-member': '/information/member',
   'information-bonus-card': '/information/bonus-card',
+  'information-booking': '/information/booking',
 };
 
 export default function HubPage() {

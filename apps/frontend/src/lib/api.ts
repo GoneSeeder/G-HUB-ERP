@@ -1,17 +1,36 @@
-import { getAuthTokenFromCookie } from './auth';
+import { clearAuthTokenCookie, getAuthTokenFromCookie } from './auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in again.';
+
+function redirectToLogin() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  clearAuthTokenCookie();
+  if (!window.location.pathname.startsWith('/login')) {
+    window.location.assign('/login');
+  }
+}
+
+function handleUnauthorized() {
+  redirectToLogin();
+  throw new Error(SESSION_EXPIRED_MESSAGE);
+}
 
 export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
   const token = getAuthTokenFromCookie();
+  if (!token) {
+    handleUnauthorized();
+  }
+
   const headers = new Headers(options.headers);
   headers.set('Content-Type', 'application/json');
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
+  headers.set('Authorization', `Bearer ${token}`);
 
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
@@ -19,6 +38,10 @@ export async function apiFetch<T>(
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized();
+    }
+
     if (response.status === 413) {
       throw new Error('File too large');
     }
@@ -37,11 +60,13 @@ export async function apiFetch<T>(
 
 export async function apiUpload<T>(path: string, file: Blob): Promise<T> {
   const token = getAuthTokenFromCookie();
+  if (!token) {
+    handleUnauthorized();
+  }
+
   const headers = new Headers();
   headers.set('Content-Type', file.type || 'application/octet-stream');
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
+  headers.set('Authorization', `Bearer ${token}`);
 
   const response = await fetch(`${API_URL}${path}`, {
     method: 'POST',
@@ -50,6 +75,10 @@ export async function apiUpload<T>(path: string, file: Blob): Promise<T> {
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized();
+    }
+
     if (response.status === 413) {
       throw new Error('File too large');
     }

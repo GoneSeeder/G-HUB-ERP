@@ -1,0 +1,2 @@
+ALTER TABLE "Booking"
+  ADD COLUMN "docNo" TEXT NOT NULL DEFAULT '';
