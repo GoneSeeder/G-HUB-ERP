@@ -17,6 +17,7 @@ const MANAGED_APP_CODES = [
   'information-member',
   'information-bonus-card',
   'information-booking',
+  'information-name-list',
 ];
 
 @Injectable()

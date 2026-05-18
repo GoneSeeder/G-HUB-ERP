@@ -33,6 +33,23 @@ type AgentMatcher = {
   }>;
 };
 
+type AgentCodeRefMatcher = {
+  id: string;
+  agentCode: string;
+  name: string;
+};
+
+type AgentMatchingFilters = {
+  search?: string;
+};
+
+type AgentMatchingDto = {
+  agentCodeRef?: string;
+  agentNameRef?: string;
+  agentId?: string;
+  agentCode?: string;
+};
+
 type BookingDetailImportGroup = {
   references: Prisma.BookingReferenceCreateWithoutBookingInput[];
   ptyStartDate: Date | null;
@@ -131,7 +148,7 @@ export class BookingsService {
   }
 
   async create(dto: CreateBookingDto) {
-    await this.attachAgentFromCode(dto);
+    await this.attachAgentFromMappingOrCode(dto);
     const row = await this.prisma.booking.create({
       data: this.toCreateData(dto),
       include: { references: true },
@@ -141,7 +158,7 @@ export class BookingsService {
 
   async update(id: string, dto: UpdateBookingDto) {
     await this.ensureExists(id);
-    await this.attachAgentFromCode(dto);
+    await this.attachAgentFromMappingOrCode(dto);
     const references = dto.references;
     const row = await this.prisma.booking.update({
       where: { id },
@@ -167,6 +184,118 @@ export class BookingsService {
     return { message: 'Booking deleted successfully' };
   }
 
+  async findAgentMatchings(filters: AgentMatchingFilters = {}) {
+    const contains = filters.search?.trim()
+      ? { contains: filters.search.trim(), mode: 'insensitive' as const }
+      : null;
+    const rows = await this.prisma.agentMatching.findMany({
+      where: contains
+        ? {
+            OR: [
+              { agentCodeRef: contains },
+              { agentNameRef: contains },
+              { agent: { agentCode: contains } },
+              { agent: { name: contains } },
+            ],
+          }
+        : {},
+      include: { agent: { select: { id: true, agentCode: true, name: true } } },
+      orderBy: [{ agentCodeRef: 'asc' }],
+    });
+
+    return rows.map((row) => this.toAgentMatchingResponse(row));
+  }
+
+  async createAgentMatching(dto: AgentMatchingDto) {
+    const agentCodeRef = this.normalizeCode(dto.agentCodeRef);
+    if (!agentCodeRef) {
+      throw new BadRequestException('Agent Code Ref is required');
+    }
+    const agent = await this.resolveAgentForMatching(dto);
+    const row = await this.prisma.agentMatching.create({
+      data: {
+        agentCodeRef,
+        agentNameRef: dto.agentNameRef?.trim() ?? '',
+        agent: { connect: { id: agent.id } },
+      },
+      include: { agent: { select: { id: true, agentCode: true, name: true } } },
+    });
+    return this.toAgentMatchingResponse(row);
+  }
+
+  async updateAgentMatching(id: string, dto: AgentMatchingDto) {
+    const data: Prisma.AgentMatchingUpdateInput = {};
+    if (dto.agentCodeRef !== undefined) {
+      const agentCodeRef = this.normalizeCode(dto.agentCodeRef);
+      if (!agentCodeRef) {
+        throw new BadRequestException('Agent Code Ref is required');
+      }
+      data.agentCodeRef = agentCodeRef;
+    }
+    if (dto.agentNameRef !== undefined) {
+      data.agentNameRef = dto.agentNameRef.trim();
+    }
+    if (dto.agentId || dto.agentCode) {
+      const agent = await this.resolveAgentForMatching(dto);
+      data.agent = { connect: { id: agent.id } };
+    }
+
+    const row = await this.prisma.agentMatching.update({
+      where: { id },
+      data,
+      include: { agent: { select: { id: true, agentCode: true, name: true } } },
+    });
+    return this.toAgentMatchingResponse(row);
+  }
+
+  async removeAgentMatching(id: string) {
+    await this.prisma.agentMatching.delete({ where: { id } });
+    return { message: 'Agent matching deleted successfully' };
+  }
+
+  async importAgentMatchingSql(fileBase64: string) {
+    if (!fileBase64) {
+      throw new BadRequestException('agentMK.sql file is required');
+    }
+    const text = Buffer.from(fileBase64, 'base64').toString('utf8');
+    const rows = this.parseAgentImportSql(text);
+    const agents = await this.prisma.agent.findMany({
+      select: { id: true, agentCode: true, name: true },
+    });
+    const agentByCode = new Map(agents.map((agent) => [agent.agentCode.toUpperCase(), agent]));
+    const agentByNameEntries = agents
+      .map((agent): [string, (typeof agents)[number]] => [this.normalizeMatchText(agent.name), agent])
+      .filter(([name]) => Boolean(name));
+    const agentByName = new Map(agentByNameEntries);
+
+    let imported = 0;
+    let skipped = 0;
+    for (const row of rows) {
+      const agent = this.resolveImportedAgent(row, agentByCode, agentByName);
+      if (!agent) {
+        skipped += row.refs.length;
+        continue;
+      }
+      for (const agentCodeRef of row.refs) {
+        await this.prisma.agentMatching.upsert({
+          where: { agentCodeRef },
+          update: {
+            agentNameRef: row.name,
+            agentId: agent.id,
+          },
+          create: {
+            agentCodeRef,
+            agentNameRef: row.name,
+            agentId: agent.id,
+          },
+        });
+        imported += 1;
+      }
+    }
+
+    return { imported, skipped, sourceRows: rows.length };
+  }
+
   async importSeparateFiles(dto: ImportBookingFilesDto) {
     if (!dto.mainFileBase64) {
       throw new BadRequestException('Main file is required');
@@ -181,7 +310,15 @@ export class BookingsService {
     const importNow = this.clientDateTime(dto.clientImportedAt);
     const importDate = this.dateFromFileName(dto.mainFileName) ?? this.dateOnly(importNow);
     const agentMatchers = await this.loadAgentMatchers();
-    const bookingRows = this.mapMainRows(mainRows, detailMap, importDate, importNow, agentMatchers);
+    const agentCodeRefMatchers = await this.loadAgentCodeRefMatchers();
+    const bookingRows = this.mapMainRows(
+      mainRows,
+      detailMap,
+      importDate,
+      importNow,
+      agentMatchers,
+      agentCodeRefMatchers,
+    );
 
     if (bookingRows.length === 0) {
       throw new BadRequestException('No booking rows found in import files');
@@ -223,7 +360,11 @@ export class BookingsService {
       : [];
 
     return {
-      main: this.previewMainRows(mainRows, await this.loadAgentMatchers()),
+      main: this.previewMainRows(
+        mainRows,
+        await this.loadAgentMatchers(),
+        await this.loadAgentCodeRefMatchers(),
+      ),
       detail: this.previewDetailRows(detailRows),
     };
   }
@@ -236,13 +377,47 @@ export class BookingsService {
 
     const rows = await this.prisma.booking.findMany({
       where: { id: { in: uniqueIds } },
-      select: { id: true, agentName: true },
+      select: { id: true, agentName: true, agentCodeRef: true },
     });
     const agentMatchers = await this.loadAgentMatchers();
     let matched = 0;
 
     for (const row of rows) {
-      const agent = this.matchAgent(row.agentName, agentMatchers);
+      const agent = await this.matchAgentFromRef(row.agentCodeRef);
+      const fallbackAgent = agent ?? this.matchAgent(row.agentName, agentMatchers);
+      if (!fallbackAgent) {
+        continue;
+      }
+      await this.prisma.booking.update({
+        where: { id: row.id },
+        data: {
+          agentId: fallbackAgent.id,
+          agentCode: fallbackAgent.agentCode,
+        },
+      });
+      matched += 1;
+    }
+
+    return {
+      requested: uniqueIds.length,
+      matched,
+      unmatched: Math.max(0, uniqueIds.length - matched),
+    };
+  }
+
+  async applyAgentCodeRefMapping(ids: string[]) {
+    const uniqueIds = [...new Set(ids)].filter(Boolean);
+    if (uniqueIds.length === 0) {
+      throw new BadRequestException('Please select booking rows first');
+    }
+
+    const rows = await this.prisma.booking.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true, agentCodeRef: true },
+    });
+    let matched = 0;
+    for (const row of rows) {
+      const agent = await this.matchAgentFromRef(row.agentCodeRef);
       if (!agent) {
         continue;
       }
@@ -326,7 +501,11 @@ export class BookingsService {
     return [...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key);
   }
 
-  private previewMainRows(rows: ParsedWorkbook, agentMatchers: AgentMatcher[]) {
+  private previewMainRows(
+    rows: ParsedWorkbook,
+    agentMatchers: AgentMatcher[],
+    agentCodeRefMatchers: Map<string, AgentCodeRefMatcher>,
+  ) {
     const dataRows = rows.slice(1);
     const keyFactory = (row: Array<string | number>) => {
       const faxNo = this.cellText(row[11]);
@@ -344,7 +523,9 @@ export class BookingsService {
       rows: dataRows.slice(0, 100).map((row) => {
         const agentName = this.cellText(row[1]);
         const agentCodeRef = this.cellText(row[12]);
-        const matchedAgent = this.matchAgent(agentName, agentMatchers);
+        const matchedAgent =
+          this.matchAgentFromRefMap(agentCodeRef, agentCodeRefMatchers) ??
+          this.matchAgent(agentName, agentMatchers);
         return [
           duplicateSet.has(keyFactory(row)) ? 'Yes' : '',
           matchedAgent?.agentCode ?? '',
@@ -416,6 +597,22 @@ export class BookingsService {
     });
   }
 
+  private async loadAgentCodeRefMatchers() {
+    const rows = await this.prisma.agentMatching.findMany({
+      include: { agent: { select: { id: true, agentCode: true, name: true } } },
+    });
+    return new Map(
+      rows.map((row) => [
+        this.normalizeCode(row.agentCodeRef),
+        {
+          id: row.agent.id,
+          agentCode: row.agent.agentCode,
+          name: row.agent.name,
+        },
+      ]),
+    );
+  }
+
   private async nextBonusNumber(workDate: string) {
     const rows = await this.prisma.bonusCard.findMany({
       where: { workDate: this.toDate(workDate) },
@@ -463,8 +660,31 @@ export class BookingsService {
     );
   }
 
+  private matchAgentFromRefMap(
+    agentCodeRef: string,
+    matchers: Map<string, AgentCodeRefMatcher>,
+  ) {
+    return matchers.get(this.normalizeCode(agentCodeRef)) ?? null;
+  }
+
+  private async matchAgentFromRef(agentCodeRef: string) {
+    const normalizedRef = this.normalizeCode(agentCodeRef);
+    if (!normalizedRef) {
+      return null;
+    }
+    const row = await this.prisma.agentMatching.findUnique({
+      where: { agentCodeRef: normalizedRef },
+      include: { agent: { select: { id: true, agentCode: true, name: true } } },
+    });
+    return row?.agent ?? null;
+  }
+
   private normalizeMatchText(value: string) {
     return value.toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+
+  private normalizeCode(value?: string | null) {
+    return (value ?? '').trim().toUpperCase();
   }
 
   private mapMainRows(
@@ -473,6 +693,7 @@ export class BookingsService {
     importDate: Date,
     importNow: Date,
     agentMatchers: AgentMatcher[],
+    agentCodeRefMatchers: Map<string, AgentCodeRefMatcher>,
   ) {
     return rows.slice(1).flatMap((row, index) => {
       const agentName = this.cellText(row[1]);
@@ -485,7 +706,9 @@ export class BookingsService {
         return [];
       }
 
-      const matchedAgent = this.matchAgent(agentName, agentMatchers);
+      const matchedAgent =
+        this.matchAgentFromRefMap(agentCodeRef, agentCodeRefMatchers) ??
+        this.matchAgent(agentName, agentMatchers);
       const importKey = [
         'booking-import',
         this.dateKey(importDate),
@@ -667,7 +890,19 @@ export class BookingsService {
     };
   }
 
-  private async attachAgentFromCode(dto: UpdateBookingDto) {
+  private async attachAgentFromMappingOrCode(dto: UpdateBookingDto) {
+    if (dto.agentCodeRef && !dto.agentId) {
+      const agent = await this.matchAgentFromRef(dto.agentCodeRef);
+      if (agent) {
+        dto.agentId = agent.id;
+        dto.agentCode = agent.agentCode;
+        if (!dto.agentName) {
+          dto.agentName = agent.name;
+        }
+        return;
+      }
+    }
+
     if (!dto.agentCode || dto.agentId) {
       return;
     }
@@ -680,6 +915,149 @@ export class BookingsService {
       return;
     }
     dto.agentId = agent.id;
+  }
+
+  private async resolveAgentForMatching(dto: AgentMatchingDto) {
+    if (dto.agentId) {
+      const agent = await this.prisma.agent.findUnique({
+        where: { id: dto.agentId },
+        select: { id: true, agentCode: true, name: true },
+      });
+      if (agent) {
+        return agent;
+      }
+    }
+    const agentCode = this.normalizeCode(dto.agentCode);
+    if (agentCode) {
+      const agent = await this.prisma.agent.findUnique({
+        where: { agentCode },
+        select: { id: true, agentCode: true, name: true },
+      });
+      if (agent) {
+        return agent;
+      }
+    }
+    throw new BadRequestException('Please select Agent Code');
+  }
+
+  private toAgentMatchingResponse(
+    row: Prisma.AgentMatchingGetPayload<{
+      include: { agent: { select: { id: true; agentCode: true; name: true } } };
+    }>,
+  ) {
+    return {
+      id: row.id,
+      agentCodeRef: row.agentCodeRef,
+      agentNameRef: row.agentNameRef,
+      agentId: row.agent.id,
+      agentCode: row.agent.agentCode,
+      agentName: row.agent.name,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+  }
+
+  private parseAgentImportSql(text: string) {
+    const valuesBlock = text.match(/INSERT INTO\s+"AgentImport"[\s\S]*?VALUES\s*([\s\S]*?);/i)?.[1];
+    if (!valuesBlock) {
+      return [];
+    }
+    const rowMatches = valuesBlock.matchAll(/\(([\s\S]*?)\)(?:,|$)/g);
+    const rows: Array<{
+      name: string;
+      primaryCode: string;
+      secondaryCodes: string[];
+      refs: string[];
+    }> = [];
+
+    for (const match of rowMatches) {
+      const cells = this.parseSqlTuple(match[1]);
+      const name = cells[1] ?? '';
+      const gei = this.normalizeSqlValue(cells[2]);
+      const rth = this.normalizeSqlValue(cells[3]);
+      const spl = this.normalizeSqlValue(cells[4]);
+      const pgc = this.normalizeSqlValue(cells[5]);
+      const refs = [gei, pgc].filter((value) => value && value !== '-');
+      if (!name || refs.length === 0) {
+        continue;
+      }
+      rows.push({
+        name,
+        primaryCode: rth,
+        secondaryCodes: [spl, rth].filter((value) => value && value !== '-'),
+        refs: [...new Set(refs.map((value) => this.normalizeCode(value)))],
+      });
+    }
+
+    return rows;
+  }
+
+  private parseSqlTuple(tuple: string) {
+    const cells: string[] = [];
+    let current = '';
+    let inQuote = false;
+
+    for (let index = 0; index < tuple.length; index += 1) {
+      const char = tuple[index];
+      const next = tuple[index + 1];
+      if (char === "'" && next === "'") {
+        current += "'";
+        index += 1;
+        continue;
+      }
+      if (char === "'") {
+        inQuote = !inQuote;
+        continue;
+      }
+      if (char === ',' && !inQuote) {
+        cells.push(this.normalizeSqlValue(current));
+        current = '';
+        continue;
+      }
+      current += char;
+    }
+    cells.push(this.normalizeSqlValue(current));
+    return cells;
+  }
+
+  private normalizeSqlValue(value: string) {
+    const trimmed = value.trim();
+    return /^null$/i.test(trimmed) ? '' : trimmed;
+  }
+
+  private resolveImportedAgent(
+    row: {
+      name: string;
+      primaryCode: string;
+      secondaryCodes: string[];
+    },
+    agentByCode: Map<string, { id: string; agentCode: string; name: string }>,
+    agentByName: Map<string, { id: string; agentCode: string; name: string }>,
+  ) {
+    const codeCandidates = [
+      row.primaryCode,
+      `${row.primaryCode}R`,
+      ...row.secondaryCodes,
+      ...row.secondaryCodes.map((code) => `${code}R`),
+    ]
+      .map((code) => this.normalizeCode(code))
+      .filter((code) => code && code !== '-');
+
+    for (const code of codeCandidates) {
+      const agent = agentByCode.get(code);
+      if (agent) {
+        return agent;
+      }
+    }
+
+    const normalizedName = this.normalizeMatchText(row.name);
+    return (
+      agentByName.get(normalizedName) ??
+      [...agentByName.entries()].find(
+        ([name]) => name && (name.includes(normalizedName) || normalizedName.includes(name)),
+      )?.[1] ??
+      null
+    );
   }
 
   private async ensureExists(id: string) {

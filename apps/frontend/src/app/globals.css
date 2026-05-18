@@ -101,6 +101,17 @@ body {
   border-color: #2563eb;
 }
 
+.no-number-spinner {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.no-number-spinner::-webkit-outer-spin-button,
+.no-number-spinner::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
 @media print {
   body.detail-print * {
     visibility: hidden;

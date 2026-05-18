@@ -19,6 +19,7 @@ async function main() {
     informationMemberApp,
     informationBonusCardApp,
     informationBookingApp,
+    informationNameListApp,
   ] = await Promise.all([
     prisma.app.upsert({
       where: { code: 'hub' },
@@ -84,6 +85,18 @@ async function main() {
         code: 'information-booking',
         name: 'บันทึกการจองเข้าร้าน',
         description: 'Booking information management',
+      },
+    }),
+    prisma.app.upsert({
+      where: { code: 'information-name-list' },
+      update: {
+        name: 'Name List',
+        description: 'Imported passenger name list management',
+      },
+      create: {
+        code: 'information-name-list',
+        name: 'Name List',
+        description: 'Imported passenger name list management',
       },
     }),
   ]);
@@ -196,6 +209,7 @@ async function main() {
     informationMemberApp,
     informationBonusCardApp,
     informationBookingApp,
+    informationNameListApp,
   ];
 
   await Promise.all(

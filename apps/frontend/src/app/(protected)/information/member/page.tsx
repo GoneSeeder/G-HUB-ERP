@@ -369,8 +369,8 @@ export default function MemberPage() {
   };
 
   return (
-    <section className="space-y-4">
-      <div className="inline-flex rounded-[10px] border border-slate-200 bg-white p-1 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+    <section className="flex h-full min-h-0 flex-col gap-3">
+      <div className="inline-flex shrink-0 self-start rounded-[10px] border border-slate-200 bg-white p-1 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
         <button
           type="button"
           onClick={() => setActiveTab('guides')}
@@ -388,11 +388,11 @@ export default function MemberPage() {
       </div>
 
       {activeTab === 'guides' ? (
-        <>
-      <div className="rounded-[10px] border border-slate-200/80 bg-white/95 px-5 py-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
+        <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="shrink-0 rounded-[10px] border border-slate-200/80 bg-white/95 px-4 py-3 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-950">ข้อมูลสมาชิก</h1>
+            <h1 className="text-xl font-semibold text-slate-950">ข้อมูลสมาชิก</h1>
             <p className="text-sm text-slate-500">Guide information and member profile management.</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -408,7 +408,7 @@ export default function MemberPage() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-[1fr_150px]">
+        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_130px]">
           <input
             value={search}
             onChange={(event) => {
@@ -418,9 +418,9 @@ export default function MemberPage() {
             placeholder="Search guide code, name, phone, passport..."
             className="form-input rounded-md"
           />
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-right">
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-right">
             <p className="text-xs text-slate-500">Records</p>
-            <p className="text-xl font-semibold text-blue-800">{total}</p>
+            <p className="text-lg font-semibold text-blue-800">{total}</p>
           </div>
         </div>
       </div>
@@ -431,19 +431,19 @@ export default function MemberPage() {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
-        <div className="border-b border-slate-200 px-4 py-3 text-sm text-slate-400">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
+        <div className="shrink-0 border-b border-slate-200 px-4 py-2 text-sm text-slate-400">
           Showing {members.length} of {total} items
         </div>
-        <div className="max-h-[65vh] overflow-auto">
+        <div className="min-h-0 flex-1 overflow-auto">
           <table className="w-full min-w-[1000px] border-collapse text-sm">
             <thead className="bg-white">
               <tr>
-                <th className="w-12 border-b border-slate-200 px-4 py-3 text-left" />
+                <th className="w-12 border-b border-slate-200 px-4 py-2 text-left" />
                 {columns.map((column) => (
                   <th
                     key={column}
-                    className="border-b border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase text-slate-400"
+                    className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400"
                   >
                     {column}
                   </th>
@@ -463,7 +463,7 @@ export default function MemberPage() {
                         checked ? 'bg-blue-50' : ''
                       }`}
                     >
-                      <td className="border-b border-slate-100 px-4 py-3">
+                      <td className="border-b border-slate-100 px-4 py-2">
                         <input
                           type="checkbox"
                           checked={checked}
@@ -472,22 +472,22 @@ export default function MemberPage() {
                           className="h-4 w-4 accent-blue-700"
                         />
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-3 font-semibold text-slate-900">
+                      <td className="border-b border-slate-100 px-3 py-2 font-semibold text-slate-900">
                         {member.guideCode}
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">
+                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">
                         {formatMemberDisplayName(member)}
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">
+                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">
                         {member.phone || '-'}
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">
+                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">
                         {member.nationalId || '-'}
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">
+                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">
                         {member.passportNo || '-'}
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">
+                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">
                         {member.guideLicenseNo || '-'}
                       </td>
                     </tr>
@@ -504,7 +504,7 @@ export default function MemberPage() {
           </table>
         </div>
         {totalPages > 1 ? (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-4 py-2">
             {getPageNumbers(page, totalPages).map((pageNumber) => (
               <button
                 key={pageNumber}
@@ -537,7 +537,7 @@ export default function MemberPage() {
           saveError={modalError}
         />
       ) : null}
-        </>
+        </div>
       ) : (
         <AgentManagement isAdmin={isAdmin} />
       )}
@@ -702,11 +702,11 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
   };
 
   return (
-    <>
-      <div className="rounded-[10px] border border-slate-200/80 bg-white/95 px-5 py-4 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="shrink-0 rounded-[10px] border border-slate-200/80 bg-white/95 px-4 py-3 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-950">Agent Management</h1>
+            <h1 className="text-xl font-semibold text-slate-950">Agent Management</h1>
             <p className="text-sm text-slate-500">Master data for booking agent matching and import mapping.</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -727,7 +727,7 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-[1fr_130px_150px_150px_150px]">
+        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_120px_140px_140px_120px]">
           <input
             value={search}
             onChange={(event) => {
@@ -767,9 +767,9 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-right">
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-right">
             <p className="text-xs text-slate-500">Records</p>
-            <p className="text-xl font-semibold text-blue-800">{total}</p>
+            <p className="text-lg font-semibold text-blue-800">{total}</p>
           </div>
         </div>
       </div>
@@ -780,17 +780,17 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
-        <div className="border-b border-slate-200 px-4 py-3 text-sm text-slate-400">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
+        <div className="shrink-0 border-b border-slate-200 px-4 py-2 text-sm text-slate-400">
           Showing {agents.length} of {total} items
         </div>
-        <div className="max-h-[65vh] overflow-auto">
+        <div className="min-h-0 flex-1 overflow-auto">
           <table className="w-full min-w-[1100px] border-collapse text-sm">
             <thead className="bg-white">
               <tr>
-                <th className="w-12 border-b border-slate-200 px-4 py-3 text-left" />
+                <th className="w-12 border-b border-slate-200 px-4 py-2 text-left" />
                 {agentColumns.map((column) => (
-                  <th key={column} className="border-b border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase text-slate-400">
+                  <th key={column} className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">
                     {column}
                   </th>
                 ))}
@@ -806,7 +806,7 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
                       onClick={() => setSelectedId(agent.id)}
                       className={`cursor-pointer transition hover:bg-blue-50 ${checked ? 'bg-blue-50' : ''}`}
                     >
-                      <td className="border-b border-slate-100 px-4 py-3">
+                      <td className="border-b border-slate-100 px-4 py-2">
                         <input
                           type="checkbox"
                           checked={checked}
@@ -815,14 +815,14 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
                           className="h-4 w-4 accent-blue-700"
                         />
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-3 font-semibold text-slate-900">{agent.agentCode}</td>
-                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{agent.name || '-'}</td>
-                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{agent.nation || '-'}</td>
-                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{agent.phone || '-'}</td>
-                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{agent.taxId || '-'}</td>
-                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{agent.contactPerson || '-'}</td>
-                      <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{agent.typeGroup || '-'}</td>
-                      <td className="border-b border-slate-100 px-3 py-3">
+                      <td className="border-b border-slate-100 px-3 py-2 font-semibold text-slate-900">{agent.agentCode}</td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{agent.name || '-'}</td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{agent.nation || '-'}</td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{agent.phone || '-'}</td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{agent.taxId || '-'}</td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{agent.contactPerson || '-'}</td>
+                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{agent.typeGroup || '-'}</td>
+                      <td className="border-b border-slate-100 px-3 py-2">
                         <span className={agent.active ? 'text-emerald-700' : 'text-slate-400'}>
                           {agent.active ? 'Active' : 'Inactive'}
                         </span>
@@ -841,7 +841,7 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
           </table>
         </div>
         {totalPages > 1 ? (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-200 px-4 py-2">
             {getPageNumbers(page, totalPages).map((pageNumber) => (
               <button
                 key={pageNumber}
@@ -886,7 +886,7 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
           }}
         />
       ) : null}
-    </>
+    </div>
   );
 }
 

@@ -157,6 +157,7 @@ model Agent {
   bankAccount   String       @default("")
   active        Boolean      @default(true)
   aliases       AgentAlias[]
+  matchings     AgentMatching[]
   bookings      Booking[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
@@ -178,6 +179,75 @@ model AgentAlias {
 
   @@unique([agentId, pattern, matchType])
   @@index([pattern])
+}
+
+model AgentMatching {
+  id           String   @id @default(uuid())
+  agentCodeRef String   @unique
+  agentNameRef String   @default("")
+  agentId      String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([agentNameRef])
+}
+
+model NameList {
+  id          String         @id @default(uuid())
+  code        String         @unique
+  partyCode   String         @default("")
+  arriveDate  DateTime?
+  departDate  DateTime?
+  agentCode   String         @default("")
+  agentName   String         @default("")
+  guideCode   String         @default("")
+  guideName   String         @default("")
+  nationCode  String         @default("")
+  nationName  String         @default("")
+  country     String         @default("")
+  province    String         @default("")
+  busCode     String         @default("")
+  pax         Int            @default(0)
+  sourceFile  String         @default("")
+  note        String         @default("")
+  items       NameListItem[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([arriveDate])
+  @@index([agentCode])
+  @@index([partyCode])
+  @@index([nationCode])
+}
+
+model NameListItem {
+  id           String   @id @default(uuid())
+  nameListId   String
+  itemNo       Int      @default(0)
+  isLeader     Boolean  @default(false)
+  agentCode    String   @default("")
+  code         String   @default("")
+  arriveDate   DateTime?
+  passportNo   String   @default("")
+  firstName    String   @default("")
+  lastName     String   @default("")
+  birthDate    DateTime?
+  age          Int?
+  gender       String   @default("")
+  nationCode   String   @default("")
+  province     String   @default("")
+  location     String   @default("")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  nameList NameList @relation(fields: [nameListId], references: [id], onDelete: Cascade)
+
+  @@index([nameListId])
+  @@index([passportNo])
+  @@index([code])
 }
 
 model Booking {

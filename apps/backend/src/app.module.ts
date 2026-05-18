@@ -11,6 +11,7 @@ import { BonusCardsModule } from './bonus-cards/bonus-cards.module';
 import { MembersModule } from './members/members.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { AgentsModule } from './agents/agents.module';
+import { NameListsModule } from './name-lists/name-lists.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AgentsModule } from './agents/agents.module';
     MembersModule,
     AgentsModule,
     BookingsModule,
+    NameListsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

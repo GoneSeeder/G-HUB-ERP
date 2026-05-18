@@ -42,12 +42,19 @@ export default function ProtectedLayout({
     }`;
 
   return (
-    <div className="min-h-screen bg-[#e7eef6] text-slate-900">
+    <div className="h-screen overflow-hidden bg-[#e7eef6] text-slate-900">
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white shadow-sm">
         <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-5 py-3">
           <div className="flex items-center gap-4">
-            <Link href="/hub" className="text-lg font-semibold text-slate-950">
-              G-HUB
+            <Link
+              href="/hub"
+              className="flex h-12 w-12 items-center justify-center rounded-xl transition hover:bg-blue-50"
+            >
+              <img
+                src="/g-hub-nav-logo.png"
+                alt="G-HUB"
+                className="h-11 w-11 rounded-xl object-contain"
+              />
             </Link>
             <nav className="flex items-center gap-2">
               <Link className={navLinkClass('/hub')} href="/hub">
@@ -69,7 +76,7 @@ export default function ProtectedLayout({
           </button>
         </div>
       </header>
-      <main className="w-full p-5">{children}</main>
+      <main className="h-[calc(100vh-73px)] w-full overflow-hidden p-4">{children}</main>
     </div>
   );
 }

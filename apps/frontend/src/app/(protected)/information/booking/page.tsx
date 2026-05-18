@@ -50,10 +50,18 @@ type ImportResponse = {
   skipped: number;
 };
 
-type AgentMatchingResponse = {
-  requested: number;
-  matched: number;
-  unmatched: number;
+type AgentOption = {
+  id: string;
+  agentCode: string;
+  name: string;
+};
+
+type AgentMatching = {
+  id: string;
+  agentCodeRef: string;
+  agentId: string;
+  agentCode: string;
+  agentName: string;
 };
 
 type CreateBonusCardsResponse = {
@@ -148,6 +156,7 @@ export default function InformationBookingPage() {
   const [error, setError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importMessage, setImportMessage] = useState('');
+  const [agentMatchingOpen, setAgentMatchingOpen] = useState(false);
 
   const selectedRow = selectedIds.length === 1 ? rows.find((row) => row.id === selectedIds[0]) ?? null : null;
   const allRowsSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.id));
@@ -231,29 +240,6 @@ export default function InformationBookingPage() {
     await loadRows();
   };
 
-  const matchSelectedAgents = async () => {
-    if (selectedIds.length === 0) {
-      setError('Please select booking rows first.');
-      return;
-    }
-    setError(null);
-    setImportMessage('');
-    try {
-      const result = await apiFetch<AgentMatchingResponse>('/api/bookings/agent-matching', {
-        method: 'POST',
-        body: JSON.stringify({ ids: selectedIds }),
-      });
-      setImportMessage(
-        `Agent matching completed. Matched ${result.matched} / ${result.requested} booking rows${
-          result.unmatched ? `, unmatched ${result.unmatched}` : ''
-        }.`,
-      );
-      await loadRows();
-    } catch (matchError) {
-      setError(matchError instanceof Error ? matchError.message : 'Agent matching failed.');
-    }
-  };
-
   const createSelectedBonusCards = async () => {
     if (selectedIds.length === 0) {
       setError('Please select booking rows first.');
@@ -325,7 +311,7 @@ export default function InformationBookingPage() {
             <button type="button" className="toolbar-btn" onClick={() => setImportOpen(true)}>
               Import File Separate
             </button>
-            <button type="button" className="toolbar-btn" disabled={selectedIds.length === 0} onClick={matchSelectedAgents}>
+            <button type="button" className="toolbar-btn" onClick={() => setAgentMatchingOpen(true)}>
               Agent Matching
             </button>
             <button type="button" className="toolbar-btn" disabled={selectedIds.length === 0} onClick={createSelectedBonusCards}>
@@ -495,6 +481,11 @@ export default function InformationBookingPage() {
           }}
         />
       ) : null}
+      {agentMatchingOpen ? (
+        <AgentMatchingModal
+          onClose={() => setAgentMatchingOpen(false)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -621,6 +612,223 @@ function BookingModal({
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function AgentMatchingModal({ onClose }: { onClose: () => void }) {
+  const [rows, setRows] = useState<AgentMatching[]>([]);
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [search, setSearch] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [editing, setEditing] = useState<AgentMatching | null>(null);
+  const [agentCodeRef, setAgentCodeRef] = useState('');
+  const [agentId, setAgentId] = useState('');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const selected = rows.find((row) => row.id === selectedId) ?? null;
+  const agentOptions =
+    editing && agentId && !agents.some((agent) => agent.id === agentId)
+      ? [
+          {
+            id: agentId,
+            agentCode: editing.agentCode,
+            name: editing.agentName,
+          },
+          ...agents,
+        ]
+      : agents;
+
+  const loadRows = async () => {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set('search', search.trim());
+    const data = await apiFetch<AgentMatching[]>(`/api/bookings/agent-matchings?${params.toString()}`);
+    setRows(data);
+    setSelectedId((current) => (current && data.some((row) => row.id === current) ? current : null));
+  };
+
+  const loadAgents = async () => {
+    const data = await apiFetch<AgentOption[]>('/api/agents/options');
+    setAgents(data);
+  };
+
+  useEffect(() => {
+    void loadRows();
+    void loadAgents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const openAdd = () => {
+    setEditing(null);
+    setAgentCodeRef('');
+    setAgentId(agents[0]?.id ?? '');
+    setError(null);
+    setDetailOpen(true);
+  };
+
+  const openEdit = () => {
+    if (!selected) {
+      setError('Please select mapping first.');
+      return;
+    }
+    setEditing(selected);
+    setAgentCodeRef(selected.agentCodeRef);
+    setAgentId(selected.agentId);
+    setError(null);
+    setDetailOpen(true);
+  };
+
+  const save = async () => {
+    const agent = agents.find((item) => item.id === agentId);
+    const body = JSON.stringify({
+      agentCodeRef,
+      agentId,
+      agentCode: agent?.agentCode,
+    });
+    if (editing) {
+      await apiFetch(`/api/bookings/agent-matchings/${editing.id}`, { method: 'PATCH', body });
+    } else {
+      await apiFetch('/api/bookings/agent-matchings', { method: 'POST', body });
+    }
+    setDetailOpen(false);
+    setMessage('Agent matching saved.');
+    await loadRows();
+  };
+
+  const remove = async () => {
+    if (!selected || !window.confirm(`Delete mapping "${selected.agentCodeRef}"?`)) {
+      return;
+    }
+    await apiFetch(`/api/bookings/agent-matchings/${selected.id}`, { method: 'DELETE' });
+    setSelectedId(null);
+    setMessage('Agent matching deleted.');
+    await loadRows();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+      <div className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950">Agent Matching</h2>
+            <p className="text-sm text-slate-500">Map Agent Code Ref from Main/Detail files to Agent master codes.</p>
+          </div>
+          <button type="button" className="toolbar-btn" onClick={onClose}>
+            Close
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-5 py-3">
+          <button type="button" className="toolbar-btn-primary" onClick={openAdd}>
+            Add
+          </button>
+          <button type="button" className="toolbar-btn" onClick={openEdit}>
+            Edit
+          </button>
+          <button type="button" className="toolbar-btn-danger" onClick={remove}>
+            Delete
+          </button>
+          <button type="button" className="toolbar-btn" onClick={loadRows}>
+            Refresh
+          </button>
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Enter text to search..."
+            className="form-input ml-auto max-w-xs rounded-md"
+          />
+          <button type="button" className="toolbar-btn" onClick={loadRows}>
+            Find
+          </button>
+          {message ? <span className="text-sm font-semibold text-blue-800">{message}</span> : null}
+          {error ? <span className="text-sm font-semibold text-red-700">{error}</span> : null}
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-auto">
+          <table className="w-full min-w-[760px] border-collapse text-sm">
+            <thead className="sticky top-0 bg-white">
+              <tr>
+                <th className="w-8 border-b border-slate-200 px-3 py-2 text-left" />
+                <th className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Agent Code Ref</th>
+                <th className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Agent Code</th>
+                <th className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">Agent Name</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr
+                  key={row.id}
+                  onClick={() => setSelectedId(row.id)}
+                  className={`cursor-pointer hover:bg-blue-50 ${selectedId === row.id ? 'bg-blue-50' : ''}`}
+                >
+                  <td className="border-b border-slate-100 px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedId === row.id}
+                      onChange={() => setSelectedId(selectedId === row.id ? null : row.id)}
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                  </td>
+                  <td className="border-b border-slate-100 px-3 py-2 font-semibold text-slate-900">{row.agentCodeRef}</td>
+                  <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{row.agentCode}</td>
+                  <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{row.agentName || '-'}</td>
+                </tr>
+              ))}
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-12 text-center text-sm text-slate-400">
+                    No agent matching data.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {detailOpen ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4">
+          <div className="w-full max-w-2xl rounded-[10px] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h3 className="text-lg font-semibold text-slate-950">Matching Agent Detail</h3>
+              <button type="button" className="toolbar-btn" onClick={() => setDetailOpen(false)}>
+                Cancel
+              </button>
+            </div>
+            <div className="space-y-4 px-5 py-5">
+              <label className="grid gap-2 md:grid-cols-[150px_1fr] md:items-center">
+                <span className="text-sm font-semibold text-slate-700">Agent Code Ref</span>
+                <input
+                  value={agentCodeRef}
+                  onChange={(event) => setAgentCodeRef(event.target.value)}
+                  className="form-input rounded-md"
+                />
+              </label>
+              <label className="grid gap-2 md:grid-cols-[150px_1fr] md:items-center">
+                <span className="text-sm font-semibold text-slate-700">Agent Code</span>
+                <select value={agentId} onChange={(event) => setAgentId(event.target.value)} className="form-input rounded-md">
+                  <option value="">Please select</option>
+                  {agentOptions.map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.agentCode} - {agent.name || 'No Agent'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-slate-200 px-5 py-4">
+              <button type="button" className="toolbar-btn" onClick={() => setDetailOpen(false)}>
+                Cancel
+              </button>
+              <button type="button" className="toolbar-btn-primary" onClick={save}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -35,6 +35,11 @@ export class AgentsController {
     return this.agentsService.findAll({ page, search, nation, active, typeGroup });
   }
 
+  @Get('options')
+  options(@Query('search') search?: string) {
+    return this.agentsService.findOptions(search);
+  }
+
   @Post()
   create(@Body() body: CreateAgentDto) {
     return this.agentsService.create(body);

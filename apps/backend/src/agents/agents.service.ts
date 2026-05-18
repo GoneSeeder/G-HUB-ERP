@@ -46,6 +46,32 @@ export class AgentsService {
     };
   }
 
+  async findOptions(search = '') {
+    const contains = search.trim()
+      ? { contains: search.trim(), mode: 'insensitive' as const }
+      : null;
+    return this.prisma.agent.findMany({
+      where: {
+        active: true,
+        ...(contains
+          ? {
+              OR: [
+                { agentCode: contains },
+                { name: contains },
+              ],
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        agentCode: true,
+        name: true,
+      },
+      orderBy: [{ agentCode: 'asc' }],
+      take: 500,
+    });
+  }
+
   async create(dto: CreateAgentDto) {
     await this.ensureUniqueAgentCode(dto.agentCode);
     const row = await this.prisma.agent.create({

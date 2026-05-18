@@ -4,7 +4,7 @@ import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { setAuthTokenCookie } from '@/lib/auth';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 interface LoginResponse {
   accessToken: string;
@@ -61,11 +61,15 @@ export default function LoginPage() {
         className="relative w-full max-w-[440px] rounded-[10px] border border-slate-200/80 bg-white/95 px-8 py-9 shadow-[0_24px_70px_rgba(15,23,42,0.12)] backdrop-blur"
       >
         <div className="mb-8">
-          <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-700 text-lg font-bold text-white shadow-[0_10px_24px_rgba(37,99,235,0.28)]">
-            G
+          <div className="mb-6 flex justify-center">
+            <img
+              src="/g-hub-login-logo.png"
+              alt="G-HUB"
+              className="h-auto w-full max-w-[220px] rounded-md object-contain"
+            />
           </div>
           <h1 className="text-[28px] font-semibold leading-tight text-slate-950">
-            Welcome back
+            Welcome to G-HUB
           </h1>
           <p className="mt-2 text-sm text-slate-500">
             Please sign in with your username to continue to G-HUB

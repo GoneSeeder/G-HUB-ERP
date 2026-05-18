@@ -191,3 +191,22 @@ Timezone:
 
 Important:
 - Do not use US date format anywhere in the UI.
+
+ERP Form Layout Rules:
+- ERP forms must be compact and information-dense.
+- Prefer dashboard-style layouts like the Booking form.
+- Do not create long vertical forms unless absolutely necessary.
+- Avoid unnecessary page/modal scrolling.
+- Use multi-column grid layouts to fit fields in one screen.
+- Group related fields into compact cards/sections.
+- Use 3-4 columns for normal fields on desktop.
+- Use 2 columns for medium sections.
+- Use full-width only for textarea, tables, or important summary sections.
+- Keep action buttons fixed at the bottom when using modal/drawer forms.
+- Important fields must be visible without scrolling.
+- Avoid excessive vertical spacing between fields.
+- Avoid large empty areas.
+- Do not stack every input vertically.
+- For master data forms with many fields, use compact sections side by side.
+- Target desktop ERP usage first: 1366x768 and above.
+- UI should look like an operational ERP screen, not a public website form.

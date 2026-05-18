@@ -25,12 +25,14 @@ const informationApps = [
   'information-member',
   'information-bonus-card',
   'information-booking',
+  'information-name-list',
 ];
 
 const appHrefByCode: Record<string, string | undefined> = {
   'information-member': '/information/member',
   'information-bonus-card': '/information/bonus-card',
   'information-booking': '/information/booking',
+  'information-name-list': '/information/name-list',
 };
 
 export default function HubPage() {

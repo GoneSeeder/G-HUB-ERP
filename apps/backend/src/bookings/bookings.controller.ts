@@ -55,6 +55,34 @@ export class BookingsController {
     return this.bookingsService.matchSelectedAgents(body.ids);
   }
 
+  @Get('agent-matchings')
+  findAgentMatchings(@Query('search') search?: string) {
+    return this.bookingsService.findAgentMatchings({ search });
+  }
+
+  @Post('agent-matchings')
+  createAgentMatching(@Body() body: { agentCodeRef: string; agentNameRef?: string; agentId?: string; agentCode?: string }) {
+    return this.bookingsService.createAgentMatching(body);
+  }
+
+  @Post('agent-matchings/import-sql')
+  importAgentMatchingSql(@Body() body: { fileBase64: string }) {
+    return this.bookingsService.importAgentMatchingSql(body.fileBase64);
+  }
+
+  @Patch('agent-matchings/:id')
+  updateAgentMatching(
+    @Param('id') id: string,
+    @Body() body: { agentCodeRef?: string; agentNameRef?: string; agentId?: string; agentCode?: string },
+  ) {
+    return this.bookingsService.updateAgentMatching(id, body);
+  }
+
+  @Delete('agent-matchings/:id')
+  removeAgentMatching(@Param('id') id: string) {
+    return this.bookingsService.removeAgentMatching(id);
+  }
+
   @Post('create-bonus-cards')
   createBonusCards(@Body() body: { ids: string[] }) {
     return this.bookingsService.createBonusCardsFromBookings(body.ids);
