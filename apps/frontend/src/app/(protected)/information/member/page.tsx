@@ -1,6 +1,8 @@
 'use client';
 
 import { ChangeEvent, FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
+import { EditIcon, PlusIcon, SearchIcon, TrashIcon, UploadIcon } from '@/components/ui/icons';
+import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { apiFetch } from '@/lib/api';
 
 const THAI_ID_BRIDGE_URL = 'http://127.0.0.1:32123';
@@ -369,19 +371,24 @@ export default function MemberPage() {
   };
 
   return (
-    <section className="flex h-full min-h-0 flex-col gap-3">
-      <div className="inline-flex shrink-0 self-start rounded-[10px] border border-slate-200 bg-white p-1 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+    <PageShell className="!max-w-[1400px]">
+      <PageHeader
+        eyebrow="Master Data · Members"
+        title="ข้อมูลสมาชิก"
+        description="Guide information and member profile management."
+      />
+      <div className="inline-flex shrink-0 self-start rounded-lg border border-slate-200 bg-white p-1">
         <button
           type="button"
           onClick={() => setActiveTab('guides')}
-          className={activeTab === 'guides' ? 'toolbar-btn-primary min-h-10 px-5' : 'toolbar-btn min-h-10 px-5'}
+          className={activeTab === 'guides' ? 'toolbar-btn-primary min-h-9 px-4' : 'toolbar-btn min-h-9 px-4'}
         >
           Guides
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('agents')}
-          className={activeTab === 'agents' ? 'toolbar-btn-primary min-h-10 px-5' : 'toolbar-btn min-h-10 px-5'}
+          className={activeTab === 'agents' ? 'toolbar-btn-primary min-h-9 px-4' : 'toolbar-btn min-h-9 px-4'}
         >
           Agents
         </button>
@@ -389,41 +396,44 @@ export default function MemberPage() {
 
       {activeTab === 'guides' ? (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="shrink-0 rounded-[10px] border border-slate-200/80 bg-white/95 px-4 py-3 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
+      <DataPanel className="erp-slide-left shrink-0 px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold text-slate-950">ข้อมูลสมาชิก</h1>
-            <p className="text-sm text-slate-500">Guide information and member profile management.</p>
+            <p className="text-sm font-light text-slate-500">Guide information and member profile management.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="toolbar-btn-primary" onClick={openCreate}>
-              เพิ่ม
+              <PlusIcon className="erp-action-icon" /> Add Guide
             </button>
             <button type="button" className="toolbar-btn" onClick={openEdit}>
-              แก้ไข
+              <EditIcon className="erp-action-icon" /> Edit
             </button>
             <button type="button" className="toolbar-btn-danger" onClick={onDeleteSelected}>
-              ลบสมาชิก
+              <TrashIcon className="erp-action-icon" /> Delete
             </button>
           </div>
         </div>
 
-        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_130px]">
-          <input
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Search guide code, name, phone, passport..."
-            className="form-input rounded-md"
-          />
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[260px] flex-1">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search guide code, name, phone, passport..."
+              className="form-input rounded-md pl-9"
+            />
+          </div>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-right">
             <p className="text-xs text-slate-500">Records</p>
             <p className="text-lg font-semibold text-blue-800">{total}</p>
           </div>
         </div>
-      </div>
+      </DataPanel>
 
       {error ? (
         <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
@@ -431,19 +441,19 @@ export default function MemberPage() {
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
+      <DataPanel className="erp-slide-right flex min-h-0 flex-1 flex-col">
         <div className="shrink-0 border-b border-slate-200 px-4 py-2 text-sm text-slate-400">
           Showing {members.length} of {total} items
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
-          <table className="w-full min-w-[1000px] border-collapse text-sm">
-            <thead className="bg-white">
+          <table className="w-full table-fixed border-collapse text-xs">
+            <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
                 <th className="w-12 border-b border-slate-200 px-4 py-2 text-left" />
                 {columns.map((column) => (
                   <th
                     key={column}
-                    className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400"
+                    className="border-b border-slate-200 px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-slate-400"
                   >
                     {column}
                   </th>
@@ -459,8 +469,8 @@ export default function MemberPage() {
                     <tr
                       key={member.id}
                       onClick={() => setSelectedId(member.id)}
-                      className={`cursor-pointer transition hover:bg-blue-50 ${
-                        checked ? 'bg-blue-50' : ''
+                      className={`cursor-pointer transition hover:bg-[#0752d6]/[0.07] ${
+                        checked ? 'bg-sky-50' : ''
                       }`}
                     >
                       <td className="border-b border-slate-100 px-4 py-2">
@@ -469,25 +479,25 @@ export default function MemberPage() {
                           checked={checked}
                           onChange={() => setSelectedId(checked ? null : member.id)}
                           onClick={(event) => event.stopPropagation()}
-                          className="h-4 w-4 accent-blue-700"
+                          className="h-4 w-4 accent-[#1478ff]"
                         />
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-2 font-semibold text-slate-900">
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 font-medium text-slate-900">
                         {member.guideCode}
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 text-slate-700">
                         {formatMemberDisplayName(member)}
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 text-slate-700">
                         {member.phone || '-'}
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 text-slate-700">
                         {member.nationalId || '-'}
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 text-slate-700">
                         {member.passportNo || '-'}
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 text-slate-700">
                         {member.guideLicenseNo || '-'}
                       </td>
                     </tr>
@@ -521,7 +531,7 @@ export default function MemberPage() {
             ))}
           </div>
         ) : null}
-      </div>
+      </DataPanel>
 
       {modalOpen ? (
         <MemberModal
@@ -541,7 +551,7 @@ export default function MemberPage() {
       ) : (
         <AgentManagement isAdmin={isAdmin} />
       )}
-    </section>
+    </PageShell>
   );
 }
 
@@ -703,40 +713,43 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="shrink-0 rounded-[10px] border border-slate-200/80 bg-white/95 px-4 py-3 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
+      <DataPanel className="erp-slide-left shrink-0 px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold text-slate-950">Agent Management</h1>
-            <p className="text-sm text-slate-500">Master data for booking agent matching and import mapping.</p>
+            <p className="text-sm font-light text-slate-500">Master data for booking agent matching and import mapping.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {isAdmin ? (
               <button type="button" className="toolbar-btn" onClick={() => setImportOpen(true)}>
-                Import Legacy DB
+                <UploadIcon className="erp-action-icon" /> Import Legacy DB
               </button>
             ) : null}
             <button type="button" className="toolbar-btn-primary" onClick={openCreate}>
-              Add Agent
+              <PlusIcon className="erp-action-icon" /> Add Agent
             </button>
             <button type="button" className="toolbar-btn" onClick={openEdit}>
-              Edit
+              <EditIcon className="erp-action-icon" /> Edit
             </button>
             <button type="button" className="toolbar-btn-danger" onClick={deleteSelected}>
-              Delete
+              <TrashIcon className="erp-action-icon" /> Delete
             </button>
           </div>
         </div>
 
-        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_120px_140px_140px_120px]">
-          <input
-            value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Search agent code, name, phone, tax id..."
-            className="form-input rounded-md"
-          />
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[260px] flex-1">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search agent code, name, phone, tax id..."
+              className="form-input rounded-md pl-9"
+            />
+          </div>
           <input
             value={nation}
             onChange={(event) => {
@@ -772,25 +785,25 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
             <p className="text-lg font-semibold text-blue-800">{total}</p>
           </div>
         </div>
-      </div>
+      </DataPanel>
 
       {error ? (
-        <div className="rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800">
+        <div className="rounded-md border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-semibold text-[#0752d6]">
           {error}
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
+      <DataPanel className="erp-slide-right flex min-h-0 flex-1 flex-col">
         <div className="shrink-0 border-b border-slate-200 px-4 py-2 text-sm text-slate-400">
           Showing {agents.length} of {total} items
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
-          <table className="w-full min-w-[1100px] border-collapse text-sm">
-            <thead className="bg-white">
+          <table className="w-full table-fixed border-collapse text-xs">
+            <thead className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_rgba(226,232,240,1)]">
               <tr>
-                <th className="w-12 border-b border-slate-200 px-4 py-2 text-left" />
+                <th className="w-12 border-b border-slate-200 bg-white px-4 py-2 text-left" />
                 {agentColumns.map((column) => (
-                  <th key={column} className="border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400">
+                  <th key={column} className="border-b border-slate-200 bg-white px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-slate-400">
                     {column}
                   </th>
                 ))}
@@ -804,7 +817,7 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
                     <tr
                       key={agent.id}
                       onClick={() => setSelectedId(agent.id)}
-                      className={`cursor-pointer transition hover:bg-blue-50 ${checked ? 'bg-blue-50' : ''}`}
+                      className={`cursor-pointer transition hover:bg-[#0752d6]/[0.07] ${checked ? 'bg-sky-50' : ''}`}
                     >
                       <td className="border-b border-slate-100 px-4 py-2">
                         <input
@@ -812,16 +825,16 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
                           checked={checked}
                           onChange={() => setSelectedId(checked ? null : agent.id)}
                           onClick={(event) => event.stopPropagation()}
-                          className="h-4 w-4 accent-blue-700"
+                          className="h-4 w-4 accent-[#1478ff]"
                         />
                       </td>
-                      <td className="border-b border-slate-100 px-3 py-2 font-semibold text-slate-900">{agent.agentCode}</td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{agent.name || '-'}</td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{agent.nation || '-'}</td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{agent.phone || '-'}</td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{agent.taxId || '-'}</td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{agent.contactPerson || '-'}</td>
-                      <td className="border-b border-slate-100 px-3 py-2 text-slate-700">{agent.typeGroup || '-'}</td>
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 font-medium text-slate-900">{agent.agentCode}</td>
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 text-slate-700">{agent.name || '-'}</td>
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 text-slate-700">{agent.nation || '-'}</td>
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 text-slate-700">{agent.phone || '-'}</td>
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 text-slate-700">{agent.taxId || '-'}</td>
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 text-slate-700">{agent.contactPerson || '-'}</td>
+                      <td className="truncate border-b border-slate-100 px-3 py-2.5 text-slate-700">{agent.typeGroup || '-'}</td>
                       <td className="border-b border-slate-100 px-3 py-2">
                         <span className={agent.active ? 'text-emerald-700' : 'text-slate-400'}>
                           {agent.active ? 'Active' : 'Inactive'}
@@ -854,7 +867,7 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
             ))}
           </div>
         ) : null}
-      </div>
+      </DataPanel>
 
       {modalOpen ? (
         <AgentModal
@@ -1023,7 +1036,7 @@ function MemberModal({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              className="min-h-10 rounded-md border border-emerald-500 bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_22px_rgba(5,150,105,0.24)] transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-100"
+              className="min-h-10 rounded-md border border-emerald-500 bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-100"
               onClick={scanCard}
             >
               Scan CardID
@@ -1052,7 +1065,7 @@ function MemberModal({
               </button>
             </div>
 
-            <div className="rounded-[8px] border border-blue-100 bg-blue-50/70 p-4">
+            <div className="rounded-[8px] border border-sky-100 bg-sky-50/70 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Guide Code</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">{form.guideCode}</p>
               <p className="mt-2 text-xs leading-5 text-slate-500">
@@ -1063,7 +1076,7 @@ function MemberModal({
 
           <div className="space-y-4">
             {lookupStatus ? (
-              <div className="rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-800">
+              <div className="rounded-md border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-medium text-[#0752d6]">
                 {lookupStatus}
               </div>
             ) : null}
@@ -1086,7 +1099,7 @@ function MemberModal({
                 onChange={(value) => setField('nationalId', value)}
                 onBlur={lookupNationalId}
                 onKeyDown={onNationalIdKeyDown}
-                required
+                marker="optional"
               />
               <Field label="เลขที่ Passport" value={form.passportNo} onChange={(value) => setField('passportNo', value)} marker="optional" />
               <Field label="เลขที่มัคคุเทศก์" value={form.guideLicenseNo} onChange={(value) => setField('guideLicenseNo', value)} marker="optional" />
@@ -1101,12 +1114,12 @@ function MemberModal({
             </FormSection>
 
             <FormSection title="ชื่อ-สกุล">
-              <Field label="คำนำหน้า (ภาษาไทย)" value={form.titleTh} onChange={(value) => setField('titleTh', value)} required />
-              <Field label="ชื่อ (ภาษาไทย)" value={form.firstNameTh} onChange={(value) => setField('firstNameTh', value)} required />
-              <Field label="นามสกุล (ภาษาไทย)" value={form.lastNameTh} onChange={(value) => setField('lastNameTh', value)} required />
-              <Field label="คำนำหน้า (ภาษาอังกฤษ)" value={form.titleEn} onChange={(value) => setField('titleEn', value)} required />
-              <Field label="ชื่อ (ภาษาอังกฤษ)" value={form.firstNameEn} onChange={(value) => setField('firstNameEn', value)} required />
-              <Field label="นามสกุล (ภาษาอังกฤษ)" value={form.lastNameEn} onChange={(value) => setField('lastNameEn', value)} required />
+              <Field label="คำนำหน้า (ภาษาไทย)" value={form.titleTh} onChange={(value) => setField('titleTh', value)} marker="optional" />
+              <Field label="ชื่อ (ภาษาไทย)" value={form.firstNameTh} onChange={(value) => setField('firstNameTh', value)} marker="optional" />
+              <Field label="นามสกุล (ภาษาไทย)" value={form.lastNameTh} onChange={(value) => setField('lastNameTh', value)} marker="optional" />
+              <Field label="คำนำหน้า (ภาษาอังกฤษ)" value={form.titleEn} onChange={(value) => setField('titleEn', value)} marker="optional" />
+              <Field label="ชื่อ (ภาษาอังกฤษ)" value={form.firstNameEn} onChange={(value) => setField('firstNameEn', value)} marker="optional" />
+              <Field label="นามสกุล (ภาษาอังกฤษ)" value={form.lastNameEn} onChange={(value) => setField('lastNameEn', value)} marker="optional" />
               <Field label="FullNameTH" value={form.fullNameTh || fullNameTh} onChange={(value) => setField('fullNameTh', value)} />
               <Field label="FullName" value={form.fullName || fullName} onChange={(value) => setField('fullName', value)} />
               <Field label="ชื่อเล่น" value={form.nickname} onChange={(value) => setField('nickname', value)} />
@@ -1206,7 +1219,7 @@ function AgentImportModal({
                 <tbody>
                   {preview?.rows.length ? (
                     preview.rows.map((row, index) => (
-                      <tr key={`${row.agentCode}-${index}`} className="hover:bg-blue-50">
+                      <tr key={`${row.agentCode}-${index}`} className="hover:bg-sky-50">
                         <td className="border-b border-slate-100 px-3 py-3 font-semibold text-slate-900">{row.agentCode}</td>
                         <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{row.name || '-'}</td>
                         <td className="border-b border-slate-100 px-3 py-3 text-slate-700">{row.nation || '-'}</td>
@@ -1315,7 +1328,7 @@ function AgentModal({
                   type="checkbox"
                   checked={form.active}
                   onChange={(event) => setField('active', event.target.checked)}
-                  className="h-4 w-4 accent-blue-700"
+                  className="h-4 w-4 accent-[#1478ff]"
                 />
                 Active
               </label>
@@ -1572,7 +1585,7 @@ function TextArea({
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-20 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+        className="min-h-20 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]"
       />
     </label>
   );

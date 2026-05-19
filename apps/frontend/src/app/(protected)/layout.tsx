@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { clearAuthTokenCookie } from '@/lib/auth';
+import { FolderIcon, LogOutIcon } from '@/components/ui/icons';
 
 interface MeResponse {
   roles: string[];
@@ -35,33 +36,35 @@ export default function ProtectedLayout({
   };
 
   const navLinkClass = (path: string) =>
-    `rounded-md px-3 py-2 text-sm font-medium transition ${
+    `inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm font-medium transition-colors ${
       pathname.startsWith(path)
-        ? 'bg-blue-700 text-white shadow-sm'
-        : 'text-slate-700 hover:bg-blue-50 hover:text-blue-800'
+        ? 'border-slate-200 bg-white text-slate-950'
+        : 'border-transparent text-slate-500 hover:border-slate-200 hover:bg-white hover:text-slate-950'
     }`;
 
   return (
-    <div className="h-screen overflow-hidden bg-[#e7eef6] text-slate-900">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white shadow-sm">
-        <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-5 py-3">
+    <div className="h-screen overflow-hidden bg-[#f5f8fc] text-slate-950">
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-[#f5f8fc]/95 backdrop-blur">
+        <div className="mx-auto flex min-h-12 max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-2">
           <div className="flex items-center gap-4">
             <Link
               href="/hub"
-              className="flex h-12 w-12 items-center justify-center rounded-xl transition hover:bg-blue-50"
+              className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-white"
             >
               <img
                 src="/g-hub-nav-logo.png"
                 alt="G-HUB"
-                className="h-11 w-11 rounded-xl object-contain"
+                className="h-8 w-8 rounded-lg object-contain"
               />
             </Link>
             <nav className="flex items-center gap-2">
               <Link className={navLinkClass('/hub')} href="/hub">
+                <FolderIcon className="h-3.5 w-3.5" />
                 Hub
               </Link>
               {canSeeAdmin ? (
                 <Link className={navLinkClass('/admin')} href="/admin">
+                  <FolderIcon className="h-3.5 w-3.5" />
                   Admin Dashboard
                 </Link>
               ) : null}
@@ -70,13 +73,14 @@ export default function ProtectedLayout({
           <button
             type="button"
             onClick={logout}
-            className="toolbar-btn"
+            className="toolbar-btn min-h-9 px-3"
           >
+            <LogOutIcon className="erp-action-icon" />
             Log out
           </button>
         </div>
       </header>
-      <main className="h-[calc(100vh-73px)] w-full overflow-hidden p-4">{children}</main>
+      <main className="h-[calc(100vh-49px)] w-full overflow-auto px-4 py-6">{children}</main>
     </div>
   );
 }

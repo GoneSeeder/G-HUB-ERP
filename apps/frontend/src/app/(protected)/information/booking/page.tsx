@@ -1,6 +1,20 @@
 'use client';
 
 import { FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
+import {
+  DownloadIcon,
+  EditIcon,
+  LinkIcon,
+  PlusIcon,
+  PrintIcon,
+  RefreshIcon,
+  SaveIcon,
+  SearchIcon,
+  TrashIcon,
+  UploadIcon,
+  XIcon,
+} from '@/components/ui/icons';
+import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { apiFetch } from '@/lib/api';
 
 type BookingReference = {
@@ -297,35 +311,36 @@ export default function InformationBookingPage() {
   };
 
   return (
-    <section className="flex h-[calc(100vh-6.5rem)] min-h-0 flex-col gap-3 overflow-hidden">
-      <div className="shrink-0 rounded-[10px] border border-slate-200/80 bg-white/95 px-4 py-3 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-950">บันทึกการจองเข้าร้าน</h1>
-            <p className="text-sm text-slate-500">Booking information management for INFORMATION-BOOKING.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+    <PageShell className="!max-w-[calc(100vw-2rem)]">
+      <PageHeader
+        eyebrow="Operations · Booking"
+        title="บันทึกการจองเข้าร้าน"
+        description="Booking information management for INFORMATION-BOOKING."
+        actions={
+          <>
             <button type="button" className="toolbar-btn-primary" onClick={openCreate}>
-              Add Booking
+              <PlusIcon className="erp-action-icon" /> Add Booking
             </button>
-            <button type="button" className="toolbar-btn" onClick={() => setImportOpen(true)}>
-              Import File Separate
+            <button type="button" className="toolbar-btn-excel" onClick={() => setImportOpen(true)}>
+              <UploadIcon className="erp-action-icon" /> Import File Separate
             </button>
             <button type="button" className="toolbar-btn" onClick={() => setAgentMatchingOpen(true)}>
-              Agent Matching
+              <LinkIcon className="erp-action-icon" /> Agent Matching
             </button>
             <button type="button" className="toolbar-btn" disabled={selectedIds.length === 0} onClick={createSelectedBonusCards}>
-              Create to Bonus Card
+              <PlusIcon className="erp-action-icon" /> Create to Bonus Card
             </button>
             <button type="button" className="toolbar-btn" onClick={exportRows}>
-              Export
+              <DownloadIcon className="erp-action-icon" /> Export
             </button>
             <button type="button" className="toolbar-btn" onClick={() => window.print()}>
-              Print
+              <PrintIcon className="erp-action-icon" /> Print
             </button>
-          </div>
-        </div>
+          </>
+        }
+      />
 
+      <DataPanel className="erp-slide-left shrink-0 px-4 py-3">
         <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-[160px_180px_130px_150px_150px_1fr]">
           <FilterDateInput label="Date" value={filters.date} onChange={(date) => setFilters({ ...filters, date })} />
           <FilterInput label="Agent" value={filters.agent} onChange={(agent) => setFilters({ ...filters, agent })} />
@@ -357,7 +372,7 @@ export default function InformationBookingPage() {
             onChange={(search) => setFilters({ ...filters, search })}
           />
         </div>
-      </div>
+      </DataPanel>
 
       {error ? (
         <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
@@ -365,12 +380,12 @@ export default function InformationBookingPage() {
         </div>
       ) : null}
       {importMessage ? (
-        <div className="rounded-md border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800">
+        <div className="rounded-md border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-semibold text-[#0752d6]">
           {importMessage}
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
+      <DataPanel className="erp-slide-right flex min-h-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 text-sm text-slate-500">
           <span>
             Showing {rows.length} bookings
@@ -378,16 +393,16 @@ export default function InformationBookingPage() {
           </span>
           <div className="flex flex-wrap gap-2">
             <button type="button" className="toolbar-btn" disabled={!selectedRow} onClick={() => selectedRow && openEdit(selectedRow)}>
-              Edit
+              <EditIcon className="erp-action-icon" /> Edit
             </button>
             <button type="button" className="toolbar-btn-danger" disabled={selectedIds.length === 0} onClick={deleteSelected}>
-              Delete
+              <TrashIcon className="erp-action-icon" /> Delete
             </button>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-          <table className="w-full table-fixed border-collapse text-[12px]">
-            <thead className="sticky top-0 bg-white">
+        <div className="min-h-0 flex-1 overflow-auto">
+          <table className="min-w-[1760px] table-fixed border-collapse text-[12px]">
+            <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
                 <th className="w-9 border-b border-slate-200 px-2 py-2 text-left">
                   <input
@@ -433,7 +448,7 @@ export default function InformationBookingPage() {
                 rows.map((row) => (
                   <tr
                     key={row.id}
-                    className={`cursor-pointer transition hover:bg-blue-50 ${selectedIds.includes(row.id) ? 'bg-blue-50' : ''}`}
+                    className={`cursor-pointer transition hover:bg-sky-50 ${selectedIds.includes(row.id) ? 'bg-sky-50' : ''}`}
                     onClick={() => toggleRowSelection(row.id)}
                   >
                     <td className="border-b border-slate-100 px-2 py-2">
@@ -460,7 +475,7 @@ export default function InformationBookingPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </DataPanel>
 
       {formMode ? (
         <BookingModal
@@ -486,7 +501,7 @@ export default function InformationBookingPage() {
           onClose={() => setAgentMatchingOpen(false)}
         />
       ) : null}
-    </section>
+    </PageShell>
   );
 }
 
@@ -521,7 +536,7 @@ function BookingModal({
             <p className="mt-0.5 text-xs text-slate-500">Booking detail, reference, status, and upload tracking.</p>
           </div>
           <button type="button" className="toolbar-btn" onClick={onClose}>
-            Close
+            <XIcon className="erp-action-icon" /> Close
           </button>
         </div>
 
@@ -722,16 +737,16 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
 
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-5 py-3">
           <button type="button" className="toolbar-btn-primary" onClick={openAdd}>
-            Add
+            <PlusIcon className="erp-action-icon" /> Add
           </button>
           <button type="button" className="toolbar-btn" onClick={openEdit}>
-            Edit
+            <EditIcon className="erp-action-icon" /> Edit
           </button>
           <button type="button" className="toolbar-btn-danger" onClick={remove}>
-            Delete
+            <TrashIcon className="erp-action-icon" /> Delete
           </button>
           <button type="button" className="toolbar-btn" onClick={loadRows}>
-            Refresh
+            <RefreshIcon className="erp-action-icon" /> Refresh
           </button>
           <input
             value={search}
@@ -740,7 +755,7 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
             className="form-input ml-auto max-w-xs rounded-md"
           />
           <button type="button" className="toolbar-btn" onClick={loadRows}>
-            Find
+            <SearchIcon className="erp-action-icon" /> Find
           </button>
           {message ? <span className="text-sm font-semibold text-blue-800">{message}</span> : null}
           {error ? <span className="text-sm font-semibold text-red-700">{error}</span> : null}
@@ -761,7 +776,7 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
                 <tr
                   key={row.id}
                   onClick={() => setSelectedId(row.id)}
-                  className={`cursor-pointer hover:bg-blue-50 ${selectedId === row.id ? 'bg-blue-50' : ''}`}
+                  className={`cursor-pointer hover:bg-sky-50 ${selectedId === row.id ? 'bg-sky-50' : ''}`}
                 >
                   <td className="border-b border-slate-100 px-3 py-2">
                     <input
@@ -794,7 +809,7 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <h3 className="text-lg font-semibold text-slate-950">Matching Agent Detail</h3>
               <button type="button" className="toolbar-btn" onClick={() => setDetailOpen(false)}>
-                Cancel
+                <XIcon className="erp-action-icon" /> Cancel
               </button>
             </div>
             <div className="space-y-4 px-5 py-5">
@@ -820,10 +835,10 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
             </div>
             <div className="flex justify-end gap-3 border-t border-slate-200 px-5 py-4">
               <button type="button" className="toolbar-btn" onClick={() => setDetailOpen(false)}>
-                Cancel
+                <XIcon className="erp-action-icon" /> Cancel
               </button>
               <button type="button" className="toolbar-btn-primary" onClick={save}>
-                Save
+                <SaveIcon className="erp-action-icon" /> Save
               </button>
             </div>
           </div>
@@ -924,7 +939,7 @@ function ImportModal({
             <p className="mt-1 text-sm text-slate-500">Upload Main_YYYY-MM-DD.txt and Detail_YYYY-MM-DD.txt.</p>
           </div>
           <button type="button" className="toolbar-btn" onClick={onClose}>
-            Close
+            <XIcon className="erp-action-icon" /> Close
           </button>
         </div>
         {error ? <div className="mt-4 rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div> : null}
@@ -954,14 +969,14 @@ function ImportModal({
             <div className="flex rounded-md border border-slate-200 bg-slate-50 p-1">
               <button
                 type="button"
-                className={`rounded px-4 py-2 text-sm font-semibold ${activePreview === 'main' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600'}`}
+                className={`rounded px-4 py-2 text-sm font-medium ${activePreview === 'main' ? 'bg-[#0b63f6] text-white' : 'text-slate-600 hover:bg-slate-100'}`}
                 onClick={() => setActivePreview('main')}
               >
                 Main
               </button>
               <button
                 type="button"
-                className={`rounded px-4 py-2 text-sm font-semibold ${activePreview === 'detail' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600'}`}
+                className={`rounded px-4 py-2 text-sm font-medium ${activePreview === 'detail' ? 'bg-[#0b63f6] text-white' : 'text-slate-600 hover:bg-slate-100'}`}
                 onClick={() => setActivePreview('detail')}
               >
                 Detail
@@ -979,7 +994,7 @@ function ImportModal({
                 <span>Preview file before import.</span>
               )}
               <button type="button" className="toolbar-btn" disabled={loading || !mainFile} onClick={previewFiles}>
-                {loading ? 'Checking...' : 'Check Duplicate / Preview'}
+                <SearchIcon className="erp-action-icon" /> {loading ? 'Checking...' : 'Check Duplicate / Preview'}
               </button>
             </div>
           </div>
@@ -997,7 +1012,7 @@ function ImportModal({
                 </thead>
                 <tbody>
                   {previewRows.rows.map((row, rowIndex) => (
-                    <tr key={rowIndex} className="hover:bg-blue-50">
+                    <tr key={rowIndex} className="hover:bg-sky-50">
                       {previewRows.columns.map((_, columnIndex) => (
                         <td key={columnIndex} className="border-b border-slate-100 px-3 py-2 text-slate-700">
                           {row[columnIndex] ?? ''}
@@ -1020,10 +1035,10 @@ function ImportModal({
         </div>
         <div className="mt-5 flex justify-end gap-3">
           <button type="button" className="toolbar-btn" onClick={onClose}>
-            Cancel
+            <XIcon className="erp-action-icon" /> Cancel
           </button>
           <button type="button" className="toolbar-btn-primary" disabled={!canImport} onClick={importFiles}>
-            {loading ? 'Importing...' : 'Import'}
+            <UploadIcon className="erp-action-icon" /> {loading ? 'Importing...' : 'Import'}
           </button>
         </div>
       </div>
@@ -1221,7 +1236,7 @@ function TextArea({
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`${compact ? 'min-h-8' : 'min-h-14'} w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100`}
+        className={`${compact ? 'min-h-8' : 'min-h-14'} w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]`}
       />
     </label>
   );

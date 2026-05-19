@@ -1,6 +1,8 @@
 'use client';
 
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
+import { DownloadIcon, EditIcon, PlusIcon, PrintIcon, SaveIcon, TrashIcon, XIcon } from '@/components/ui/icons';
+import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { apiFetch, apiUpload } from '@/lib/api';
 
 type BonusCard = {
@@ -61,12 +63,12 @@ const emptyForm: BonusCard = {
 };
 
 const visibleColumns: Array<{ key: keyof BonusCard; label: string; width: string }> = [
-  { key: 'bonus', label: 'Bonus', width: '100px' },
-  { key: 'bonusName', label: 'Bonus Name', width: '280px' },
-  { key: 'agentCode', label: 'Agent Code', width: '130px' },
-  { key: 'agentName', label: 'Agent Name', width: '260px' },
-  { key: 'guide', label: 'Guide', width: '130px' },
-  { key: 'guideName', label: 'Guide Name', width: '230px' },
+  { key: 'bonus', label: 'Bonus', width: '72px' },
+  { key: 'bonusName', label: 'Bonus Name', width: '190px' },
+  { key: 'agentCode', label: 'Agent Code', width: '92px' },
+  { key: 'agentName', label: 'Agent Name', width: '190px' },
+  { key: 'guide', label: 'Guide', width: '88px' },
+  { key: 'guideName', label: 'Guide Name', width: '170px' },
   { key: 'partyCode', label: 'Party Code', width: '170px' },
   { key: 'comment', label: 'Remark', width: '240px' },
 ];
@@ -234,26 +236,27 @@ export default function BonusCardPage() {
   };
 
   return (
-    <section className="space-y-4">
-      <div className="border border-slate-200 bg-white px-5 py-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-950">Bonus Card</h1>
-            <p className="text-sm text-slate-500">Enterprise bonus card records from PostgreSQL.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+    <PageShell className="!max-w-[1380px]">
+      <PageHeader
+        eyebrow="Document · Bonus Card"
+        title="Bonus Card"
+        description="Enterprise bonus card records from PostgreSQL."
+        actions={
+          <>
             <button className="toolbar-btn-primary" onClick={openCreate}>
-              Add Bonus
+              <PlusIcon className="erp-action-icon" /> Add Bonus
             </button>
             <button className="toolbar-btn" onClick={() => window.print()}>
-              Print
+              <PrintIcon className="erp-action-icon" /> Print
             </button>
             <button className="toolbar-btn" onClick={() => setExportOpen(true)}>
-              Export
+              <DownloadIcon className="erp-action-icon" /> Export
             </button>
-          </div>
-        </div>
+          </>
+        }
+      />
 
+      <DataPanel className="erp-slide-left shrink-0 px-4 py-3">
         <div className="mt-5 grid gap-3 md:grid-cols-[220px_1fr_150px]">
           <input
             type="text"
@@ -269,18 +272,18 @@ export default function BonusCardPage() {
             placeholder="Search bonus, guide, party code, agent..."
             className="form-input"
           />
-          <div className="border border-slate-200 bg-slate-50 px-3 py-2 text-right">
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-right">
             <p className="text-xs text-slate-500">Records</p>
             <p className="text-xl font-semibold text-blue-800">{filteredRows.length}</p>
           </div>
         </div>
-      </div>
+      </DataPanel>
 
       {error ? (
         <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       ) : null}
 
-      <div className="overflow-hidden border border-slate-200 bg-white shadow-sm">
+      <DataPanel className="erp-slide-right overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
           <div className="flex items-center gap-3 text-sm">
             <button
@@ -297,11 +300,11 @@ export default function BonusCardPage() {
         </div>
 
         <div className="overflow-auto">
-          <table className="w-full min-w-[1180px] border-collapse text-sm">
-            <thead className="bg-white">
+          <table className="w-full table-fixed border-collapse text-xs">
+            <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className="w-12 border-b border-slate-200 px-4 py-3 text-left" />
-                <th className="w-16 border-b border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase text-slate-400">
+                <th className="w-10 border-b border-slate-200 px-2 py-3 text-left" />
+                <th className="w-14 border-b border-slate-200 px-2 py-3 text-left text-xs font-semibold uppercase text-slate-400">
                   Image
                 </th>
                 {visibleColumns.map((column) => (
@@ -313,7 +316,7 @@ export default function BonusCardPage() {
                     {column.label}
                   </th>
                 ))}
-                <th className="w-[170px] border-b border-slate-200 px-3 py-3 text-right text-xs font-semibold uppercase text-slate-400">
+                <th className="w-[150px] border-b border-slate-200 px-2 py-3 text-right text-xs font-semibold uppercase text-slate-400">
                   Actions
                 </th>
               </tr>
@@ -333,18 +336,18 @@ export default function BonusCardPage() {
                     <tr
                       key={row.id}
                       className={`border-b border-slate-100 transition ${
-                        selected ? 'bg-indigo-50' : 'hover:bg-slate-50'
+                        selected ? 'bg-sky-50' : 'hover:bg-slate-50'
                       }`}
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-3">
                         <input
                           type="checkbox"
                           checked={selected}
                           onChange={() => toggleSelected(row.id)}
-                          className="h-4 w-4 accent-blue-700"
+                          className="h-4 w-4 accent-[#1478ff]"
                         />
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-2 py-3">
                         {row.imageUrl ? (
                           <img
                             src={getImageSrc(row.imageUrl)}
@@ -356,20 +359,20 @@ export default function BonusCardPage() {
                         )}
                       </td>
                       {visibleColumns.map((column) => (
-                        <td key={column.key} className="px-3 py-3 text-slate-700">
+                        <td key={column.key} className="px-2 py-3 text-slate-700">
                           <span className="block truncate">{String(row[column.key] ?? '')}</span>
                         </td>
                       ))}
-                      <td className="px-3 py-3 text-right">
-                        <div className="flex justify-end gap-2 font-medium">
-                          <button className="toolbar-btn min-h-9 px-3" onClick={() => setPrintRow(row)}>
+                      <td className="px-2 py-3 text-right">
+                        <div className="flex justify-end gap-1.5 font-medium">
+                          <button className="toolbar-btn min-h-9 px-2.5" onClick={() => setPrintRow(row)}>
                             Detail
                           </button>
-                          <button className="toolbar-btn min-h-9 px-3" onClick={() => openEdit(row)}>
-                            Edit
+                          <button className="toolbar-btn min-h-9 px-2.5" onClick={() => openEdit(row)}>
+                            <EditIcon className="erp-action-icon" /> Edit
                           </button>
-                          <button className="toolbar-btn-danger min-h-9 px-3" onClick={() => deleteRow(row)}>
-                            Delete
+                          <button className="toolbar-btn-danger min-h-9 px-2.5" onClick={() => deleteRow(row)}>
+                            <TrashIcon className="erp-action-icon" /> Delete
                           </button>
                         </div>
                       </td>
@@ -379,7 +382,7 @@ export default function BonusCardPage() {
             </tbody>
           </table>
         </div>
-      </div>
+      </DataPanel>
 
       {formMode ? (
         <BonusModal
@@ -406,7 +409,7 @@ export default function BonusCardPage() {
       ) : null}
 
       {printRow ? <PrintModal row={printRow} onClose={() => setPrintRow(null)} /> : null}
-    </section>
+    </PageShell>
   );
 }
 
@@ -456,7 +459,7 @@ function BonusModal({
             <p className="mt-1 text-sm text-slate-500">Manage bonus card profile, guide, travel, and print details.</p>
           </div>
           <button type="button" className="toolbar-btn" onClick={onClose}>
-            Close
+            <XIcon className="erp-action-icon" /> Close
           </button>
         </div>
         <div className="grid gap-5 p-5 lg:grid-cols-[220px_1fr]">
@@ -480,7 +483,7 @@ function BonusModal({
               />
             </div>
 
-            <div className="rounded-[8px] border border-blue-100 bg-blue-50/70 p-4">
+            <div className="rounded-[8px] border border-sky-100 bg-sky-50/70 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Bonus</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">{form.bonus || '-'}</p>
               <p className="mt-2 text-xs leading-5 text-slate-500">
@@ -550,7 +553,7 @@ function BonusModal({
                 <textarea
                   value={form.comment}
                   onChange={(event) => setField('comment', event.target.value)}
-                  className="min-h-24 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="min-h-24 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]"
                 />
               </label>
             </BonusFormSection>
@@ -558,10 +561,10 @@ function BonusModal({
         </div>
         <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
           <button type="button" className="toolbar-btn" onClick={onClose}>
-            Cancel
+            <XIcon className="erp-action-icon" /> Cancel
           </button>
           <button type="submit" className="toolbar-btn-primary">
-            Save
+            <SaveIcon className="erp-action-icon" /> Save
           </button>
         </div>
       </form>
@@ -693,7 +696,7 @@ function ExportModal({
               ) : null}
               {!loading &&
                 rows.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-100 hover:bg-blue-50/60">
+                  <tr key={row.id} className="border-b border-slate-100 hover:bg-sky-50/60">
                     {exportColumns.map((column) => (
                       <td key={column.key} className="px-3 py-2 text-slate-700">
                         {formatCellValue(row, column.key)}
@@ -782,7 +785,7 @@ function PrintModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
               </div>
             </div>
 
-            <div className="rounded-[8px] border border-blue-100 bg-blue-50/70 p-4">
+            <div className="rounded-[8px] border border-sky-100 bg-sky-50/70 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Selected Bonus</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">{row.bonus}</p>
               <p className="mt-2 text-xs leading-5 text-slate-500">{row.guideName || row.bonusName || '-'}</p>

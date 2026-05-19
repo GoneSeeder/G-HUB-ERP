@@ -20,6 +20,8 @@ async function main() {
     informationBonusCardApp,
     informationBookingApp,
     informationNameListApp,
+    inventoryApp,
+    inventoryStockApp,
   ] = await Promise.all([
     prisma.app.upsert({
       where: { code: 'hub' },
@@ -97,6 +99,30 @@ async function main() {
         code: 'information-name-list',
         name: 'Name List',
         description: 'Imported passenger name list management',
+      },
+    }),
+    prisma.app.upsert({
+      where: { code: 'inventory' },
+      update: {
+        name: 'Inventory',
+        description: 'Inventory application folder',
+      },
+      create: {
+        code: 'inventory',
+        name: 'Inventory',
+        description: 'Inventory application folder',
+      },
+    }),
+    prisma.app.upsert({
+      where: { code: 'inventory-stock' },
+      update: {
+        name: 'จัดการคลังสินค้า',
+        description: 'Stock and warehouse management',
+      },
+      create: {
+        code: 'inventory-stock',
+        name: 'จัดการคลังสินค้า',
+        description: 'Stock and warehouse management',
       },
     }),
   ]);
@@ -212,6 +238,8 @@ async function main() {
     informationNameListApp,
   ];
 
+  const inventoryChildApps = [inventoryStockApp];
+
   await Promise.all(
     informationChildApps.map((app) =>
       prisma.roleAppPermission.upsert({
@@ -232,7 +260,12 @@ async function main() {
   );
 
   const restrictedRoles = [userRole, informationRole];
-  const restrictedApps = [informationApp, ...informationChildApps];
+  const restrictedApps = [
+    informationApp,
+    ...informationChildApps,
+    inventoryApp,
+    ...inventoryChildApps,
+  ];
 
   await Promise.all(
     restrictedRoles.flatMap((role) =>

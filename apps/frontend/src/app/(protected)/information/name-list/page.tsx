@@ -1,6 +1,18 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  CheckIcon,
+  EditIcon,
+  PlusIcon,
+  RefreshIcon,
+  SaveIcon,
+  SearchIcon,
+  TrashIcon,
+  UploadIcon,
+  XIcon,
+} from '@/components/ui/icons';
+import { PageHeader, PageShell } from '@/components/ui/page-shell';
 import { apiFetch } from '@/lib/api';
 
 type NameListItem = {
@@ -130,20 +142,20 @@ const emptyForm = (): FormState => ({
 });
 
 const itemColumns: Array<{ key: keyof NameListItem; label: string; width: string }> = [
-  { key: 'itemNo', label: 'Item', width: 'w-[40px]' },
+  { key: 'itemNo', label: 'Item', width: 'w-[36px]' },
   { key: 'isLeader', label: 'Leader', width: 'w-[44px]' },
   { key: 'agentCode', label: 'Agent', width: 'w-[50px]' },
-  { key: 'code', label: 'Code', width: 'w-[70px]' },
-  { key: 'arriveDate', label: 'Arrive Date', width: 'w-[70px]' },
-  { key: 'passportNo', label: 'Passport', width: 'w-[74px]' },
-  { key: 'firstName', label: 'First Name', width: 'w-[76px]' },
-  { key: 'lastName', label: 'Last Name', width: 'w-[76px]' },
-  { key: 'birthDate', label: 'Birth Date', width: 'w-[70px]' },
-  { key: 'age', label: 'Age', width: 'w-[34px]' },
-  { key: 'gender', label: 'Gender', width: 'w-[44px]' },
-  { key: 'nationCode', label: 'Nation', width: 'w-[46px]' },
-  { key: 'province', label: 'Province', width: 'w-[60px]' },
-  { key: 'location', label: 'Location', width: 'w-[44px]' },
+  { key: 'code', label: 'Code', width: 'w-[120px]' },
+  { key: 'arriveDate', label: 'Arrive Date', width: 'w-[76px]' },
+  { key: 'passportNo', label: 'Passport', width: 'w-[96px]' },
+  { key: 'firstName', label: 'First Name', width: 'w-[100px]' },
+  { key: 'lastName', label: 'Last Name', width: 'w-[100px]' },
+  { key: 'birthDate', label: 'Birth Date', width: 'w-[82px]' },
+  { key: 'age', label: 'Age', width: 'w-[38px]' },
+  { key: 'gender', label: 'Gender', width: 'w-[48px]' },
+  { key: 'nationCode', label: 'Nation', width: 'w-[48px]' },
+  { key: 'province', label: 'Province', width: 'w-[64px]' },
+  { key: 'location', label: 'Location', width: 'w-[56px]' },
 ];
 
 export default function NameListPage() {
@@ -211,44 +223,34 @@ export default function NameListPage() {
   };
 
   return (
-    <section className="flex h-[calc(100vh-6.5rem)] min-h-0 flex-col gap-3 overflow-hidden">
-      <div className="shrink-0 rounded-[10px] border border-slate-200/80 bg-white/95 px-4 py-3 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700">
-                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
-                  <path d="M6.5 3A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-13A2.5 2.5 0 0 0 17.5 3h-11ZM7 7h10v2H7V7Zm0 4h10v1.5H7V11Zm0 4h6v1.5H7V15Z" />
-                </svg>
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-2xl font-semibold text-slate-950">NameList</h1>
-                <p className="truncate text-sm text-slate-500">
-                  Passenger manifests from agent Excel files
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
+    <PageShell className="h-full !max-w-[1380px] gap-3 overflow-hidden">
+      <PageHeader
+        eyebrow="Passenger Data · NameList"
+        title="NameList"
+        description="Passenger manifests from agent Excel files"
+        actions={
+          <>
             <button type="button" className="toolbar-btn-primary" onClick={openImport}>
-              Import Namelist
+              <UploadIcon className="erp-action-icon" /> Import Namelist
             </button>
             <button type="button" className="toolbar-btn" onClick={() => setFormMode('add')}>
-              Add
+              <PlusIcon className="erp-action-icon" /> Add
             </button>
             <button type="button" className="toolbar-btn" disabled={!selected} onClick={() => setFormMode('edit')}>
-              Edit
+              <EditIcon className="erp-action-icon" /> Edit
             </button>
             <button type="button" className="toolbar-btn-danger" disabled={!selected} onClick={deleteSelected}>
-              Delete
+              <TrashIcon className="erp-action-icon" /> Delete
             </button>
             <button type="button" className="toolbar-btn" onClick={loadRows}>
-              Refresh
+              <RefreshIcon className="erp-action-icon" /> Refresh
             </button>
-          </div>
-        </div>
+          </>
+        }
+      />
 
-        <div className="mt-3">
+      <div className="erp-slide-left shrink-0 rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
+        <div>
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -260,8 +262,8 @@ export default function NameListPage() {
         {error ? <p className="mt-2 text-sm font-semibold text-red-700">{error}</p> : null}
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[380px_minmax(0,1fr)] 2xl:grid-cols-[420px_minmax(0,1fr)]">
-        <aside className="min-h-0 overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_14px_38px_rgba(15,23,42,0.06)]">
+      <div className="grid min-h-0 flex-1 gap-3 overflow-hidden xl:grid-cols-[240px_minmax(0,1fr)] 2xl:grid-cols-[250px_minmax(0,1fr)]">
+        <aside className="erp-slide-right min-h-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <div>
               <h2 className="text-base font-semibold text-slate-950">Manifests</h2>
@@ -271,48 +273,41 @@ export default function NameListPage() {
               DB list
             </span>
           </div>
-          <div className="h-[calc(100%-3.75rem)] overflow-auto">
+          <div className="h-[calc(100%-3.75rem)] overflow-y-auto overflow-x-hidden p-2">
             {visibleRows.length ? (
-              <table className="w-full table-fixed border-collapse text-xs">
-                <thead className="sticky top-0 z-10 bg-white">
-                  <tr>
-                    <th className="w-[34%] border-b border-slate-200 px-2 py-2 text-left text-[10px] font-semibold uppercase text-slate-400">Code</th>
-                    <th className="w-[24%] border-b border-slate-200 px-2 py-2 text-left text-[10px] font-semibold uppercase text-slate-400">Arrive</th>
-                    <th className="w-[24%] border-b border-slate-200 px-2 py-2 text-left text-[10px] font-semibold uppercase text-slate-400">Agent</th>
-                    <th className="w-[10%] border-b border-slate-200 px-1 py-2 text-left text-[10px] font-semibold uppercase text-slate-400">N</th>
-                    <th className="w-[8%] border-b border-slate-200 px-1 py-2 text-right text-[10px] font-semibold uppercase text-slate-400">P</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleRows.map((row) => (
-                    <tr
-                      key={row.id}
-                      onClick={() => setSelectedId(row.id)}
-                      onDoubleClick={() => {
-                        setSelectedId(row.id);
-                        setFormMode('edit');
-                      }}
-                      className={`cursor-pointer transition hover:bg-blue-50 ${
-                        row.id === selected?.id ? 'bg-blue-50' : ''
-                      }`}
-                    >
-                      <td className="border-b border-slate-100 px-2 py-2">
-                        <p className="truncate font-semibold text-slate-950">{row.code}</p>
-                        <p className="truncate text-[11px] text-slate-400">{row.partyCode || '-'}</p>
-                      </td>
-                      <td className="whitespace-nowrap border-b border-slate-100 px-2 py-2 text-slate-700">{formatDate(row.arriveDate)}</td>
-                      <td className="border-b border-slate-100 px-2 py-2">
-                        <p className="truncate text-slate-700">{row.agentName || '-'}</p>
-                        <p className="truncate text-[11px] text-slate-400">{row.agentCode || '-'}</p>
-                      </td>
-                      <td className="whitespace-nowrap border-b border-slate-100 px-2 py-2 text-slate-700">{row.nationCode || '-'}</td>
-                      <td className="whitespace-nowrap border-b border-slate-100 px-2 py-2 text-right font-semibold text-slate-900">
-                        {row.pax || row.items.length}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="space-y-1">
+                {visibleRows.map((row) => (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => setSelectedId(row.id)}
+                    onDoubleClick={() => {
+                      setSelectedId(row.id);
+                      setFormMode('edit');
+                    }}
+                    className={`w-full rounded-lg border px-2.5 py-2 text-left transition-colors ${
+                      row.id === selected?.id
+                        ? 'border-[#0752d6]/20 bg-[#0752d6]/[0.07]'
+                        : 'border-transparent hover:border-slate-200 hover:bg-[#0752d6]/[0.07]'
+                    }`}
+                  >
+                    <div className="flex min-w-0 items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium text-slate-950">{row.code}</p>
+                        <p className="truncate text-[10px] font-light text-slate-500">{row.partyCode || '-'}</p>
+                      </div>
+                      <span className="shrink-0 text-xs font-medium text-slate-900">
+                        {row.pax || row.items.length}p
+                      </span>
+                    </div>
+                    <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[10px] text-slate-500">
+                      <span className="shrink-0">{formatDate(row.arriveDate)}</span>
+                      <span className="truncate rounded bg-slate-100 px-1 font-mono">{row.nationCode || '-'}</span>
+                      <span className="truncate">{row.agentCode || row.agentName || '-'}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             ) : null}
             {visibleRows.length === 0 ? (
               <div className="flex h-full min-h-64 items-center justify-center rounded-md border border-dashed border-slate-200 px-6 text-center">
@@ -325,8 +320,8 @@ export default function NameListPage() {
           </div>
         </aside>
 
-        <main className="grid min-h-0 gap-3 xl:grid-rows-[auto_minmax(0,1fr)]">
-          <section className="rounded-[10px] border border-slate-200 bg-white shadow-[0_14px_38px_rgba(15,23,42,0.06)]">
+        <main className="grid min-h-0 overflow-hidden gap-3 xl:grid-rows-[auto_minmax(0,1fr)]">
+          <section className="erp-fade-in rounded-lg border border-slate-200 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase text-slate-400">Selected Manifest</p>
@@ -355,7 +350,7 @@ export default function NameListPage() {
             title="Passengers"
             subtitle={selected ? `${filteredItems.length} rows from ${selected.code}` : 'Select a manifest'}
           >
-            <table className="w-full table-fixed border-collapse text-xs">
+            <table className="w-full min-w-[1058px] table-fixed border-collapse text-xs">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr>
                   {itemColumns.map((column) => (
@@ -377,7 +372,11 @@ export default function NameListPage() {
                         title={formatItemValue(item, column.key)}
                         className={`${column.width} truncate whitespace-nowrap border-b border-slate-100 px-1.5 py-2 text-slate-700`}
                       >
-                        {formatItemValue(item, column.key)}
+                        {column.key === 'isLeader' && item.isLeader ? (
+                          <CheckIcon className="h-4 w-4 text-emerald-600" />
+                        ) : (
+                          formatItemValue(item, column.key)
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -420,7 +419,7 @@ export default function NameListPage() {
           onError={setError}
         />
       ) : null}
-    </section>
+    </PageShell>
   );
 }
 
@@ -574,7 +573,7 @@ function ImportNameListModal({
             <p className="text-xs text-slate-500">Upload Excel, auto-detect columns, preview, then import.</p>
           </div>
           <button type="button" className="toolbar-btn" onClick={onClose}>
-            Close
+            <XIcon className="erp-action-icon" /> Close
           </button>
         </div>
 
@@ -583,7 +582,7 @@ function ImportNameListModal({
             <div className="grid gap-3 lg:grid-cols-[minmax(260px,1.5fr)_minmax(160px,1fr)_minmax(220px,1.2fr)_160px]">
               <label>
                 <span className="text-xs font-semibold text-slate-700">Excel File</span>
-                <span className="mt-1 flex h-10 cursor-pointer items-center gap-2 rounded-md border border-blue-200 bg-white px-2.5 text-sm text-slate-700 transition hover:border-blue-400">
+                <span className="mt-1 flex h-10 cursor-pointer items-center gap-2 rounded-md border border-sky-200 bg-white px-2.5 text-sm text-slate-700 transition hover:border-[#1478ff]">
                   <span className="shrink-0 rounded border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
                     Choose File
                   </span>
@@ -639,10 +638,10 @@ function ImportNameListModal({
               </div>
               <div className="flex gap-2">
                 <button type="button" className="toolbar-btn" disabled={busy || !file} onClick={() => void runPreview()}>
-                  {busy ? 'Reading...' : 'Preview File'}
+                  <SearchIcon className="erp-action-icon" /> {busy ? 'Reading...' : 'Preview File'}
                 </button>
                 <button type="button" className="toolbar-btn-primary" disabled={busy || !preview} onClick={runImport}>
-                  Import
+                  <UploadIcon className="erp-action-icon" /> Import
                 </button>
               </div>
             </div>
@@ -698,7 +697,7 @@ function ImportNameListModal({
                                 void runPreview(nextOverrides);
                               }
                             }}
-                            className="h-6 rounded-md border border-blue-200 bg-white px-1 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
+                            className="h-6 rounded-md border border-sky-200 bg-white px-1 text-xs font-semibold text-slate-700 outline-none focus:border-[#1478ff]"
                           >
                             <option value="">ไม่มี</option>
                             {excelColumnLetters.map((letter) => (
@@ -859,7 +858,7 @@ function NameListModal({
             <p className="text-xs text-slate-500">Main trip data and passenger items.</p>
           </div>
           <button type="button" className="toolbar-btn" onClick={onClose}>
-            Cancel
+            <XIcon className="erp-action-icon" /> Cancel
           </button>
         </div>
 
@@ -889,7 +888,7 @@ function NameListModal({
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2">
               <h3 className="text-sm font-semibold text-slate-950">Passenger Items</h3>
               <button type="button" className="toolbar-btn" onClick={addItem}>
-                Add Item
+                <PlusIcon className="erp-action-icon" /> Add Item
               </button>
             </div>
             <div className="h-[calc(100%-3.5rem)] overflow-auto">
@@ -943,7 +942,7 @@ function NameListModal({
                       <EditableCell value={item.province} onChange={(value) => setItem(index, 'province', value)} />
                       <td className="border-b border-slate-100 px-1.5 py-1.5 text-right">
                         <button type="button" className="toolbar-btn-danger min-h-8 px-2.5 text-xs" onClick={() => removeItem(index)}>
-                          Remove
+                          <TrashIcon className="erp-action-icon" /> Remove
                         </button>
                       </td>
                     </tr>
@@ -963,10 +962,10 @@ function NameListModal({
 
         <div className="flex shrink-0 justify-end gap-3 border-t border-slate-200 px-5 py-2.5">
           <button type="button" className="toolbar-btn" onClick={onClose}>
-            Cancel
+            <XIcon className="erp-action-icon" /> Cancel
           </button>
           <button type="submit" className="toolbar-btn-primary">
-            Save
+            <SaveIcon className="erp-action-icon" /> Save
           </button>
         </div>
       </form>

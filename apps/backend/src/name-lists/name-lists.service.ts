@@ -299,13 +299,15 @@ export class NameListsService {
       header: 1,
       raw: false,
       defval: '',
-    });
+    }) as string[][];
     const headerRowIndex = this.findHeaderRow(rows);
     if (headerRowIndex < 0) {
       throw new BadRequestException('Cannot detect passenger header row in this Excel file');
     }
 
-    const headers = rows[headerRowIndex].map((cell) => this.normalizeHeader(cell));
+    const headers = rows[headerRowIndex].map((cell: string) =>
+      this.normalizeHeader(cell),
+    );
     const columnMap = this.applyColumnOverrides(
       this.buildColumnMap(headers),
       dto.columnOverrides,
@@ -314,10 +316,17 @@ export class NameListsService {
     const hasItemNoColumn = columnMap.itemNo !== undefined;
     const dataRows = rows
       .slice(headerRowIndex + 1)
-      .filter((row) => this.isPassengerDataRow(row, columnMap, hasItemNoColumn));
+      .filter((row: string[]) =>
+        this.isPassengerDataRow(row, columnMap, hasItemNoColumn),
+      );
     const items = dataRows
-      .map((row, index) => this.rowToItem(row, index, columnMap, dto))
-      .filter((item) => item.passportNo || item.firstName || item.lastName);
+      .map((row: string[], index: number) =>
+        this.rowToItem(row, index, columnMap, dto),
+      )
+      .filter(
+        (item: NameListItemDto) =>
+          item.passportNo || item.firstName || item.lastName,
+      );
 
     if (!items.length) {
       throw new BadRequestException('No passenger rows found in this Excel file');

@@ -1,6 +1,8 @@
 ﻿'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { EditIcon, PlusIcon, TrashIcon } from '@/components/ui/icons';
+import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { apiFetch } from '@/lib/api';
 
 interface UserItem {
@@ -47,6 +49,13 @@ const appTree = [
       { code: 'information-member', label: 'บันทึกข้อมูลสมาชิก' },
       { code: 'information-bonus-card', label: 'บันทึกข้อมูลโบนัสการ์ด' },
       { code: 'information-booking', label: 'บันทึกการจองเข้าร้าน' },
+    ],
+  },
+  {
+    code: 'inventory',
+    label: 'Inventory',
+    children: [
+      { code: 'inventory-stock', label: 'จัดการคลังสินค้า' },
     ],
   },
 ];
@@ -234,83 +243,82 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <section className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-semibold text-slate-950">Manage Users</h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Create users, assign roles, and control app visibility in Hub.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="toolbar-btn-primary uppercase tracking-wide"
-        >
-          Create User
-        </button>
-      </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="Administration"
+        title="Manage Users"
+        description="Create users, assign roles, and control app visibility in Hub."
+        actions={
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="toolbar-btn-primary"
+          >
+            <PlusIcon className="erp-action-icon" /> Create User
+          </button>
+        }
+      />
 
       {error ? (
-        <p className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {error}
         </p>
       ) : null}
 
-      <div className="overflow-hidden border border-white/60 bg-white/60 shadow-[0_12px_26px_rgba(98,56,42,0.12)] backdrop-blur-sm">
-        <table className="w-full border-collapse text-sm">
-          <thead className="bg-slate-50">
+      <DataPanel className="flex-1 overflow-auto">
+        <table className="w-full min-w-[900px] border-collapse text-sm">
+          <thead className="sticky top-0 z-10 bg-slate-50">
             <tr>
-              <th className="border-b border-slate-200 px-4 py-3 text-left">
+              <th className="border-b border-slate-200 px-4 py-2.5 text-left text-xs font-bold uppercase text-slate-400">
                 Username
               </th>
-              <th className="border-b border-slate-200 px-4 py-3 text-left">
+              <th className="border-b border-slate-200 px-4 py-2.5 text-left text-xs font-bold uppercase text-slate-400">
                 Name
               </th>
-              <th className="border-b border-slate-200 px-4 py-3 text-left">
+              <th className="border-b border-slate-200 px-4 py-2.5 text-left text-xs font-bold uppercase text-slate-400">
                 Password
               </th>
-              <th className="border-b border-slate-200 px-4 py-3 text-left">
+              <th className="border-b border-slate-200 px-4 py-2.5 text-left text-xs font-bold uppercase text-slate-400">
                 Role
               </th>
-              <th className="border-b border-slate-200 px-4 py-3 text-left">
+              <th className="border-b border-slate-200 px-4 py-2.5 text-left text-xs font-bold uppercase text-slate-400">
                 Visible Apps
               </th>
-              <th className="border-b border-slate-200 px-4 py-3 text-right">
+              <th className="border-b border-slate-200 px-4 py-2.5 text-right text-xs font-bold uppercase text-slate-400">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={user.id}>
-                <td className="border-b border-slate-100 px-4 py-3 font-medium text-slate-900">
+              <tr key={user.id} className="transition hover:bg-sky-50/50">
+                <td className="border-b border-slate-100 px-4 py-2.5 font-semibold text-slate-900">
                   {user.username}
                 </td>
-                <td className="border-b border-slate-100 px-4 py-3 text-slate-700">
+                <td className="border-b border-slate-100 px-4 py-2.5 text-slate-700">
                   {user.name}
                 </td>
-                <td className="border-b border-slate-100 px-4 py-3 text-slate-600">
+                <td className="border-b border-slate-100 px-4 py-2.5 text-slate-600">
                   {user.password}
                 </td>
-                <td className="border-b border-slate-100 px-4 py-3 text-slate-700">
+                <td className="border-b border-slate-100 px-4 py-2.5 text-slate-700">
                   {roleOptions.find((role) => role.code === user.roleCode)?.label ??
                     user.roleCode}
                 </td>
-                <td className="border-b border-slate-100 px-4 py-3 text-slate-600">
+                <td className="border-b border-slate-100 px-4 py-2.5 text-slate-600">
                   {user.appCodes
                     .filter((code) => managedAppCodes.has(code))
                     .map((code) => appNameByCode.get(code) ?? code)
                     .join(', ') || '-'}
                 </td>
-                <td className="border-b border-slate-100 px-4 py-3 text-right">
+                <td className="border-b border-slate-100 px-4 py-2.5 text-right">
                   <div className="flex justify-end gap-2">
                     <button
                       type="button"
                       onClick={() => openEditModal(user)}
                       className="toolbar-btn min-h-9 px-3"
                     >
-                      Edit
+                      <EditIcon className="erp-action-icon" /> Edit
                     </button>
                     {user.id !== currentUserId ? (
                       <button
@@ -318,7 +326,7 @@ export default function AdminUsersPage() {
                         onClick={() => onDeleteUser(user)}
                         className="toolbar-btn-danger min-h-9 px-3"
                       >
-                        Delete
+                        <TrashIcon className="erp-action-icon" /> Delete
                       </button>
                     ) : null}
                   </div>
@@ -327,17 +335,17 @@ export default function AdminUsersPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </DataPanel>
 
       {modalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
           <form
             onSubmit={onSubmitUser}
-            className="max-h-[92vh] w-full max-w-[560px] overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 px-7 py-7 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
+            className="erp-fade-in max-h-[92vh] w-full max-w-[640px] overflow-auto rounded-xl border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]"
           >
-            <div className="mb-7 flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
               <div>
-                <h2 className="text-[26px] font-semibold leading-tight text-slate-950">
+                <h2 className="text-xl font-bold leading-tight text-slate-950">
                   {editingUser ? 'Edit User' : 'Create User'}
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
@@ -354,17 +362,17 @@ export default function AdminUsersPage() {
             </div>
 
             {modalError ? (
-              <div className="mb-5 rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              <div className="mx-5 mt-4 rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                 {modalError}
               </div>
             ) : null}
 
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid gap-4 px-5 py-4 md:grid-cols-2">
               <label className="block space-y-2">
                 <span className="text-sm font-semibold text-slate-700">
                   Username
                 </span>
-                <span className="flex h-12 rounded-md border border-slate-200 bg-white transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100">
+                <span className="flex h-11 rounded-lg border border-slate-200 bg-white transition focus-within:border-[#1478ff] focus-within:ring-4 focus-within:ring-[rgba(20,120,255,0.14)]">
                   <span className="flex w-11 items-center justify-center text-slate-400">
                     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
                       <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4Zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4Z" />
@@ -388,7 +396,7 @@ export default function AdminUsersPage() {
                 <span className="text-sm font-semibold text-slate-700">
                   Name
                 </span>
-                <span className="flex h-12 rounded-md border border-slate-200 bg-white transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100">
+                <span className="flex h-11 rounded-lg border border-slate-200 bg-white transition focus-within:border-[#1478ff] focus-within:ring-4 focus-within:ring-[rgba(20,120,255,0.14)]">
                   <span className="flex w-11 items-center justify-center text-slate-400">
                     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
                       <path d="M12 12c2.21 0 4-1.57 4-3.5S14.21 5 12 5 8 6.57 8 8.5 9.79 12 12 12Zm0 2c-3.31 0-6 1.57-6 3.5V19h12v-1.5c0-1.93-2.69-3.5-6-3.5Z" />
@@ -413,7 +421,7 @@ export default function AdminUsersPage() {
                 <span className="text-sm font-semibold text-slate-700">
                   Password
                 </span>
-                <span className="flex h-12 rounded-md border border-slate-200 bg-white transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100">
+                <span className="flex h-11 rounded-lg border border-slate-200 bg-white transition focus-within:border-[#1478ff] focus-within:ring-4 focus-within:ring-[rgba(20,120,255,0.14)]">
                   <span className="flex w-11 items-center justify-center text-slate-400">
                     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
                       <path d="M17 8h-1V6c0-2.76-1.79-5-4-5S8 3.24 8 6v2H7c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2Zm-7-2c0-1.66.9-3 2-3s2 1.34 2 3v2h-4V6Z" />
@@ -442,7 +450,7 @@ export default function AdminUsersPage() {
                 <select
                   value={form.roleCode}
                   onChange={(event) => setRoleCode(event.target.value as RoleCode)}
-                  className="h-12 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                  className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]"
                 >
                   {roleOptions.map((role) => (
                     <option key={role.code} value={role.code}>
@@ -453,7 +461,7 @@ export default function AdminUsersPage() {
               </label>
             </div>
 
-            <div className="mt-6 rounded-[8px] border border-slate-200 bg-slate-50/60 p-4">
+            <div className="mx-5 rounded-lg border border-slate-200 bg-slate-50/60 p-4">
               <p className="text-sm font-semibold text-slate-700">
                 Apps visible in Hub
               </p>
@@ -467,7 +475,7 @@ export default function AdminUsersPage() {
                       className="overflow-hidden rounded-md border border-slate-200 bg-white"
                     >
                       <label className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-800">
-                        <span className="text-blue-700">
+                        <span className="text-[#1478ff]">
                           <svg
                             aria-hidden="true"
                             viewBox="0 0 24 24"
@@ -480,19 +488,19 @@ export default function AdminUsersPage() {
                           type="checkbox"
                           checked={folderChecked}
                           onChange={() => toggleFolder(group.code)}
-                          className="h-4 w-4 accent-blue-700"
+                          className="h-4 w-4 accent-[#1478ff]"
                         />
                         <span>{group.label}</span>
                       </label>
 
                       {folderChecked ? (
-                        <div className="space-y-1 border-t border-slate-200 bg-blue-50/40 px-8 py-3">
+                        <div className="space-y-1 border-t border-slate-200 bg-sky-50/45 px-8 py-3">
                           {group.children.map((child) => (
                             <label
                               key={child.code}
                               className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm text-slate-700 hover:bg-white"
                             >
-                              <span className="text-blue-700">
+                              <span className="text-[#1478ff]">
                                 <svg
                                   aria-hidden="true"
                                   viewBox="0 0 24 24"
@@ -505,7 +513,7 @@ export default function AdminUsersPage() {
                                 type="checkbox"
                                 checked={form.appCodes.includes(child.code)}
                                 onChange={() => toggleChildApp(child.code)}
-                                className="h-4 w-4 accent-blue-700"
+                                className="h-4 w-4 accent-[#1478ff]"
                               />
                               <span>{appNameByCode.get(child.code) ?? child.label}</span>
                             </label>
@@ -518,7 +526,7 @@ export default function AdminUsersPage() {
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-5 flex justify-end gap-3 border-t border-slate-200 px-5 py-4">
               <button
                 type="button"
                 onClick={closeModal}
@@ -537,7 +545,7 @@ export default function AdminUsersPage() {
           </form>
         </div>
       ) : null}
-    </section>
+    </PageShell>
   );
 }
 

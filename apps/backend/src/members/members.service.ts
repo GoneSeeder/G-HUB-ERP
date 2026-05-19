@@ -62,6 +62,8 @@ export class MembersService {
       titleEn: dto.titleEn ?? existing.titleEn,
       firstNameEn: dto.firstNameEn ?? existing.firstNameEn,
       lastNameEn: dto.lastNameEn ?? existing.lastNameEn,
+      fullName: dto.fullName ?? existing.fullName,
+      fullNameTh: dto.fullNameTh ?? existing.fullNameTh,
       nationalId: dto.nationalId ?? existing.nationalId,
       guideType: dto.guideType ?? existing.guideType,
     });
@@ -203,14 +205,16 @@ export class MembersService {
     | 'titleEn'
     | 'firstNameEn'
     | 'lastNameEn'
+    | 'fullName'
+    | 'fullNameTh'
     | 'nationalId'
     | 'guideType'
   >) {
     const hasThaiName = Boolean(
-      dto.titleTh?.trim() && dto.firstNameTh?.trim() && dto.lastNameTh?.trim(),
+      dto.fullNameTh?.trim() || (dto.firstNameTh?.trim() && dto.lastNameTh?.trim()),
     );
     const hasEnglishName = Boolean(
-      dto.titleEn?.trim() && dto.firstNameEn?.trim() && dto.lastNameEn?.trim(),
+      dto.fullName?.trim() || (dto.firstNameEn?.trim() && dto.lastNameEn?.trim()),
     );
     const nationalId = dto.nationalId?.replace(/\D/g, '') ?? '';
     const guideType = dto.guideType || 'Guide';
@@ -218,10 +222,7 @@ export class MembersService {
     if (!dto.guideCode?.trim()) {
       throw new BadRequestException('Guide code is required');
     }
-    if (!nationalId) {
-      throw new BadRequestException('National ID is required');
-    }
-    if (nationalId.length !== 13) {
+    if (nationalId && nationalId.length !== 13) {
       throw new BadRequestException('National ID must be 13 digits');
     }
     if (!hasThaiName && !hasEnglishName) {

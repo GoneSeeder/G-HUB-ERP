@@ -1,10 +1,18 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { clearAuthTokenCookie } from '@/lib/auth';
+import { AppCard } from '@/components/ui/app-card';
+import {
+  CardIcon,
+  FolderIcon,
+  InventoryIcon,
+  ListIcon,
+  UsersIcon,
+} from '@/components/ui/icons';
+import { PageShell } from '@/components/ui/page-shell';
 import { apiFetch } from '@/lib/api';
+import { clearAuthTokenCookie } from '@/lib/auth';
 
 interface MeResponse {
   sub: string;
@@ -21,11 +29,19 @@ interface AppItem {
   description: string | null;
 }
 
+type HubAppMeta = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  accent: string;
+  icon: 'users' | 'booking' | 'card' | 'list';
+};
+
 const informationApps = [
-  'information-member',
-  'information-bonus-card',
-  'information-booking',
   'information-name-list',
+  'information-booking',
+  'information-bonus-card',
+  'information-member',
 ];
 
 const appHrefByCode: Record<string, string | undefined> = {
@@ -33,6 +49,37 @@ const appHrefByCode: Record<string, string | undefined> = {
   'information-bonus-card': '/information/bonus-card',
   'information-booking': '/information/booking',
   'information-name-list': '/information/name-list',
+};
+
+const appMetaByCode: Record<string, HubAppMeta> = {
+  'information-booking': {
+    eyebrow: 'Operations',
+    title: 'Booking',
+    description: 'Import Main/Detail files and review daily bookings',
+    accent: 'bg-emerald-50 text-emerald-600',
+    icon: 'booking',
+  },
+  'information-name-list': {
+    eyebrow: 'Passenger Data',
+    title: 'Name List',
+    description: 'Passenger manifests and Excel import workflow',
+    accent: 'bg-blue-50 text-blue-600',
+    icon: 'list',
+  },
+  'information-member': {
+    eyebrow: 'Master Data',
+    title: 'Members',
+    description: 'Agent and guide records used across operations',
+    accent: 'bg-violet-50 text-violet-600',
+    icon: 'users',
+  },
+  'information-bonus-card': {
+    eyebrow: 'Document',
+    title: 'Bonus Card',
+    description: 'Create and verify bonus card records from bookings',
+    accent: 'bg-orange-50 text-orange-600',
+    icon: 'card',
+  },
 };
 
 export default function HubPage() {
@@ -64,82 +111,166 @@ export default function HubPage() {
   }, [router]);
 
   if (loading) {
-    return <p className="text-gray-600">Loading hub...</p>;
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="erp-fade-in rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-500 shadow-sm">
+          Loading hub...
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <p className="text-red-600">{error}</p>;
+    return (
+      <div className="erp-fade-in rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+        {error}
+      </div>
+    );
   }
 
+  const visibleInformationApps = apps.filter((app) =>
+    informationApps.includes(app.code),
+  );
+  const canSeeInformation = profile?.apps.includes('information');
+  const canSeeInventory =
+    profile?.apps.includes('inventory') ||
+    profile?.apps.includes('inventory-stock');
+  const activeCount = visibleInformationApps.length;
+  const plannedCount = canSeeInventory ? 1 : 0;
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
   return (
-    <section className="space-y-5">
-      <div>
-        <h1 className="text-3xl font-semibold text-slate-950">Hub</h1>
-        <p className="mt-2 text-slate-600">Welcome back, {profile?.name}.</p>
-      </div>
-      {profile?.apps.includes('information') ? (
-        <section className="overflow-hidden rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur">
-          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-blue-50 text-blue-700">
-                <svg
-                  aria-hidden="true"
-                  viewBox="0 0 24 24"
-                  className="h-5 w-5 fill-current"
-                >
-                  <path d="M3 6.75A2.75 2.75 0 0 1 5.75 4h4.1c.84 0 1.63.38 2.15 1.04l.72.92c.24.31.61.49 1 .49h4.53A2.75 2.75 0 0 1 21 9.2v8.05A2.75 2.75 0 0 1 18.25 20H5.75A2.75 2.75 0 0 1 3 17.25V6.75Z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-slate-950">
-                  Information
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Application folder for information workflows
-                </p>
-              </div>
+    <PageShell className="gap-6">
+      <header className="erp-slide-down border-b border-slate-200 pb-5">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              G-HUB · ERP 2026
+            </p>
+            <h1 className="mt-2 text-2xl font-semibold leading-tight text-slate-950">
+              {greeting},{' '}
+              <span className="text-[#0752d6]">
+                {profile?.name ?? 'G-HUB Admin'}
+              </span>
+            </h1>
+            <p className="mt-1 text-sm font-light text-slate-500">
+              Select a module to start daily operations.
+            </p>
+          </div>
+          <div className="flex items-center gap-5 text-xs font-normal text-slate-500">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              {activeCount} active
+            </span>
+            {plannedCount ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+                {plannedCount} planned
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </header>
+
+      {canSeeInformation ? (
+        <section className="erp-slide-right space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-baseline gap-2">
+              <h2 className="text-sm font-semibold text-slate-950">Information</h2>
+              <p className="text-xs font-light text-slate-500">
+                Daily operation modules and master data
+              </p>
             </div>
+            <span className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-normal text-slate-500">
+              ERP 2026
+            </span>
           </div>
 
-          <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
-            {apps
-              .filter((app) => informationApps.includes(app.code))
-              .map((app) => (
-                <Link
+          <div className="erp-hub-grid grid gap-3 md:grid-cols-2">
+            {visibleInformationApps.map((app) => {
+              const meta = appMetaByCode[app.code] ?? {
+                eyebrow: 'Application',
+                title: app.name,
+                description: app.description ?? 'No description',
+                accent: 'bg-slate-50 text-slate-500',
+                icon: 'booking' as const,
+              };
+
+              return (
+                <AppCard
                   key={app.id}
-                  href={appHrefByCode[app.code] ?? '#'}
-                  className="flex min-h-28 overflow-hidden rounded-[8px] border border-slate-200 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.05)] transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/60 hover:shadow-[0_16px_36px_rgba(37,99,235,0.12)]"
-                  aria-disabled={!appHrefByCode[app.code]}
-                >
-                  <div className="flex w-14 items-center justify-center bg-blue-50 text-blue-700">
-                    <svg
-                      aria-hidden="true"
-                      viewBox="0 0 24 24"
-                      className="h-5 w-5 fill-current"
-                    >
-                      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5v-13Zm3 1.25v2.5h10v-2.5H7Zm0 5v1.5h10v-1.5H7Zm0 4v1.5h6v-1.5H7Z" />
-                    </svg>
-                  </div>
-                  <div className="min-w-0 p-4">
-                    <h3 className="truncate text-base font-semibold text-slate-950">
-                      {app.name}
-                    </h3>
-                    <p className="mt-1 text-sm leading-5 text-slate-600">
-                      {app.description ?? 'No description'}
-                    </p>
-                    <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-blue-500">
-                      {app.code}
-                    </p>
-                  </div>
-                </Link>
-              ))}
+                  href={appHrefByCode[app.code]}
+                  eyebrow={meta.eyebrow}
+                  title={meta.title}
+                  description={meta.description}
+                  code={app.code.replace('information-', '')}
+                  className="opacity-0"
+                  icon={
+                    <HubIconBadge accent={meta.accent}>
+                      <HubIcon type={meta.icon} />
+                    </HubIconBadge>
+                  }
+                />
+              );
+            })}
           </div>
         </section>
       ) : (
-        <div className="border border-white/60 bg-white/55 px-5 py-8 text-sm text-slate-600 shadow-[0_12px_26px_rgba(98,56,42,0.12)] backdrop-blur-sm">
+        <div className="erp-soft-card px-5 py-8 text-sm text-slate-600">
           No apps are available for this user.
         </div>
       )}
-    </section>
+
+      {canSeeInventory ? (
+        <section className="erp-slide-left space-y-3">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <h2 className="text-sm font-semibold text-slate-950">Inventory</h2>
+            <p className="text-xs font-light text-slate-500">
+              Stock and warehouse workflows
+            </p>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <AppCard
+              disabled
+              eyebrow="Warehouse"
+              title="Inventory Management"
+              description="Stock receiving, issue, and inventory count workflow"
+              code="inventory"
+              icon={
+                <HubIconBadge accent="bg-teal-50 text-teal-600">
+                  <InventoryIcon />
+                </HubIconBadge>
+              }
+            />
+          </div>
+        </section>
+      ) : null}
+    </PageShell>
   );
+}
+
+function HubIconBadge({
+  accent,
+  children,
+}: {
+  accent: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${accent}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function HubIcon({ type }: { type: HubAppMeta['icon'] }) {
+  if (type === 'users') return <UsersIcon />;
+  if (type === 'card') return <CardIcon />;
+  if (type === 'list') return <ListIcon />;
+  return <FolderIcon />;
 }

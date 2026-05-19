@@ -1,55 +1,60 @@
 import Link from 'next/link';
+import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
+import { ArrowLeftIcon, UsersIcon } from '@/components/ui/icons';
 
 const adminMenu = [
   {
     title: 'Manage Users',
-    description: 'Create and review username accounts',
+    description: 'Create accounts, assign roles, and control Hub access.',
     href: '/admin/users',
   },
 ];
 
 export default function AdminDashboardPage() {
   return (
-    <section className="space-y-5">
-      <div>
-        <h1 className="text-3xl font-semibold text-slate-950">
-          Admin Dashboard
-        </h1>
-        <p className="mt-2 text-slate-600">
-          Manage users, permissions, and admin tools from one place.
-        </p>
-      </div>
+    <PageShell>
+      <PageHeader
+        eyebrow="Administration"
+        title="Admin Dashboard"
+        description="Manage users, permissions, and admin tools from one place."
+      />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {adminMenu.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="flex min-h-36 overflow-hidden border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/60 hover:shadow-md"
-          >
-            <div className="flex w-16 items-center justify-center bg-blue-50 text-blue-700">
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="h-7 w-7 fill-current"
-              >
-                <path d="M16 11c1.66 0 3-1.57 3-3.5S17.66 4 16 4s-3 1.57-3 3.5S14.34 11 16 11Zm-8 0c1.66 0 3-1.57 3-3.5S9.66 4 8 4 5 5.57 5 7.5 6.34 11 8 11Zm0 2c-2.67 0-8 1.34-8 4v2h10v-2c0-1.24.47-2.35 1.27-3.28A12.1 12.1 0 0 0 8 13Zm8 0c-2.21 0-6 1.12-6 3.33V19h12v-2.67C22 14.12 18.21 13 16 13Z" />
-              </svg>
-            </div>
-            <div className="p-5">
-              <h2 className="text-lg font-semibold text-slate-950">
-                {item.title}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-700">
+      <DataPanel className="p-3">
+        <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+          {adminMenu.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="group flex min-h-[104px] flex-col justify-between rounded-xl border border-slate-200 bg-white p-3 transition hover:border-sky-200 hover:bg-sky-50/35"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                    Admin
+                  </p>
+                  <h2 className="mt-0.5 truncate text-base font-bold text-slate-950">
+                    {item.title}
+                  </h2>
+                </div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-[#1478ff]">
+                  <UsersIcon />
+                </div>
+              </div>
+              <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">
                 {item.description}
               </p>
-              <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-blue-500">
-                Admin
-              </p>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </section>
+              <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2">
+                <span className="text-[11px] font-semibold uppercase text-slate-400">
+                  Users
+                </span>
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-[#0752d6] transition group-hover:translate-x-0.5">
+                  Open <ArrowLeftIcon className="h-3.5 w-3.5 rotate-180" />
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </DataPanel>
+    </PageShell>
   );
 }
