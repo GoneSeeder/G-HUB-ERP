@@ -1104,7 +1104,7 @@ function Field({
       <span className="text-xs font-semibold text-slate-700">{label}</span>
       <input
         type={type}
-        value={value ?? ''}
+        value={type === 'number' && value === 0 ? '' : value ?? ''}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         className="form-input h-8 rounded-md text-sm disabled:bg-slate-100 disabled:text-slate-500"
@@ -1304,7 +1304,7 @@ function FilterDateInput({ label, value, onChange }: { label: string; value: str
         <input
           type="text"
           value={displayValue}
-          placeholder="dd/mm/yyyy"
+          placeholder="--/--/----"
           onClick={openPicker}
           onFocus={openPicker}
           onChange={(event) => {

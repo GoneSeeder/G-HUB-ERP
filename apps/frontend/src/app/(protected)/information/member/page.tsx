@@ -1519,39 +1519,40 @@ function DateField({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const [editing, setEditing] = useState(Boolean(value));
-
-  if (!value && !editing) {
-    return (
-      <label className="space-y-2">
-        <span className="text-sm font-semibold text-slate-700">{label}</span>
-        <input
-          type="text"
-          readOnly
-          value="--/--/----"
-          onFocus={() => setEditing(true)}
-          className="form-input rounded-md text-slate-400"
-        />
-      </label>
-    );
-  }
-
   return (
     <label className="space-y-2">
       <span className="text-sm font-semibold text-slate-700">{label}</span>
       <input
-        type="date"
-        value={value}
-        onBlur={() => {
-          if (!value) {
-            setEditing(false);
-          }
-        }}
-        onChange={(event) => onChange(event.target.value)}
+        type="text"
+        value={dateInputValue(value)}
+        placeholder="--/--/----"
+        onChange={(event) => onChange(parseDateInput(event.target.value))}
+        onBlur={(event) => onChange(completeDateInput(event.target.value))}
         className="form-input rounded-md"
       />
     </label>
   );
+}
+
+function dateInputValue(value?: string) {
+  if (!value) return '';
+  const [year, month, day] = value.slice(0, 10).split('-');
+  return year && month && day ? `${day}/${month}/${year}` : value;
+}
+
+function parseDateInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '--/--/----') return '';
+  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return trimmed;
+  return `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
+}
+
+function completeDateInput(value: string) {
+  const parsed = parseDateInput(value);
+  if (!parsed) return '';
+  const [year, month, day] = parsed.slice(0, 10).split('-');
+  return year && month && day ? `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` : parsed;
 }
 
 function TextArea({

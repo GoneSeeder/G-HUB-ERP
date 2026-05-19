@@ -63,7 +63,7 @@ export class NameListsService {
           orderBy: [{ itemNo: 'asc' }, { createdAt: 'asc' }],
         },
       },
-      orderBy: [{ arriveDate: 'desc' }, { code: 'asc' }],
+      orderBy: [{ createdAt: 'desc' }, { code: 'asc' }],
       take: 500,
     });
 
@@ -167,6 +167,7 @@ export class NameListsService {
   }
 
   private toCreateData(dto: CreateNameListDto): Prisma.NameListCreateInput {
+    const nationCode = this.resolveNationCode(dto.nationCode, dto.items);
     return {
       code: dto.code.trim(),
       partyCode: dto.partyCode ?? '',
@@ -176,7 +177,7 @@ export class NameListsService {
       agentName: dto.agentName ?? '',
       guideCode: dto.guideCode ?? '',
       guideName: dto.guideName ?? '',
-      nationCode: dto.nationCode ?? '',
+      nationCode,
       nationName: dto.nationName ?? '',
       country: dto.country ?? '',
       province: dto.province ?? '',
@@ -193,6 +194,7 @@ export class NameListsService {
   }
 
   private toUpdateData(dto: UpdateNameListDto): Prisma.NameListUpdateInput {
+    const nationCode = this.resolveNationCode(dto.nationCode, dto.items);
     const update: Prisma.NameListUpdateInput = {
       ...(dto.code !== undefined ? { code: dto.code.trim() } : {}),
       ...(dto.partyCode !== undefined ? { partyCode: dto.partyCode } : {}),
@@ -206,7 +208,9 @@ export class NameListsService {
       ...(dto.agentName !== undefined ? { agentName: dto.agentName } : {}),
       ...(dto.guideCode !== undefined ? { guideCode: dto.guideCode } : {}),
       ...(dto.guideName !== undefined ? { guideName: dto.guideName } : {}),
-      ...(dto.nationCode !== undefined ? { nationCode: dto.nationCode } : {}),
+      ...(dto.nationCode !== undefined || (dto.items && nationCode)
+        ? { nationCode }
+        : {}),
       ...(dto.nationName !== undefined ? { nationName: dto.nationName } : {}),
       ...(dto.country !== undefined ? { country: dto.country } : {}),
       ...(dto.province !== undefined ? { province: dto.province } : {}),
@@ -251,6 +255,25 @@ export class NameListsService {
     };
   }
 
+  private resolveNationCode(
+    current?: string,
+    items?: NameListItemDto[],
+  ) {
+    const trimmed = current?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+
+    const counts = new Map<string, number>();
+    for (const item of items ?? []) {
+      const code = item.nationCode?.trim();
+      if (!code) continue;
+      counts.set(code, (counts.get(code) ?? 0) + 1);
+    }
+
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '';
+  }
+
   private toDateOrNull(value?: string | null) {
     if (!value) {
       return null;
@@ -283,10 +306,16 @@ export class NameListsService {
     }
 
     const headers = rows[headerRowIndex].map((cell) => this.normalizeHeader(cell));
-    const columnMap = this.buildColumnMap(headers);
+    const columnMap = this.applyColumnOverrides(
+      this.buildColumnMap(headers),
+      dto.columnOverrides,
+    );
     const warnings = this.validateColumnMap(columnMap);
-    const items = rows
+    const hasItemNoColumn = columnMap.itemNo !== undefined;
+    const dataRows = rows
       .slice(headerRowIndex + 1)
+      .filter((row) => this.isPassengerDataRow(row, columnMap, hasItemNoColumn));
+    const items = dataRows
       .map((row, index) => this.rowToItem(row, index, columnMap, dto))
       .filter((item) => item.passportNo || item.firstName || item.lastName);
 
@@ -308,7 +337,7 @@ export class NameListsService {
         sheetName,
         headerRow: headerRowIndex + 1,
         columnMap: this.toColumnMapResponse(columnMap),
-        sampleRows: items.slice(0, 12),
+        sampleRows: items,
         warnings,
       },
     };
@@ -348,8 +377,12 @@ export class NameListsService {
   }
 
   private buildColumnMap(headers: string[]): ColumnMap {
-    const find = (...patterns: RegExp[]) =>
-      headers.findIndex((header) => patterns.some((pattern) => pattern.test(header)));
+    const find = (...patterns: RegExp[]) => {
+      const index = headers.findIndex((header) =>
+        patterns.some((pattern) => pattern.test(header)),
+      );
+      return index === -1 ? undefined : index;
+    };
     const map: ColumnMap = {};
 
     map.itemNo = find(/序号|^no\.?$|^item$/);
@@ -363,6 +396,9 @@ export class NameListsService {
       map.englishSurname === undefined
         ? find(/英文名|英文姓名|english.*name|name/)
         : undefined;
+    if (map.englishName === undefined && map.englishGiven === undefined) {
+      map.englishName = find(/name.*surname|name.*surename|surename/);
+    }
     map.birthDate = find(/出生日期|出生年月|birth/);
     map.age = find(/年龄|age/);
     map.gender = find(/性别|gender|sex/);
@@ -372,7 +408,7 @@ export class NameListsService {
     map.remark = find(/备注|remark|note/);
 
     return Object.fromEntries(
-      Object.entries(map).filter(([, value]) => value !== -1),
+      Object.entries(map).filter(([, value]) => value !== undefined),
     ) as ColumnMap;
   }
 
@@ -386,7 +422,57 @@ export class NameListsService {
       warnings.push('English name columns were not detected clearly.');
     }
     if (map.birthDate === undefined) warnings.push('Birth date column was not detected.');
+    if (map.itemNo === undefined) {
+      warnings.push('Sequence column was not detected; rows will be detected from passenger data.');
+    }
     return warnings;
+  }
+
+  private applyColumnOverrides(
+    detected: ColumnMap,
+    overrides?: Record<string, string>,
+  ) {
+    if (!overrides) return detected;
+    const next: ColumnMap = { ...detected };
+    Object.entries(overrides).forEach(([key, value]) => {
+      if (!this.isColumnKey(key)) return;
+      const index = this.columnLetterToIndex(value);
+      if (index === undefined) {
+        delete next[key];
+      } else {
+        next[key] = index;
+      }
+    });
+    return next;
+  }
+
+  private isColumnKey(key: string): key is keyof ColumnMap {
+    return [
+      'itemNo',
+      'chineseName',
+      'englishSurname',
+      'englishGiven',
+      'englishName',
+      'birthDate',
+      'age',
+      'gender',
+      'location',
+      'passportNo',
+      'province',
+      'remark',
+    ].includes(key);
+  }
+
+  private columnLetterToIndex(value: string) {
+    const normalized = String(value ?? '').trim().toUpperCase();
+    if (!normalized) return undefined;
+    let index = 0;
+    for (const char of normalized) {
+      const code = char.charCodeAt(0) - 64;
+      if (code < 1 || code > 26) return undefined;
+      index = index * 26 + code;
+    }
+    return index - 1;
   }
 
   private rowToItem(
@@ -401,6 +487,8 @@ export class NameListsService {
     const englishName = this.cell(row, map.englishName);
     const splitName = this.splitEnglishName(englishName);
     const remark = this.cell(row, map.remark);
+    const birthDate = this.parseDateInput(this.cell(row, map.birthDate));
+    const age = this.toNumber(this.cell(row, map.age)) ?? this.calculateAge(birthDate);
 
     return {
       itemNo,
@@ -408,16 +496,41 @@ export class NameListsService {
       agentCode: dto.agentCode.trim(),
       code: dto.partyCode.trim() || this.partyCodeFromFileName(dto.fileName),
       arriveDate: this.parseDateInput(dto.receivedDate) || this.todayText(),
-      passportNo: this.cell(row, map.passportNo),
+      passportNo: this.cleanPassportNo(this.cell(row, map.passportNo)),
       firstName: englishGiven || splitName.firstName,
       lastName: englishSurname || splitName.lastName,
-      birthDate: this.parseDateInput(this.cell(row, map.birthDate)),
-      age: this.toNumber(this.cell(row, map.age)),
+      birthDate,
+      age,
       gender: this.normalizeGender(this.cell(row, map.gender)),
       nationCode: 'CN',
       province: this.cleanPlace(this.cell(row, map.province) || this.cell(row, map.location)),
       location: this.cleanPlace(this.cell(row, map.location)),
     };
+  }
+
+  private isPassengerDataRow(row: string[], map: ColumnMap, hasItemNoColumn: boolean) {
+    const itemNo = this.toNumber(this.cell(row, map.itemNo));
+    const hasNumberedItem = itemNo !== undefined;
+    const hasPassport = Boolean(this.cell(row, map.passportNo));
+    const hasName = Boolean(
+      this.cell(row, map.englishGiven) ||
+        this.cell(row, map.englishSurname) ||
+        this.cell(row, map.englishName) ||
+        this.cell(row, map.chineseName),
+    );
+    const hasBirthDate = Boolean(this.parseDateInput(this.cell(row, map.birthDate)));
+    const hasGender = Boolean(this.normalizeGender(this.cell(row, map.gender)));
+    const hasAge = this.toNumber(this.cell(row, map.age)) !== undefined;
+    const hasPassengerIdentity =
+      (hasPassport && hasName && (hasBirthDate || hasGender || hasAge)) ||
+      (hasPassport && hasBirthDate && hasGender) ||
+      (hasName && hasBirthDate && (hasGender || hasAge));
+
+    if (hasItemNoColumn) {
+      return hasNumberedItem && hasPassengerIdentity;
+    }
+
+    return hasPassengerIdentity;
   }
 
   private cell(row: string[], index?: number) {
@@ -430,6 +543,16 @@ export class NameListsService {
   }
 
   private splitEnglishName(value: string) {
+    const slashParts = value
+      .trim()
+      .replace(/\s+/g, ' ')
+      .split('/')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (slashParts.length >= 2) {
+      return { firstName: slashParts.slice(1).join(' '), lastName: slashParts[0] };
+    }
+
     const parts = value.trim().replace(/\s+/g, ' ').split(' ').filter(Boolean);
     if (!parts.length) return { firstName: '', lastName: '' };
     if (parts.length === 1) return { firstName: parts[0], lastName: '' };
@@ -444,6 +567,13 @@ export class NameListsService {
 
   private cleanPlace(value: string) {
     return value.split('/')[0]?.trim() ?? '';
+  }
+
+  private cleanPassportNo(value: string) {
+    return value
+      .trim()
+      .replace(/^\$+\s*/, '')
+      .replace(/\s+/g, ' ');
   }
 
   private toNumber(value: string) {
@@ -473,6 +603,26 @@ export class NameListsService {
       return `${thaiStyle[3]}-${thaiStyle[2].padStart(2, '0')}-${thaiStyle[1].padStart(2, '0')}`;
     }
     return '';
+  }
+
+  private calculateAge(birthDate: string) {
+    if (!birthDate) return undefined;
+    const match = birthDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return undefined;
+
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const today = new Date();
+    let age = today.getFullYear() - year;
+    const currentMonth = today.getMonth() + 1;
+    const currentDay = today.getDate();
+
+    if (currentMonth < month || (currentMonth === month && currentDay < day)) {
+      age -= 1;
+    }
+
+    return age >= 0 && age < 130 ? age : undefined;
   }
 
   private partyCodeFromFileName(fileName: string) {

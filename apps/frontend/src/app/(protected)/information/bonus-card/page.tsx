@@ -256,9 +256,11 @@ export default function BonusCardPage() {
 
         <div className="mt-5 grid gap-3 md:grid-cols-[220px_1fr_150px]">
           <input
-            type="date"
-            value={workDate}
-            onChange={(event) => setWorkDate(event.target.value)}
+            type="text"
+            value={dateInputValue(workDate)}
+            placeholder="--/--/----"
+            onChange={(event) => setWorkDate(parseDateInput(event.target.value))}
+            onBlur={(event) => setWorkDate(completeDateInput(event.target.value))}
             className="form-input"
           />
           <input
@@ -593,9 +595,15 @@ function Field({
     <label className={`space-y-2 ${wide ? 'md:col-span-2' : ''}`}>
       <span className="text-sm font-semibold text-slate-700">{label}</span>
       <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
+        type={type === 'date' ? 'text' : type}
+        value={type === 'date' ? dateInputValue(String(value ?? '')) : type === 'number' && value === 0 ? '' : value}
+        placeholder={type === 'date' ? '--/--/----' : undefined}
+        onChange={(event) => onChange(type === 'date' ? parseDateInput(event.target.value) : event.target.value)}
+        onBlur={(event) => {
+          if (type === 'date') {
+            onChange(completeDateInput(event.target.value));
+          }
+        }}
         className="form-input rounded-md"
       />
     </label>
@@ -844,11 +852,31 @@ function formatCellValue(row: BonusCard, key: keyof BonusCard) {
 }
 
 function formatDate(value: string) {
+  if (!value) return '--/--/----';
   const [year, month, day] = value.slice(0, 10).split('-');
   if (!year || !month || !day) {
     return value;
   }
   return `${day}/${month}/${year}`;
+}
+
+function dateInputValue(value?: string) {
+  return value ? formatDate(value) : '';
+}
+
+function parseDateInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '--/--/----') return '';
+  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return trimmed;
+  return `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
+}
+
+function completeDateInput(value: string) {
+  const parsed = parseDateInput(value);
+  if (!parsed) return '';
+  const [year, month, day] = parsed.slice(0, 10).split('-');
+  return year && month && day ? `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` : parsed;
 }
 
 function getImageSrc(value: string) {

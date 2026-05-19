@@ -1,11 +1,11 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 
 type NameListItem = {
   id?: string;
-  itemNo: number;
+  itemNo: number | '';
   isLeader: boolean;
   agentCode: string;
   code: string;
@@ -39,11 +39,13 @@ type NameList = {
   pax: number;
   sourceFile: string;
   note: string;
+  createdAt: string;
   items: NameListItem[];
 };
 
-type FormState = Omit<NameList, 'id'> & {
+type FormState = Omit<NameList, 'id' | 'pax'> & {
   id?: string;
+  pax: number | '';
 };
 
 type AgentOption = {
@@ -69,6 +71,25 @@ type ImportResult = {
   imported: number;
   nameList: NameList;
 };
+
+const importColumnOptions = [
+  { key: 'itemNo', label: 'ลำดับ' },
+  { key: 'chineseName', label: 'ชื่อจีน' },
+  { key: 'englishSurname', label: 'นามสกุล' },
+  { key: 'englishGiven', label: 'ชื่ออังกฤษ' },
+  { key: 'englishName', label: 'ชื่อรวม' },
+  { key: 'birthDate', label: 'วันเกิด' },
+  { key: 'age', label: 'อายุ' },
+  { key: 'gender', label: 'เพศ' },
+  { key: 'location', label: 'ที่เกิด' },
+  { key: 'passportNo', label: 'Passport' },
+  { key: 'province', label: 'ที่ออกพาสปอร์ต' },
+  { key: 'remark', label: 'หมายเหตุ' },
+] as const;
+
+const excelColumnLetters = Array.from({ length: 26 }, (_, index) =>
+  String.fromCharCode(65 + index),
+);
 
 const emptyItem = (itemNo: number): NameListItem => ({
   itemNo,
@@ -104,6 +125,7 @@ const emptyForm = (): FormState => ({
   pax: 0,
   sourceFile: '',
   note: '',
+  createdAt: '',
   items: [],
 });
 
@@ -136,8 +158,8 @@ export default function NameListPage() {
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase();
     const sorted = [...rows].sort((a, b) => {
-      const dateCompare = (b.arriveDate || '').localeCompare(a.arriveDate || '');
-      return dateCompare || a.code.localeCompare(b.code);
+      const createdCompare = (b.createdAt || '').localeCompare(a.createdAt || '');
+      return createdCompare || a.code.localeCompare(b.code);
     });
     if (!query) return sorted;
     return sorted.filter((row) =>
@@ -465,6 +487,7 @@ function ImportNameListModal({
   const [agentCode, setAgentCode] = useState('');
   const [receivedDate, setReceivedDate] = useState(new Date().toISOString().slice(0, 10));
   const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [columnOverrides, setColumnOverrides] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
@@ -481,7 +504,7 @@ function ImportNameListModal({
 
   const selectedAgent = agents.find((agent) => agent.agentCode === agentCode);
 
-  const payload = async () => {
+  const payload = async (overrides = columnOverrides) => {
     if (!file) {
       throw new Error('Please select an Excel file.');
     }
@@ -499,19 +522,24 @@ function ImportNameListModal({
       agentName: selectedAgent.name,
       receivedDate,
       sheetIndex: 1,
+      columnOverrides: overrides,
     };
   };
 
-  const runPreview = async () => {
+  const runPreview = async (overrides = columnOverrides) => {
     setBusy(true);
     setLocalError(null);
     onError(null);
     try {
       const data = await apiFetch<ImportPreview>('/api/name-lists/import-preview', {
         method: 'POST',
-        body: JSON.stringify(await payload()),
+        body: JSON.stringify(await payload(overrides)),
       });
       setPreview(data);
+      setColumnOverrides((current) => {
+        const merged = { ...data.columnMap, ...current, ...overrides };
+        return merged;
+      });
     } catch (previewError) {
       setPreview(null);
       setLocalError(previewError instanceof Error ? previewError.message : 'Preview failed.');
@@ -555,19 +583,28 @@ function ImportNameListModal({
             <div className="grid gap-3 lg:grid-cols-[minmax(260px,1.5fr)_minmax(160px,1fr)_minmax(220px,1.2fr)_160px]">
               <label>
                 <span className="text-xs font-semibold text-slate-700">Excel File</span>
-                <input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  className="form-input mt-1 h-10 rounded-md py-2 text-sm"
-                  onChange={(event) => {
+                <span className="mt-1 flex h-10 cursor-pointer items-center gap-2 rounded-md border border-blue-200 bg-white px-2.5 text-sm text-slate-700 transition hover:border-blue-400">
+                  <span className="shrink-0 rounded border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                    Choose File
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-slate-500">
+                    {file?.name ?? 'No file chosen'}
+                  </span>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="sr-only"
+                    onChange={(event) => {
                     const nextFile = event.target.files?.[0] ?? null;
                     setFile(nextFile);
                     setPreview(null);
+                    setColumnOverrides({});
                     if (nextFile) {
                       setPartyCode(extractPartyCode(nextFile.name));
                     }
-                  }}
-                />
+                    }}
+                  />
+                </span>
               </label>
               <Field label="Party Code" value={partyCode} onChange={(value) => {
                 setPartyCode(value);
@@ -601,7 +638,7 @@ function ImportNameListModal({
                 {file ? `Selected: ${file.name}` : 'Choose an Excel file from your PC.'}
               </div>
               <div className="flex gap-2">
-                <button type="button" className="toolbar-btn" disabled={busy || !file} onClick={runPreview}>
+                <button type="button" className="toolbar-btn" disabled={busy || !file} onClick={() => void runPreview()}>
                   {busy ? 'Reading...' : 'Preview File'}
                 </button>
                 <button type="button" className="toolbar-btn-primary" disabled={busy || !preview} onClick={runImport}>
@@ -616,8 +653,8 @@ function ImportNameListModal({
             ) : null}
           </section>
 
-          <section className="min-h-0 overflow-hidden rounded-[8px] border border-slate-200">
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <section className="grid min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-[8px] border border-slate-200">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2.5">
               <div>
                 <h3 className="text-sm font-semibold text-slate-950">Preview</h3>
                 <p className="text-xs text-slate-500">
@@ -634,47 +671,88 @@ function ImportNameListModal({
             </div>
 
             {preview ? (
-              <div className="grid h-full min-h-0 grid-cols-1 gap-3 overflow-hidden p-3 lg:grid-cols-[240px_minmax(0,1fr)]">
-                <div className="overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3">
-                  <h4 className="text-xs font-semibold uppercase text-slate-500">Column Mapping</h4>
-                  <div className="mt-2 space-y-1 text-xs text-slate-700">
-                    {Object.entries(preview.columnMap).map(([key, value]) => (
-                      <div key={key} className="flex justify-between gap-3">
-                        <span className="truncate">{key}</span>
-                        <span className="font-semibold">{value || '-'}</span>
-                      </div>
-                    ))}
+              <div className="grid min-h-0 grid-cols-[210px_minmax(0,1fr)] gap-3 overflow-hidden p-3">
+                <div className="min-h-0 overflow-hidden rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-semibold uppercase text-slate-500">จัดคอลัมน์จาก Excel</h4>
+                      <p className="mt-0.5 text-[10px] text-slate-500">เลือกคอลัมน์เองได้ แล้วกด Preview อีกครั้ง</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 grid grid-cols-1 gap-y-1 text-xs text-slate-700">
+                    {importColumnOptions.map((column) => {
+                      const selectedValue =
+                        columnOverrides[column.key] ?? preview.columnMap[column.key] ?? '';
+                      return (
+                        <label key={column.key} className="grid grid-cols-[minmax(0,1fr)_54px] items-center gap-1.5">
+                          <span className="truncate">{column.label}</span>
+                          <select
+                            value={selectedValue}
+                            onChange={(event) => {
+                              const nextOverrides = {
+                                ...columnOverrides,
+                                [column.key]: event.target.value,
+                              };
+                              setColumnOverrides(nextOverrides);
+                              if (preview && file && selectedAgent) {
+                                void runPreview(nextOverrides);
+                              }
+                            }}
+                            className="h-6 rounded-md border border-blue-200 bg-white px-1 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500"
+                          >
+                            <option value="">ไม่มี</option>
+                            {excelColumnLetters.map((letter) => (
+                              <option key={letter} value={letter}>
+                                {letter}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      );
+                    })}
                   </div>
                   {preview.warnings.length ? (
-                    <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-semibold text-amber-800">
-                      {preview.warnings.join(' ')}
+                    <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] font-semibold leading-4 text-amber-800">
+                      {preview.warnings.map(translateImportWarning).join(' ')}
                     </div>
                   ) : null}
                 </div>
-                <div className="min-h-0 overflow-auto rounded-md border border-slate-200">
-                  <table className="w-full min-w-[920px] border-collapse text-xs">
+                <div className="min-h-0 overflow-auto rounded-md border border-slate-200 bg-white">
+                  <table className="w-full table-fixed border-collapse text-[11px]">
+                    <colgroup>
+                      <col className="w-[38px]" />
+                      <col className="w-[50px]" />
+                      <col className="w-[108px]" />
+                      <col className="w-[130px]" />
+                      <col className="w-[96px]" />
+                      <col className="w-[88px]" />
+                      <col className="w-[54px]" />
+                      <col className="w-[42px]" />
+                      <col className="w-[72px]" />
+                      <col className="w-[72px]" />
+                    </colgroup>
                     <thead className="sticky top-0 z-10 bg-white">
                       <tr>
                         {['No.', 'Leader', 'Passport', 'First Name', 'Last Name', 'Birth Date', 'Gender', 'Age', 'Province', 'Location'].map((header) => (
-                          <th key={header} className="border-b border-slate-200 px-2 py-2 text-left text-[11px] font-semibold uppercase text-slate-400">
+                          <th key={header} className="truncate border-b border-slate-200 px-1.5 py-2 text-left text-[10px] font-semibold uppercase text-slate-400">
                             {header}
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="bg-white">
                       {preview.sampleRows.map((item) => (
                         <tr key={`${item.itemNo}-${item.passportNo}`}>
-                          <td className="border-b border-slate-100 px-2 py-2">{item.itemNo}</td>
-                          <td className="border-b border-slate-100 px-2 py-2">{item.isLeader ? 'Yes' : ''}</td>
-                          <td className="border-b border-slate-100 px-2 py-2">{item.passportNo}</td>
-                          <td className="border-b border-slate-100 px-2 py-2">{item.firstName}</td>
-                          <td className="border-b border-slate-100 px-2 py-2">{item.lastName}</td>
-                          <td className="border-b border-slate-100 px-2 py-2">{formatDate(item.birthDate)}</td>
-                          <td className="border-b border-slate-100 px-2 py-2">{item.gender}</td>
-                          <td className="border-b border-slate-100 px-2 py-2">{item.age ?? ''}</td>
-                          <td className="border-b border-slate-100 px-2 py-2">{item.province}</td>
-                          <td className="border-b border-slate-100 px-2 py-2">{item.location}</td>
+                          <td className="truncate border-b border-slate-100 px-1.5 py-2">{item.itemNo}</td>
+                          <td className="truncate border-b border-slate-100 px-1.5 py-2">{item.isLeader ? 'Yes' : ''}</td>
+                          <td className="truncate border-b border-slate-100 px-1.5 py-2" title={item.passportNo}>{item.passportNo}</td>
+                          <td className="truncate border-b border-slate-100 px-1.5 py-2" title={item.firstName}>{item.firstName}</td>
+                          <td className="truncate border-b border-slate-100 px-1.5 py-2" title={item.lastName}>{item.lastName}</td>
+                          <td className="truncate border-b border-slate-100 px-1.5 py-2">{formatDate(item.birthDate)}</td>
+                          <td className="truncate border-b border-slate-100 px-1.5 py-2">{item.gender}</td>
+                          <td className="truncate border-b border-slate-100 px-1.5 py-2">{item.age ?? ''}</td>
+                          <td className="truncate border-b border-slate-100 px-1.5 py-2" title={item.province}>{item.province}</td>
+                          <td className="truncate border-b border-slate-100 px-1.5 py-2" title={item.location}>{item.location}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -682,7 +760,7 @@ function ImportNameListModal({
                 </div>
               </div>
             ) : (
-              <div className="flex h-full min-h-64 items-center justify-center text-center text-sm text-slate-400">
+              <div className="flex min-h-0 items-center justify-center text-center text-sm text-slate-400">
                 Select file, confirm Party Code and Agent, then click Preview File.
               </div>
             )}
@@ -794,7 +872,7 @@ function NameListModal({
               <Field label="Arrive Date" type="date" value={form.arriveDate} onChange={(value) => setField('arriveDate', value)} />
               <Field label="Depart Date" type="date" value={form.departDate} onChange={(value) => setField('departDate', value)} />
               <Field label="Agent Code" value={form.agentCode} onChange={(value) => setField('agentCode', value)} />
-              <Field label="Pax" type="number" value={String(form.pax)} onChange={(value) => setField('pax', Number(value) || 0)} />
+              <Field label="Pax" type="number" value={String(form.pax)} onChange={(value) => setField('pax', value === '' ? '' : Number(value))} />
               <Field label="Agent Name" value={form.agentName} onChange={(value) => setField('agentName', value)} wide />
               <Field label="Guide Code" value={form.guideCode} onChange={(value) => setField('guideCode', value)} />
               <Field label="Guide Name" value={form.guideName} onChange={(value) => setField('guideName', value)} wide />
@@ -836,8 +914,11 @@ function NameListModal({
                       <td className="border-b border-slate-100 px-1.5 py-1.5">
                         <input
                           type="number"
-                          value={item.itemNo}
-                          onChange={(event) => setItem(index, 'itemNo', Number(event.target.value) || 0)}
+                          value={item.itemNo || ''}
+                          onChange={(event) => {
+                            const nextValue = event.target.value;
+                            setItem(index, 'itemNo', nextValue === '' ? '' : Number(nextValue));
+                          }}
                           className="form-input no-number-spinner h-8 rounded-md px-2 text-xs"
                         />
                       </td>
@@ -908,16 +989,72 @@ function Field({
   required?: boolean;
   wide?: boolean;
 }) {
+  const pickerRef = useRef<HTMLInputElement>(null);
+  const isDate = type === 'date';
+
+  const completeDate = (rawValue: string) => {
+    onChange(completeDateInput(rawValue));
+  };
+
+  const openPicker = () => {
+    const picker = pickerRef.current as (HTMLInputElement & { showPicker?: () => void }) | null;
+    try {
+      if (picker?.showPicker) {
+        picker.showPicker();
+        return;
+      }
+    } catch {
+      // Native date picker availability depends on browser focus rules.
+    }
+    picker?.focus();
+    picker?.click();
+  };
+
   return (
     <label className={wide ? 'md:col-span-2' : ''}>
       <span className="text-[11px] font-semibold text-slate-700">{label}</span>
-      <input
-        required={required}
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="form-input mt-0.5 h-8 rounded-md px-2.5 text-xs"
-      />
+      <div className="relative mt-0.5">
+        <input
+          required={required}
+          type={isDate ? 'text' : type}
+          value={isDate ? dateInputValue(value) : type === 'number' && value === '0' ? '' : value}
+          placeholder={isDate ? '--/--/----' : undefined}
+          onChange={(event) => onChange(isDate ? parseDateInput(event.target.value) : event.target.value)}
+          onBlur={(event) => {
+            if (isDate) {
+              completeDate(event.target.value);
+            }
+          }}
+          onKeyDown={(event) => {
+            if (isDate && event.key === 'Enter') {
+              completeDate(event.currentTarget.value);
+            }
+          }}
+          className={`form-input h-8 rounded-md px-2.5 text-xs ${isDate ? 'pr-8' : ''}`}
+        />
+        {isDate ? (
+          <>
+            <button
+              type="button"
+              className="absolute inset-y-0 right-1.5 my-auto flex h-6 w-6 items-center justify-center rounded text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-blue-700"
+              aria-label="Open date picker"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={openPicker}
+            >
+              v
+            </button>
+            <input
+              ref={pickerRef}
+              type="date"
+              value={toNativeDateValue(value)}
+              onChange={(event) => onChange(event.target.value)}
+              className="pointer-events-none absolute right-0 top-full h-px w-px opacity-0"
+              tabIndex={-1}
+              aria-hidden="true"
+            />
+          </>
+        ) : null}
+      </div>
     </label>
   );
 }
@@ -936,9 +1073,15 @@ function EditableCell({
   return (
     <td className="border-b border-slate-100 px-1.5 py-1.5">
       <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
+        type={type === 'date' ? 'text' : type}
+        value={type === 'date' ? dateInputValue(value) : type === 'number' && value === '0' ? '' : value}
+        placeholder={type === 'date' ? '--/--/----' : undefined}
+        onChange={(event) => onChange(type === 'date' ? parseDateInput(event.target.value) : event.target.value)}
+        onBlur={(event) => {
+          if (type === 'date') {
+            onChange(completeDateInput(event.target.value));
+          }
+        }}
         className={`form-input h-8 rounded-md px-2.5 text-xs ${compactNumber ? 'no-number-spinner' : ''}`}
       />
     </td>
@@ -956,10 +1099,45 @@ function formatItemValue(item: NameListItem, key: keyof NameListItem) {
 }
 
 function formatDate(value?: string) {
-  if (!value) return '-';
+  if (!value) return '--/--/----';
   const [year, month, day] = value.slice(0, 10).split('-');
   if (!year || !month || !day) return value;
   return `${day}/${month}/${year}`;
+}
+
+function dateInputValue(value?: string) {
+  if (!value) return '';
+  return formatDate(value);
+}
+
+function parseDateInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '--/--/----') return '';
+  const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return trimmed;
+  return `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
+}
+
+function completeDateInput(value: string) {
+  const parsed = parseDateInput(value);
+  if (!parsed) return '';
+  if (/^\d{1,2}$/.test(parsed)) {
+    const now = new Date();
+    const day = parsed.padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${now.getFullYear()}-${month}-${day}`;
+  }
+  const dayMonth = parsed.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (dayMonth) {
+    const now = new Date();
+    return `${now.getFullYear()}-${dayMonth[2].padStart(2, '0')}-${dayMonth[1].padStart(2, '0')}`;
+  }
+  const [year, month, day] = parsed.slice(0, 10).split('-');
+  return year && month && day ? `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` : parsed;
+}
+
+function toNativeDateValue(value?: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value ?? '') ? value ?? '' : '';
 }
 
 function extractPartyCode(fileName: string) {
@@ -967,6 +1145,19 @@ function extractPartyCode(fileName: string) {
     .replace(/\.[^.]+$/, '')
     .split(/[-\s]*名单/i)[0]
     .trim();
+}
+
+function translateImportWarning(message: string) {
+  if (message.includes('Passport')) {
+    return 'ไม่พบคอลัมน์เลข Passport';
+  }
+  if (message.includes('English name')) {
+    return 'ระบบยังจับคอลัมน์ชื่ออังกฤษไม่ชัดเจน กรุณาเลือกคอลัมน์ชื่อ/นามสกุลเอง';
+  }
+  if (message.includes('Birth date')) {
+    return 'ไม่พบคอลัมน์วันเกิด';
+  }
+  return message;
 }
 
 function fileToBase64(file: File) {

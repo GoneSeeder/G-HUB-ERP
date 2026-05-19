@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsObject, IsOptional, IsString, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ImportNameListDto {
@@ -25,4 +25,8 @@ export class ImportNameListDto {
   @IsInt()
   @Min(1)
   sheetIndex?: number;
+
+  @IsOptional()
+  @IsObject()
+  columnOverrides?: Record<string, string>;
 }

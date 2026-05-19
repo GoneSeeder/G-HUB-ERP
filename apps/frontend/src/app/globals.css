@@ -101,13 +101,16 @@ body {
   border-color: #2563eb;
 }
 
-.no-number-spinner {
+.no-number-spinner,
+input[type='number'] {
   appearance: textfield;
   -moz-appearance: textfield;
 }
 
 .no-number-spinner::-webkit-outer-spin-button,
-.no-number-spinner::-webkit-inner-spin-button {
+.no-number-spinner::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
   margin: 0;
   -webkit-appearance: none;
 }
