@@ -2,6 +2,8 @@
 
 import { FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
   DownloadIcon,
   EditIcon,
   LinkIcon,
@@ -78,10 +80,8 @@ type AgentMatching = {
   agentName: string;
 };
 
-type CreateBonusCardsResponse = {
-  requested: number;
-  created: number;
-  skipped: number;
+type BonusPreviewRow = Booking & {
+  previewBonus: string;
 };
 
 type ImportPreviewSection = {
@@ -131,26 +131,26 @@ const emptyBooking: Booking = {
 };
 
 const tableColumns: Array<{ key: keyof Booking; label: string; className?: string }> = [
-  { key: 'docDate', label: 'Doc Date', className: 'w-[6.5%]' },
-  { key: 'docTime', label: 'Doc Time', className: 'w-[5%]' },
-  { key: 'agentCode', label: 'Agent Code', className: 'w-[6%]' },
-  { key: 'agentName', label: 'Agent Name', className: 'w-[13%]' },
-  { key: 'partyCode', label: 'PartyCode', className: 'w-[8%]' },
-  { key: 'nation', label: 'Nation', className: 'w-[4.5%]' },
-  { key: 'arriveDate', label: 'Arrive Date', className: 'w-[6%]' },
-  { key: 'departDate', label: 'Depart Date', className: 'w-[6%]' },
-  { key: 'guideCode', label: 'Guide Code', className: 'w-[6%]' },
-  { key: 'guideName', label: 'Guide Name', className: 'w-[9%]' },
-  { key: 'telGuide', label: 'Tel Guide', className: 'w-[6%]' },
-  { key: 'telDriver', label: 'Tel Driver', className: 'w-[6%]' },
+  { key: 'docDate', label: 'Doc Date', className: 'w-[6.2%]' },
+  { key: 'docTime', label: 'Time', className: 'w-[4.2%]' },
+  { key: 'agentCode', label: 'Agent', className: 'w-[5.3%]' },
+  { key: 'agentName', label: 'Agent Name', className: 'w-[8.5%]' },
+  { key: 'partyCode', label: 'Party Code', className: 'w-[8.2%]' },
+  { key: 'nation', label: 'Nation', className: 'w-[3.8%]' },
+  { key: 'arriveDate', label: 'Arrive', className: 'w-[6%]' },
+  { key: 'departDate', label: 'Depart', className: 'w-[6%]' },
+  { key: 'guideCode', label: 'Guide Code', className: 'hidden' },
+  { key: 'guideName', label: 'Guide', className: 'w-[6.5%]' },
+  { key: 'telGuide', label: 'Tel Guide', className: 'hidden' },
+  { key: 'telDriver', label: 'Tel Driver', className: 'hidden' },
   { key: 'pax', label: 'Pax', className: 'w-[3.5%]' },
-  { key: 'carCode', label: 'CarCode', className: 'w-[5%]' },
-  { key: 'shop', label: 'Shop', className: 'w-[4%]' },
-  { key: 'bookRemark', label: 'Book Remark', className: 'w-[9%]' },
-  { key: 'dateBookJw', label: 'DateBookJW', className: 'w-[6%]' },
-  { key: 'timeBookJw', label: 'TimeBookJW', className: 'w-[5%]' },
-  { key: 'ptyStartDate', label: 'PTY Start Date', className: 'w-[6%]' },
-  { key: 'ptyEndDate', label: 'PTY End Date', className: 'w-[6%]' },
+  { key: 'carCode', label: 'Car', className: 'w-[5.2%]' },
+  { key: 'shop', label: 'Shop', className: 'hidden xl:table-cell xl:w-[3.5%]' },
+  { key: 'bookRemark', label: 'Remark', className: 'w-[7.2%]' },
+  { key: 'dateBookJw', label: 'Date JW', className: 'hidden' },
+  { key: 'timeBookJw', label: 'Time JW', className: 'hidden' },
+  { key: 'ptyStartDate', label: 'PTY Start', className: 'w-[6%]' },
+  { key: 'ptyEndDate', label: 'PTY End', className: 'w-[6%]' },
 ];
 
 export default function InformationBookingPage() {
@@ -171,6 +171,7 @@ export default function InformationBookingPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [importMessage, setImportMessage] = useState('');
   const [agentMatchingOpen, setAgentMatchingOpen] = useState(false);
+  const [createBonusOpen, setCreateBonusOpen] = useState(false);
 
   const selectedRow = selectedIds.length === 1 ? rows.find((row) => row.id === selectedIds[0]) ?? null : null;
   const allRowsSelected = rows.length > 0 && rows.every((row) => selectedIds.includes(row.id));
@@ -254,33 +255,6 @@ export default function InformationBookingPage() {
     await loadRows();
   };
 
-  const createSelectedBonusCards = async () => {
-    if (selectedIds.length === 0) {
-      setError('Please select booking rows first.');
-      return;
-    }
-    if (!window.confirm(`Create ${selectedIds.length} selected booking(s) to bonus card?`)) {
-      return;
-    }
-    setError(null);
-    setImportMessage('');
-    try {
-      const result = await apiFetch<CreateBonusCardsResponse>('/api/bookings/create-bonus-cards', {
-        method: 'POST',
-        body: JSON.stringify({ ids: selectedIds }),
-      });
-      setImportMessage(
-        `Created ${result.created} bonus card rows${
-          result.skipped ? `, skipped ${result.skipped}` : ''
-        }.`,
-      );
-      setSelectedIds([]);
-      await loadRows();
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'Create bonus card failed.');
-    }
-  };
-
   const toggleRowSelection = (id: string) => {
     setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   };
@@ -311,7 +285,7 @@ export default function InformationBookingPage() {
   };
 
   return (
-    <PageShell className="!max-w-[calc(100vw-2rem)]">
+    <PageShell className="h-full !max-w-[calc(100vw-2rem)] gap-3 overflow-hidden">
       <PageHeader
         eyebrow="Operations · Booking"
         title="บันทึกการจองเข้าร้าน"
@@ -327,7 +301,7 @@ export default function InformationBookingPage() {
             <button type="button" className="toolbar-btn" onClick={() => setAgentMatchingOpen(true)}>
               <LinkIcon className="erp-action-icon" /> Agent Matching
             </button>
-            <button type="button" className="toolbar-btn" disabled={selectedIds.length === 0} onClick={createSelectedBonusCards}>
+            <button type="button" className="toolbar-btn" onClick={() => setCreateBonusOpen(true)}>
               <PlusIcon className="erp-action-icon" /> Create to Bonus Card
             </button>
             <button type="button" className="toolbar-btn" onClick={exportRows}>
@@ -340,11 +314,12 @@ export default function InformationBookingPage() {
         }
       />
 
-      <DataPanel className="erp-slide-left shrink-0 px-4 py-3">
-        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-[160px_180px_130px_150px_150px_1fr]">
-          <FilterDateInput label="Date" value={filters.date} onChange={(date) => setFilters({ ...filters, date })} />
-          <FilterInput label="Agent" value={filters.agent} onChange={(agent) => setFilters({ ...filters, agent })} />
-          <FilterInput label="Nation" value={filters.nation} onChange={(nation) => setFilters({ ...filters, nation })} />
+      <DataPanel className="erp-slide-left shrink-0 px-3 py-2.5">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="w-[150px]"><FilterDateInput label="Date" value={filters.date} onChange={(date) => setFilters({ ...filters, date })} /></div>
+          <div className="w-[145px]"><FilterInput label="Agent" value={filters.agent} onChange={(agent) => setFilters({ ...filters, agent })} /></div>
+          <div className="w-[112px]"><FilterInput label="Nation" value={filters.nation} onChange={(nation) => setFilters({ ...filters, nation })} /></div>
+          <div className="w-[132px]">
           <FilterSelect
             label="Status"
             value={filters.status}
@@ -355,6 +330,8 @@ export default function InformationBookingPage() {
             ]}
             onChange={(status) => setFilters({ ...filters, status })}
           />
+          </div>
+          <div className="w-[126px]">
           <FilterSelect
             label="Upload"
             value={filters.upload}
@@ -365,12 +342,19 @@ export default function InformationBookingPage() {
             ]}
             onChange={(upload) => setFilters({ ...filters, upload })}
           />
+          </div>
+          <div className="min-w-[260px] flex-1">
           <FilterInput
             label="Search"
             value={filters.search}
             placeholder="Search party, guide, agent, car..."
             onChange={(search) => setFilters({ ...filters, search })}
           />
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-right">
+            <p className="text-[10px] font-medium uppercase text-slate-400">Records</p>
+            <p className="text-sm font-medium text-slate-900">{rows.length}</p>
+          </div>
         </div>
       </DataPanel>
 
@@ -386,7 +370,7 @@ export default function InformationBookingPage() {
       ) : null}
 
       <DataPanel className="erp-slide-right flex min-h-0 flex-1 flex-col">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 text-sm text-slate-500">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-3 py-2 text-sm text-slate-500">
           <span>
             Showing {rows.length} bookings
             {selectedIds.length ? ` / selected ${selectedIds.length}` : ''}
@@ -400,11 +384,11 @@ export default function InformationBookingPage() {
             </button>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-auto">
-          <table className="min-w-[1760px] table-fixed border-collapse text-[12px]">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <table className="w-full table-fixed border-collapse text-[11px]">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className="w-9 border-b border-slate-200 px-2 py-2 text-left">
+                <th className="w-8 border-b border-slate-200 px-1.5 py-2 text-left">
                   <input
                     type="checkbox"
                     checked={allRowsSelected}
@@ -416,15 +400,15 @@ export default function InformationBookingPage() {
                 {tableColumns.map((column) => (
                   <th
                     key={column.key}
-                    className={`border-b border-slate-200 px-2 py-2 text-left text-[10px] font-semibold uppercase text-slate-400 ${column.className ?? ''}`}
+                    className={`truncate border-b border-slate-200 px-1.5 py-2 text-left text-[9px] font-semibold uppercase text-slate-400 ${column.className ?? ''}`}
                   >
                     {column.label}
                   </th>
                 ))}
-                <th className="w-[5%] border-b border-slate-200 px-2 py-2 text-left text-[10px] font-semibold uppercase text-slate-400">
+                <th className="w-[5.4%] border-b border-slate-200 px-1.5 py-2 text-left text-[9px] font-semibold uppercase text-slate-400">
                   Status
                 </th>
-                <th className="w-[5%] border-b border-slate-200 px-2 py-2 text-left text-[10px] font-semibold uppercase text-slate-400">
+                <th className="w-[5%] border-b border-slate-200 px-1.5 py-2 text-left text-[9px] font-semibold uppercase text-slate-400">
                   Upload
                 </th>
               </tr>
@@ -451,7 +435,7 @@ export default function InformationBookingPage() {
                     className={`cursor-pointer transition hover:bg-sky-50 ${selectedIds.includes(row.id) ? 'bg-sky-50' : ''}`}
                     onClick={() => toggleRowSelection(row.id)}
                   >
-                    <td className="border-b border-slate-100 px-2 py-2">
+                    <td className="border-b border-slate-100 px-1.5 py-2">
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(row.id)}
@@ -460,7 +444,7 @@ export default function InformationBookingPage() {
                       />
                     </td>
                     {tableColumns.map((column) => (
-                      <td key={column.key} className="truncate border-b border-slate-100 px-2 py-2 text-slate-700" title={formatBookingValue(row, column.key)}>
+                      <td key={column.key} className={`truncate border-b border-slate-100 px-1.5 py-2 text-slate-700 ${column.className ?? ''}`} title={formatBookingValue(row, column.key)}>
                         {formatBookingValue(row, column.key)}
                       </td>
                     ))}
@@ -481,9 +465,11 @@ export default function InformationBookingPage() {
         <BookingModal
           mode={formMode}
           form={form}
+          rows={rows}
           onChange={setForm}
           onClose={() => setFormMode(null)}
           onSubmit={saveForm}
+          onNavigate={(row) => setForm({ ...row, references: row.references ?? [] })}
         />
       ) : null}
       {importOpen ? (
@@ -501,6 +487,13 @@ export default function InformationBookingPage() {
           onClose={() => setAgentMatchingOpen(false)}
         />
       ) : null}
+      {createBonusOpen ? (
+        <CreateBonusModal
+          rows={rows}
+          initialDate={filters.date || today}
+          onClose={() => setCreateBonusOpen(false)}
+        />
+      ) : null}
     </PageShell>
   );
 }
@@ -508,22 +501,29 @@ export default function InformationBookingPage() {
 function BookingModal({
   mode,
   form,
+  rows,
   onChange,
   onClose,
   onSubmit,
+  onNavigate,
 }: {
   mode: 'create' | 'edit';
   form: Booking;
+  rows: Booking[];
   onChange: (value: Booking) => void;
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onNavigate: (row: Booking) => void;
 }) {
   const setField = (key: keyof Booking, value: string | number | boolean) => {
     onChange({ ...form, [key]: value });
   };
+  const currentIndex = rows.findIndex((row) => row.id === form.id);
+  const previousRow = currentIndex > 0 ? rows[currentIndex - 1] : null;
+  const nextRow = currentIndex >= 0 && currentIndex < rows.length - 1 ? rows[currentIndex + 1] : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <form
         onSubmit={onSubmit}
         className="flex max-h-[90vh] w-[calc(100vw-180px)] max-w-[1400px] flex-col overflow-hidden rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
@@ -540,8 +540,8 @@ function BookingModal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-hidden p-2">
-          <div className="grid gap-2 xl:grid-cols-[minmax(0,1fr)_540px]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-2">
+          <div className="grid shrink-0 gap-2 xl:grid-cols-[minmax(0,1fr)_540px]">
           <FormSection title="General">
             <CheckField label="Complete" checked={form.status} onChange={(status) => setField('status', status)} />
             <DateField label="Date" value={form.docDate} onChange={(value) => setField('docDate', value)} disabled />
@@ -569,7 +569,6 @@ function BookingModal({
             <Field label="ทะเบียนรถ" value={form.carCode} onChange={(value) => setField('carCode', value)} />
             <Field label="Tel พขร." value={form.telDriver} onChange={(value) => setField('telDriver', value)} />
             <DateField label="Departure Date" value={form.departDate} onChange={(value) => setField('departDate', value)} />
-            <TextArea label="Book Remark" value={form.bookRemark} onChange={(value) => setField('bookRemark', value)} compact wide />
           </FormSection>
 
           <div className="min-h-0 space-y-3 overflow-hidden">
@@ -590,18 +589,18 @@ function BookingModal({
             <Field label="Agent Ref" value={form.agentCodeRef} onChange={(value) => setField('agentCodeRef', value)} />
             <Field label="Fax No" value={form.faxNo} onChange={(value) => setField('faxNo', value)} />
             <Field label="PartyCode Ref" value={form.partyCodeRef} onChange={(value) => setField('partyCodeRef', value)} />
-            <TextArea label="Book Remark" value={form.bookRemark} onChange={(value) => setField('bookRemark', value)} compact />
+            <TextArea label="Book Remark" value={form.bookRemark} onChange={(value) => setField('bookRemark', value)} tall />
           </FormSection>
           </div>
           </div>
 
-          <section className="mt-2 rounded-[8px] border border-slate-200 bg-slate-50/60 p-2">
+          <section className="mt-2 flex min-h-0 flex-1 flex-col rounded-[8px] border border-slate-200 bg-slate-50/60 p-2">
             <div className="mb-1.5 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-slate-800">Reference Details</h3>
             </div>
-            <div className="max-h-40 space-y-1.5 overflow-auto rounded-md border border-slate-200 bg-white p-1.5">
+            <div className="min-h-0 flex-1 space-y-1.5 overflow-auto rounded-md border border-slate-200 bg-white p-1.5">
               {form.references.length === 0 ? (
-                <div className="px-4 py-4 text-center text-sm text-slate-400">No reference rows.</div>
+                <div className="flex h-full items-center justify-center px-4 py-4 text-sm text-slate-400">No reference rows.</div>
               ) : null}
               {form.references.map((reference, index) => (
                 <div key={`${reference.faxNo}-${index}`} className="grid gap-2 rounded-md border border-slate-100 bg-slate-50/60 p-2 md:grid-cols-4 xl:grid-cols-7">
@@ -618,15 +617,136 @@ function BookingModal({
           </section>
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-slate-200 bg-white/95 px-4 py-2 backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-4 py-2 backdrop-blur">
+          <div className="flex gap-2">
+            <button type="button" className="toolbar-btn px-4" disabled={!previousRow} onClick={() => previousRow && onNavigate(previousRow)}>
+              <ArrowLeftIcon className="erp-action-icon" /> Previous
+            </button>
+            <button type="button" className="toolbar-btn px-4" disabled={!nextRow} onClick={() => nextRow && onNavigate(nextRow)}>
+              Next <ArrowRightIcon className="erp-action-icon" />
+            </button>
+          </div>
+          <div className="flex gap-3">
           <button type="button" className="toolbar-btn px-5" onClick={onClose}>
             Cancel
           </button>
           <button type="submit" className="toolbar-btn-primary px-5">
             Save
           </button>
+          </div>
         </div>
       </form>
+    </div>
+  );
+}
+
+function CreateBonusModal({
+  rows,
+  initialDate,
+  onClose,
+}: {
+  rows: Booking[];
+  initialDate: string;
+  onClose: () => void;
+}) {
+  const [bookDate, setBookDate] = useState(initialDate);
+  const [previewRows, setPreviewRows] = useState<BonusPreviewRow[]>([]);
+  const filteredRows = rows.filter((row) => (row.arriveDate || row.docDate)?.slice(0, 10) === bookDate);
+
+  const genBonus = () => {
+    setPreviewRows(
+      filteredRows.map((row, index) => ({
+        ...row,
+        previewBonus: String(8001 + index),
+      })),
+    );
+  };
+
+  const clearBonus = () => {
+    setPreviewRows(filteredRows.map((row) => ({ ...row, previewBonus: '' })));
+  };
+
+  useEffect(() => {
+    setPreviewRows(filteredRows.map((row) => ({ ...row, previewBonus: '' })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookDate, rows]);
+
+  const displayRows = previewRows.length ? previewRows : filteredRows.map((row) => ({ ...row, previewBonus: '' }));
+
+  return (
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="modal-pop flex h-[86vh] w-full max-w-[1440px] flex-col overflow-hidden rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950">Create to Bonus Card</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Preview booking rows, generate bonus codes, then prepare upload to bonus.</p>
+          </div>
+          <button type="button" className="toolbar-btn" onClick={onClose}>
+            <XIcon className="erp-action-icon" /> Close
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-2 border-b border-slate-200 bg-slate-50/70 px-5 py-3">
+          <div className="w-[170px]">
+            <FilterDateInput label="Book Date" value={bookDate} onChange={setBookDate} />
+          </div>
+          <button type="button" className="toolbar-btn-primary" onClick={genBonus}>
+            <PlusIcon className="erp-action-icon" /> Gen. Bonus Auto
+          </button>
+          <button type="button" className="toolbar-btn" onClick={clearBonus}>
+            <RefreshIcon className="erp-action-icon" /> Clear Bonus Code
+          </button>
+          <button type="button" className="toolbar-btn" onClick={() => undefined}>
+            <UploadIcon className="erp-action-icon" /> Upload to Bonus
+          </button>
+          <span className="ml-auto text-sm font-light text-slate-500">{displayRows.length} rows</span>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-auto">
+          <table className="w-full min-w-[1320px] border-collapse text-xs">
+            <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_rgba(226,232,240,1)]">
+              <tr>
+                {['Status', 'Bonus Code', 'Date book JW', 'Time', 'Agent Code', 'Agent Name', 'Guide Code', 'Guide Name', 'Nation', 'Car Code', 'Pax', 'Party Code', 'First Shop', 'Remark', 'Shop', 'Doc No.', 'Complete'].map((label) => (
+                  <th key={label} className="border-b border-slate-200 px-2 py-2 text-left text-[10px] font-semibold uppercase text-slate-400">
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {displayRows.length ? (
+                displayRows.map((row) => (
+                  <tr key={row.id} className="border-b border-slate-100 hover:bg-[#0752d6]/[0.06]">
+                    <td className="px-2 py-2 text-emerald-700">Upload</td>
+                    <td className="px-2 py-2 font-medium text-slate-950">{row.previewBonus || '-'}</td>
+                    <td className="px-2 py-2">{formatDisplayDate(row.dateBookJw || row.arriveDate || row.docDate)}</td>
+                    <td className="px-2 py-2">{row.timeBookJw || row.docTime}</td>
+                    <td className="px-2 py-2">{row.agentCode}</td>
+                    <td className="max-w-[190px] truncate px-2 py-2" title={row.agentName}>{row.agentName}</td>
+                    <td className="px-2 py-2">{row.guideCode}</td>
+                    <td className="px-2 py-2">{row.guideName}</td>
+                    <td className="px-2 py-2">{row.nation}</td>
+                    <td className="px-2 py-2">{row.carCode}</td>
+                    <td className="px-2 py-2">{row.pax}</td>
+                    <td className="px-2 py-2">{row.partyCode}</td>
+                    <td className="px-2 py-2">{row.shop}</td>
+                    <td className="max-w-[230px] truncate px-2 py-2" title={row.bookRemark}>{row.bookRemark}</td>
+                    <td className="px-2 py-2">R</td>
+                    <td className="px-2 py-2">{row.docNo}</td>
+                    <td className="px-2 py-2">{row.status ? 'Complete' : 'Incomplete'}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={17} className="px-4 py-16 text-center text-sm text-slate-400">
+                    No booking rows for selected date.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
@@ -723,7 +843,7 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <div>
@@ -752,7 +872,7 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Enter text to search..."
-            className="form-input ml-auto max-w-xs rounded-md"
+            className="form-input form-input-search ml-auto max-w-xs rounded-md"
           />
           <button type="button" className="toolbar-btn" onClick={loadRows}>
             <SearchIcon className="erp-action-icon" /> Find
@@ -804,7 +924,7 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
       </div>
 
       {detailOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4">
+        <div className="modal-backdrop fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="w-full max-w-2xl rounded-[10px] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <h3 className="text-lg font-semibold text-slate-950">Matching Agent Detail</h3>
@@ -931,7 +1051,7 @@ function ImportModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200 bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -1043,7 +1163,7 @@ function ImportModal({
         </div>
       </div>
       {confirmDuplicateOpen ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4">
+        <div className="modal-backdrop fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-[10px] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <div>
@@ -1222,12 +1342,14 @@ function TextArea({
   value,
   compact = false,
   wide = false,
+  tall = false,
   onChange,
 }: {
   label: string;
   value: string;
   compact?: boolean;
   wide?: boolean;
+  tall?: boolean;
   onChange: (value: string) => void;
 }) {
   return (
@@ -1236,7 +1358,7 @@ function TextArea({
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className={`${compact ? 'min-h-8' : 'min-h-14'} w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]`}
+        className={`${tall ? 'min-h-32' : compact ? 'min-h-8' : 'min-h-14'} w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]`}
       />
     </label>
   );
@@ -1282,10 +1404,22 @@ function FilterInput({
   placeholder?: string;
   onChange: (value: string) => void;
 }) {
+  const isSearch = label.toLowerCase() === 'search';
   return (
     <label className="space-y-1">
-      <span className="text-xs font-semibold uppercase text-slate-400">{label}</span>
-      <input type={type} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} className="form-input rounded-md" />
+      <span className="text-[10px] font-medium uppercase text-slate-500">{label}</span>
+      <div className="relative">
+        {isSearch ? (
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        ) : null}
+        <input
+          type={type}
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => onChange(event.target.value)}
+          className={`form-input rounded-md ${isSearch ? 'pl-9' : ''}`}
+        />
+      </div>
     </label>
   );
 }
@@ -1314,7 +1448,7 @@ function FilterDateInput({ label, value, onChange }: { label: string; value: str
 
   return (
     <label className="space-y-1">
-      <span className="text-xs font-semibold uppercase text-slate-400">{label}</span>
+      <span className="text-[10px] font-medium uppercase text-slate-500">{label}</span>
       <div className="relative">
         <input
           type="text"
@@ -1384,7 +1518,7 @@ function FilterSelect({
 }) {
   return (
     <label className="space-y-1">
-      <span className="text-xs font-semibold uppercase text-slate-400">{label}</span>
+      <span className="text-[10px] font-medium uppercase text-slate-500">{label}</span>
       <select value={value} onChange={(event) => onChange(event.target.value)} className="form-input rounded-md">
         {options.map(([optionValue, labelText]) => (
           <option key={optionValue} value={optionValue}>
@@ -1454,6 +1588,10 @@ function formatBookingValue(row: Booking, key: keyof Booking) {
     return formatDate(value);
   }
   return String(value ?? '');
+}
+
+function formatDisplayDate(value: string) {
+  return formatDate(value);
 }
 
 function formatDate(value: string) {

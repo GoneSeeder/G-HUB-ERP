@@ -3,9 +3,10 @@
 import { ChangeEvent, FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon, UploadIcon } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiUpload } from '@/lib/api';
 
 const THAI_ID_BRIDGE_URL = 'http://127.0.0.1:32123';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 type MemberForm = {
   guideCode: string;
@@ -133,6 +134,10 @@ type ThaiIdBridgeResponse = {
   cardExpireDate?: string;
   address?: string;
   imageUrl?: string;
+};
+
+type UploadImageResponse = {
+  imageUrl: string;
 };
 
 const columns = [
@@ -345,9 +350,9 @@ export default function MemberPage() {
     }
   };
 
-  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>, overrideForm?: MemberForm) => {
     event.preventDefault();
-    const payload = normalizeMemberPayload(form);
+    const payload = normalizeMemberPayload(overrideForm ?? form);
     setModalError(null);
 
     try {
@@ -371,85 +376,80 @@ export default function MemberPage() {
   };
 
   return (
-    <PageShell className="!max-w-[1400px]">
+    <PageShell className="h-full !max-w-[1216px] gap-4 overflow-hidden">
       <PageHeader
         eyebrow="Master Data · Members"
-        title="ข้อมูลสมาชิก"
+        title="Members"
         description="Guide information and member profile management."
+        actions={
+          activeTab === 'guides' ? (
+            <>
+              <button type="button" className="toolbar-btn-primary" onClick={openCreate}>
+                <PlusIcon className="erp-action-icon" /> Add Guide
+              </button>
+              <button type="button" className="toolbar-btn" onClick={openEdit}>
+                <EditIcon className="erp-action-icon" /> Edit
+              </button>
+              <button type="button" className="toolbar-btn-danger" onClick={onDeleteSelected}>
+                <TrashIcon className="erp-action-icon" /> Delete
+              </button>
+            </>
+          ) : null
+        }
       />
-      <div className="inline-flex shrink-0 self-start rounded-lg border border-slate-200 bg-white p-1">
-        <button
-          type="button"
-          onClick={() => setActiveTab('guides')}
-          className={activeTab === 'guides' ? 'toolbar-btn-primary min-h-9 px-4' : 'toolbar-btn min-h-9 px-4'}
-        >
-          Guides
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('agents')}
-          className={activeTab === 'agents' ? 'toolbar-btn-primary min-h-9 px-4' : 'toolbar-btn min-h-9 px-4'}
-        >
-          Agents
-        </button>
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('guides')}
+            className={activeTab === 'guides' ? 'toolbar-btn-primary min-h-9 px-4' : 'toolbar-btn min-h-9 px-4'}
+          >
+            Guides
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('agents')}
+            className={activeTab === 'agents' ? 'toolbar-btn-primary min-h-9 px-4' : 'toolbar-btn min-h-9 px-4'}
+          >
+            Agents
+          </button>
+        </div>
+        {activeTab === 'guides' ? (
+          <div className="flex min-w-[360px] flex-1 items-center justify-end gap-3">
+            <div className="relative w-full max-w-[520px]">
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search guide code, name, phone, passport..."
+                className="form-input rounded-md pl-9"
+              />
+            </div>
+            <span className="shrink-0 text-sm font-light text-slate-500">{total} records</span>
+          </div>
+        ) : null}
       </div>
 
       {activeTab === 'guides' ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <DataPanel className="erp-slide-left shrink-0 px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-950">ข้อมูลสมาชิก</h1>
-            <p className="text-sm font-light text-slate-500">Guide information and member profile management.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="toolbar-btn-primary" onClick={openCreate}>
-              <PlusIcon className="erp-action-icon" /> Add Guide
-            </button>
-            <button type="button" className="toolbar-btn" onClick={openEdit}>
-              <EditIcon className="erp-action-icon" /> Edit
-            </button>
-            <button type="button" className="toolbar-btn-danger" onClick={onDeleteSelected}>
-              <TrashIcon className="erp-action-icon" /> Delete
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[260px] flex-1">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-            <input
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              placeholder="Search guide code, name, phone, passport..."
-              className="form-input rounded-md pl-9"
-            />
-          </div>
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-right">
-            <p className="text-xs text-slate-500">Records</p>
-            <p className="text-lg font-semibold text-blue-800">{total}</p>
-          </div>
-        </div>
-      </DataPanel>
-
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
       {error ? (
         <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {error}
         </div>
       ) : null}
 
-      <DataPanel className="erp-slide-right flex min-h-0 flex-1 flex-col">
+      <DataPanel className="flex min-h-0 flex-1 flex-col">
         <div className="shrink-0 border-b border-slate-200 px-4 py-2 text-sm text-slate-400">
           Showing {members.length} of {total} items
         </div>
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           <table className="w-full table-fixed border-collapse text-xs">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className="w-12 border-b border-slate-200 px-4 py-2 text-left" />
+                <th className="w-10 border-b border-slate-200 px-4 py-2 text-left" />
                 {columns.map((column) => (
                   <th
                     key={column}
@@ -557,9 +557,7 @@ export default function MemberPage() {
 
 function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
   const [search, setSearch] = useState('');
-  const [nation, setNation] = useState('');
   const [activeFilter, setActiveFilter] = useState('');
-  const [typeGroup, setTypeGroup] = useState('');
   const [page, setPage] = useState(1);
   const [agents, setAgents] = useState<AgentItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -578,14 +576,12 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
 
   useEffect(() => {
     loadAgents();
-  }, [page, search, nation, activeFilter, typeGroup]);
+  }, [page, search, activeFilter]);
 
   const loadAgents = () => {
     const params = new URLSearchParams({ page: String(page) });
     if (search.trim()) params.set('search', search.trim());
-    if (nation.trim()) params.set('nation', nation.trim());
     if (activeFilter) params.set('active', activeFilter);
-    if (typeGroup.trim()) params.set('typeGroup', typeGroup.trim());
 
     apiFetch<AgentsResponse>(`/api/agents?${params.toString()}`)
       .then((data) => {
@@ -712,12 +708,35 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <DataPanel className="erp-slide-left shrink-0 px-4 py-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
+      <div className="shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold text-slate-950">Agent Management</h1>
-            <p className="text-sm font-light text-slate-500">Master data for booking agent matching and import mapping.</p>
+          <div className="flex min-w-[320px] flex-1 flex-wrap items-center gap-3">
+            <div className="relative min-w-[280px] flex-1">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search agent code, name, phone, tax id..."
+              className="form-input rounded-md pl-9"
+            />
+            </div>
+            <select
+              value={activeFilter}
+              onChange={(event) => {
+                setActiveFilter(event.target.value);
+                setPage(1);
+              }}
+              className="form-input h-10 w-[138px] rounded-md"
+            >
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <span className="whitespace-nowrap text-sm font-light text-slate-500">{total} รายการ</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {isAdmin ? (
@@ -736,56 +755,7 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
             </button>
           </div>
         </div>
-
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[260px] flex-1">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-            <input
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              placeholder="Search agent code, name, phone, tax id..."
-              className="form-input rounded-md pl-9"
-            />
-          </div>
-          <input
-            value={nation}
-            onChange={(event) => {
-              setNation(event.target.value);
-              setPage(1);
-            }}
-            placeholder="Nation"
-            className="form-input rounded-md"
-          />
-          <input
-            value={typeGroup}
-            onChange={(event) => {
-              setTypeGroup(event.target.value);
-              setPage(1);
-            }}
-            placeholder="TypeGroup"
-            className="form-input rounded-md"
-          />
-          <select
-            value={activeFilter}
-            onChange={(event) => {
-              setActiveFilter(event.target.value);
-              setPage(1);
-            }}
-            className="form-input rounded-md"
-          >
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-right">
-            <p className="text-xs text-slate-500">Records</p>
-            <p className="text-lg font-semibold text-blue-800">{total}</p>
-          </div>
-        </div>
-      </DataPanel>
+      </div>
 
       {error ? (
         <div className="rounded-md border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-semibold text-[#0752d6]">
@@ -793,15 +763,15 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
         </div>
       ) : null}
 
-      <DataPanel className="erp-slide-right flex min-h-0 flex-1 flex-col">
+      <DataPanel className="flex min-h-0 flex-1 flex-col">
         <div className="shrink-0 border-b border-slate-200 px-4 py-2 text-sm text-slate-400">
           Showing {agents.length} of {total} items
         </div>
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           <table className="w-full table-fixed border-collapse text-xs">
             <thead className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_rgba(226,232,240,1)]">
               <tr>
-                <th className="w-12 border-b border-slate-200 bg-white px-4 py-2 text-left" />
+                <th className="w-10 border-b border-slate-200 bg-white px-4 py-2 text-left" />
                 {agentColumns.map((column) => (
                   <th key={column} className="border-b border-slate-200 bg-white px-3 py-2.5 text-left text-[10px] font-semibold uppercase text-slate-400">
                     {column}
@@ -915,7 +885,7 @@ function MemberModal({
   form: MemberForm;
   onChange: (value: MemberForm) => void;
   onClose: () => void;
-  onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  onSubmit: (event: FormEvent<HTMLFormElement>, overrideForm?: MemberForm) => Promise<void>;
   saveError: string | null;
 }) {
   const [lookupStatus, setLookupStatus] = useState<string | null>(null);
@@ -955,7 +925,31 @@ function MemberModal({
       return;
     }
     setValidationError(null);
-    await onSubmit(event);
+    let submitForm = form;
+    if (form.imageUrl.startsWith('data:')) {
+      const uploadedImage = await uploadGuideImage(dataUrlToBlob(form.imageUrl));
+      if (!uploadedImage) return;
+      submitForm = { ...form, imageUrl: uploadedImage };
+    }
+    await onSubmit(event, submitForm);
+  };
+
+  const uploadGuideImage = async (file: Blob | null) => {
+    if (!file || !form.guideCode.trim()) {
+      return false;
+    }
+    try {
+      const result = await apiUpload<UploadImageResponse>(
+        `/api/members/${encodeURIComponent(form.guideCode)}/image`,
+        file,
+      );
+      onChange({ ...form, imageUrl: result.imageUrl });
+      setLookupStatus('Guide image saved.');
+      return result.imageUrl;
+    } catch (error) {
+      setLookupStatus(error instanceof Error ? error.message : 'Unable to upload guide image.');
+      return false;
+    }
   };
 
   const scanCard = async () => {
@@ -1021,7 +1015,7 @@ function MemberModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <form
         onSubmit={handleSubmit}
         className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
@@ -1052,7 +1046,7 @@ function MemberModal({
             <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
               <div className="flex h-52 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white text-sm text-slate-400">
                 {form.imageUrl ? (
-                  <img src={form.imageUrl} alt="" className="h-full w-full object-cover" />
+                  <img src={getImageSrc(form.imageUrl)} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <span>No image data</span>
                 )}
@@ -1060,9 +1054,16 @@ function MemberModal({
               <p className="mt-3 text-xs leading-5 text-slate-500">
                 รูปจะถูกดึงจากเครื่องอ่านบัตรประชาชน หรือ upload เพิ่มภายหลัง
               </p>
-              <button type="button" className="toolbar-btn mt-3 w-full">
+              <label className="toolbar-btn mt-3 w-full cursor-pointer">
+                <UploadIcon className="erp-action-icon" />
                 Browse
-              </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(event) => uploadGuideImage(event.target.files?.[0] ?? null)}
+                />
+              </label>
             </div>
 
             <div className="rounded-[8px] border border-sky-100 bg-sky-50/70 p-4">
@@ -1173,7 +1174,7 @@ function AgentImportModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <div>
@@ -1296,7 +1297,7 @@ function AgentModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <form
         onSubmit={onSubmit}
         className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
@@ -1566,6 +1567,24 @@ function completeDateInput(value: string) {
   if (!parsed) return '';
   const [year, month, day] = parsed.slice(0, 10).split('-');
   return year && month && day ? `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}` : parsed;
+}
+
+function getImageSrc(value: string) {
+  if (!value || value.startsWith('data:') || value.startsWith('http')) {
+    return value;
+  }
+  return `${API_BASE_URL}${value}`;
+}
+
+function dataUrlToBlob(value: string) {
+  const [meta, payload] = value.split(',');
+  const mimeType = meta.match(/data:(.*?);base64/)?.[1] ?? 'image/jpeg';
+  const binary = atob(payload ?? '');
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: mimeType });
 }
 
 function TextArea({

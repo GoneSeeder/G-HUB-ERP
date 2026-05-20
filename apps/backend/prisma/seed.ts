@@ -20,8 +20,13 @@ async function main() {
     informationBonusCardApp,
     informationBookingApp,
     informationNameListApp,
+    informationReportApp,
     inventoryApp,
     inventoryStockApp,
+    salesApp,
+    salesSalesApp,
+    salesCrmApp,
+    salesPosApp,
   ] = await Promise.all([
     prisma.app.upsert({
       where: { code: 'hub' },
@@ -102,27 +107,87 @@ async function main() {
       },
     }),
     prisma.app.upsert({
+      where: { code: 'information-report' },
+      update: {
+        name: 'รายงาน',
+        description: 'Operational reports and analytics',
+      },
+      create: {
+        code: 'information-report',
+        name: 'รายงาน',
+        description: 'Operational reports and analytics',
+      },
+    }),
+    prisma.app.upsert({
       where: { code: 'inventory' },
       update: {
-        name: 'Inventory',
-        description: 'Inventory application folder',
+        name: 'Supply Chain',
+        description: 'Supply chain application folder',
       },
       create: {
         code: 'inventory',
-        name: 'Inventory',
-        description: 'Inventory application folder',
+        name: 'Supply Chain',
+        description: 'Supply chain application folder',
       },
     }),
     prisma.app.upsert({
       where: { code: 'inventory-stock' },
       update: {
-        name: 'จัดการคลังสินค้า',
+        name: 'Inventory',
         description: 'Stock and warehouse management',
       },
       create: {
         code: 'inventory-stock',
-        name: 'จัดการคลังสินค้า',
+        name: 'Inventory',
         description: 'Stock and warehouse management',
+      },
+    }),
+    prisma.app.upsert({
+      where: { code: 'sales' },
+      update: {
+        name: 'Sales',
+        description: 'Sales application folder',
+      },
+      create: {
+        code: 'sales',
+        name: 'Sales',
+        description: 'Sales application folder',
+      },
+    }),
+    prisma.app.upsert({
+      where: { code: 'sales-sales' },
+      update: {
+        name: 'Sales',
+        description: 'Quotation and sales order workflow',
+      },
+      create: {
+        code: 'sales-sales',
+        name: 'Sales',
+        description: 'Quotation and sales order workflow',
+      },
+    }),
+    prisma.app.upsert({
+      where: { code: 'sales-crm' },
+      update: {
+        name: 'CRM',
+        description: 'Customer relationship management',
+      },
+      create: {
+        code: 'sales-crm',
+        name: 'CRM',
+        description: 'Customer relationship management',
+      },
+    }),
+    prisma.app.upsert({
+      where: { code: 'sales-pos' },
+      update: {
+        name: 'Point Of Sale (POS)',
+        description: 'Point of sale register',
+      },
+      create: {
+        code: 'sales-pos',
+        name: 'Point Of Sale (POS)',
+        description: 'Point of sale register',
       },
     }),
   ]);
@@ -236,9 +301,11 @@ async function main() {
     informationBonusCardApp,
     informationBookingApp,
     informationNameListApp,
+    informationReportApp,
   ];
 
   const inventoryChildApps = [inventoryStockApp];
+  const salesChildApps = [salesSalesApp, salesCrmApp, salesPosApp];
 
   await Promise.all(
     informationChildApps.map((app) =>
@@ -265,6 +332,8 @@ async function main() {
     ...informationChildApps,
     inventoryApp,
     ...inventoryChildApps,
+    salesApp,
+    ...salesChildApps,
   ];
 
   await Promise.all(
@@ -423,3 +492,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

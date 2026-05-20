@@ -96,6 +96,16 @@ model BonusCard {
   tourOut          String   @default("")
   comment          String   @default("")
   imageUrl         String?
+  nameListCode     String   @default("")
+  guide2           String   @default("")
+  guide2Name       String   @default("")
+  guide2Phone      String   @default("")
+  guide3           String   @default("")
+  guide3Name       String   @default("")
+  guide3Phone      String   @default("")
+  narratorCode     String   @default("")
+  narratorName     String   @default("")
+  narratorPhone    String   @default("")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }

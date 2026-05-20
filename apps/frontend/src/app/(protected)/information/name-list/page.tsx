@@ -5,7 +5,6 @@ import {
   CheckIcon,
   EditIcon,
   PlusIcon,
-  RefreshIcon,
   SaveIcon,
   SearchIcon,
   TrashIcon,
@@ -242,20 +241,18 @@ export default function NameListPage() {
             <button type="button" className="toolbar-btn-danger" disabled={!selected} onClick={deleteSelected}>
               <TrashIcon className="erp-action-icon" /> Delete
             </button>
-            <button type="button" className="toolbar-btn" onClick={loadRows}>
-              <RefreshIcon className="erp-action-icon" /> Refresh
-            </button>
           </>
         }
       />
 
       <div className="erp-slide-left shrink-0 rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
-        <div>
+        <div className="relative">
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search code, party code, agent, guide, nation, source file..."
-            className="form-input rounded-md"
+            className="form-input rounded-md pl-9"
           />
         </div>
         {message ? <p className="mt-2 text-sm font-semibold text-blue-800">{message}</p> : null}
@@ -267,10 +264,9 @@ export default function NameListPage() {
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <div>
               <h2 className="text-base font-semibold text-slate-950">Manifests</h2>
-              <p className="text-xs text-slate-500">{visibleRows.length} records</p>
             </div>
-            <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-              DB list
+            <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
+              {visibleRows.length} records
             </span>
           </div>
           <div className="h-[calc(100%-3.75rem)] overflow-y-auto overflow-x-hidden p-2">
@@ -565,7 +561,7 @@ function ImportNameListModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/40 p-4">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center overflow-hidden p-4">
       <div className="flex h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-3">
           <div>
@@ -609,24 +605,14 @@ function ImportNameListModal({
                 setPartyCode(value);
                 setPreview(null);
               }} />
-              <label>
-                <span className="text-xs font-semibold text-slate-700">Agent</span>
-                <select
-                  value={agentCode}
-                  onChange={(event) => {
-                    setAgentCode(event.target.value);
-                    setPreview(null);
-                  }}
-                  className="form-input mt-1 h-10 rounded-md text-sm"
-                >
-                  <option value="">Please select</option>
-                  {agents.map((agent) => (
-                    <option key={agent.id} value={agent.agentCode}>
-                      {agent.agentCode} - {agent.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <AgentCombobox
+                agents={agents}
+                value={agentCode}
+                onChange={(value) => {
+                  setAgentCode(value);
+                  setPreview(null);
+                }}
+              />
               <Field label="Received Date" type="date" value={receivedDate} onChange={(value) => {
                 setReceivedDate(value);
                 setPreview(null);
@@ -770,6 +756,86 @@ function ImportNameListModal({
   );
 }
 
+function AgentCombobox({
+  agents,
+  value,
+  onChange,
+}: {
+  agents: AgentOption[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const selectedAgent = agents.find((agent) => agent.agentCode === value);
+  const selectedAgentLabel = selectedAgent ? `${selectedAgent.agentCode} - ${selectedAgent.name}` : '';
+
+  useEffect(() => {
+    setQuery(selectedAgentLabel);
+  }, [selectedAgentLabel]);
+
+  const filteredAgents = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return agents.slice(0, 80);
+    return agents
+      .filter((agent) => `${agent.agentCode} ${agent.name}`.toLowerCase().includes(normalizedQuery))
+      .slice(0, 80);
+  }, [agents, query]);
+
+  return (
+    <label className="relative">
+      <span className="text-xs font-semibold text-slate-700">Agent</span>
+      <div className="relative mt-1">
+        <input
+          value={query}
+          onFocus={() => setOpen(true)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange('');
+            setOpen(true);
+          }}
+          onBlur={() => window.setTimeout(() => setOpen(false), 140)}
+          placeholder="Search agent code or name..."
+          className="form-input h-10 rounded-md pr-9 text-sm"
+        />
+        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+          ▾
+        </span>
+        {open ? (
+          <div className="absolute left-0 right-0 top-[calc(100%+0.25rem)] z-30 max-h-64 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-[0_16px_36px_rgba(15,23,42,0.14)]">
+            {filteredAgents.length ? (
+              filteredAgents.map((agent) => (
+                <button
+                  key={agent.id}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    onChange(agent.agentCode);
+                    setQuery(`${agent.agentCode} - ${agent.name}`);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm transition hover:bg-[#0752d6]/[0.1] ${
+                    agent.agentCode === value ? 'bg-blue-50 text-[#0752d6]' : 'text-slate-700'
+                  }`}
+                >
+                  <span className="min-w-0 truncate">
+                    <span className="font-medium text-slate-950">{agent.agentCode}</span>
+                    <span className="text-slate-400"> - </span>
+                    {agent.name || 'No Agent'}
+                  </span>
+                  {agent.agentCode === value ? <CheckIcon className="h-4 w-4 shrink-0 text-[#1478ff]" /> : null}
+                </button>
+              ))
+            ) : (
+              <div className="px-3 py-3 text-sm text-slate-400">No matching agents.</div>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </label>
+  );
+}
+
 function NameListModal({
   mode,
   initial,
@@ -845,7 +911,7 @@ function NameListModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/40 p-4">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center overflow-hidden p-4">
       <form
         onSubmit={save}
         className="flex h-[90vh] w-full max-w-[min(1500px,96vw)] flex-col overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]"

@@ -34,7 +34,7 @@ type HubAppMeta = {
   title: string;
   description: string;
   accent: string;
-  icon: 'users' | 'booking' | 'card' | 'list';
+  icon: 'users' | 'booking' | 'card' | 'list' | 'report';
 };
 
 const informationApps = [
@@ -42,6 +42,37 @@ const informationApps = [
   'information-booking',
   'information-bonus-card',
   'information-member',
+  'information-report',
+];
+
+const salesCards = [
+  {
+    id: 'sales-sales-planned',
+    code: 'sales-sales',
+    eyebrow: 'Sales',
+    title: 'Sales',
+    description: 'Quotation and sales order workflow',
+    accent: 'bg-indigo-50 text-indigo-600',
+    icon: 'card' as const,
+  },
+  {
+    id: 'sales-crm-planned',
+    code: 'sales-crm',
+    eyebrow: 'CRM',
+    title: 'CRM',
+    description: 'Customer pipeline and follow-up tracking',
+    accent: 'bg-rose-50 text-rose-600',
+    icon: 'users' as const,
+  },
+  {
+    id: 'sales-pos-planned',
+    code: 'sales-pos',
+    eyebrow: 'POS',
+    title: 'Point Of Sale (POS)',
+    description: 'Retail checkout and daily sales register',
+    accent: 'bg-amber-50 text-amber-600',
+    icon: 'booking' as const,
+  },
 ];
 
 const appHrefByCode: Record<string, string | undefined> = {
@@ -79,6 +110,13 @@ const appMetaByCode: Record<string, HubAppMeta> = {
     description: 'Create and verify bonus card records from bookings',
     accent: 'bg-orange-50 text-orange-600',
     icon: 'card',
+  },
+  'information-report': {
+    eyebrow: 'Report',
+    title: 'Reports',
+    description: 'Operational reports and analytics dashboard',
+    accent: 'bg-slate-100 text-slate-600',
+    icon: 'report',
   },
 };
 
@@ -132,11 +170,26 @@ export default function HubPage() {
     informationApps.includes(app.code),
   );
   const canSeeInformation = profile?.apps.includes('information');
-  const canSeeInventory =
+  const informationCards = canSeeInformation
+    ? [
+        ...visibleInformationApps,
+        ...(visibleInformationApps.some((app) => app.code === 'information-report')
+          ? []
+          : [
+              {
+                id: 'information-report-planned',
+                code: 'information-report',
+                name: 'Reports',
+                description: 'Operational reports and analytics dashboard',
+              },
+            ]),
+      ]
+    : [];
+  const canSeeSupplyChain =
     profile?.apps.includes('inventory') ||
     profile?.apps.includes('inventory-stock');
-  const activeCount = visibleInformationApps.length;
-  const plannedCount = canSeeInventory ? 1 : 0;
+  const activeCount = visibleInformationApps.filter((app) => app.code !== 'information-report').length;
+  const plannedCount = (canSeeSupplyChain ? 1 : 0) + salesCards.length;
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -189,7 +242,7 @@ export default function HubPage() {
           </div>
 
           <div className="erp-hub-grid grid gap-3 md:grid-cols-2">
-            {visibleInformationApps.map((app) => {
+            {informationCards.map((app) => {
               const meta = appMetaByCode[app.code] ?? {
                 eyebrow: 'Application',
                 title: app.name,
@@ -207,6 +260,7 @@ export default function HubPage() {
                   description={meta.description}
                   code={app.code.replace('information-', '')}
                   className="opacity-0"
+                  disabled={app.code === 'information-report'}
                   icon={
                     <HubIconBadge accent={meta.accent}>
                       <HubIcon type={meta.icon} />
@@ -223,10 +277,10 @@ export default function HubPage() {
         </div>
       )}
 
-      {canSeeInventory ? (
+      {canSeeSupplyChain ? (
         <section className="erp-slide-left space-y-3">
           <div className="flex flex-wrap items-baseline gap-2">
-            <h2 className="text-sm font-semibold text-slate-950">Inventory</h2>
+            <h2 className="text-sm font-semibold text-slate-950">Supply Chain</h2>
             <p className="text-xs font-light text-slate-500">
               Stock and warehouse workflows
             </p>
@@ -236,7 +290,7 @@ export default function HubPage() {
             <AppCard
               disabled
               eyebrow="Warehouse"
-              title="Inventory Management"
+              title="Inventory"
               description="Stock receiving, issue, and inventory count workflow"
               code="inventory"
               icon={
@@ -248,6 +302,33 @@ export default function HubPage() {
           </div>
         </section>
       ) : null}
+
+      <section className="erp-slide-right space-y-3">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h2 className="text-sm font-semibold text-slate-950">Sales</h2>
+          <p className="text-xs font-light text-slate-500">
+            Customer and point of sale workflows
+          </p>
+        </div>
+
+        <div className="erp-hub-grid grid gap-3 md:grid-cols-2">
+          {salesCards.map((app) => (
+            <AppCard
+              key={app.id}
+              disabled
+              eyebrow={app.eyebrow}
+              title={app.title}
+              description={app.description}
+              code={app.code.replace('sales-', '')}
+              icon={
+                <HubIconBadge accent={app.accent}>
+                  <HubIcon type={app.icon} />
+                </HubIconBadge>
+              }
+            />
+          ))}
+        </div>
+      </section>
     </PageShell>
   );
 }
@@ -272,5 +353,6 @@ function HubIcon({ type }: { type: HubAppMeta['icon'] }) {
   if (type === 'users') return <UsersIcon />;
   if (type === 'card') return <CardIcon />;
   if (type === 'list') return <ListIcon />;
+  if (type === 'report') return <FolderIcon />;
   return <FolderIcon />;
 }

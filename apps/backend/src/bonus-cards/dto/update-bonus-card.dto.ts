@@ -90,4 +90,44 @@ export class UpdateBonusCardDto {
   @IsOptional()
   @IsString()
   imageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  nameListCode?: string;
+
+  @IsOptional()
+  @IsString()
+  guide2?: string;
+
+  @IsOptional()
+  @IsString()
+  guide2Name?: string;
+
+  @IsOptional()
+  @IsString()
+  guide2Phone?: string;
+
+  @IsOptional()
+  @IsString()
+  guide3?: string;
+
+  @IsOptional()
+  @IsString()
+  guide3Name?: string;
+
+  @IsOptional()
+  @IsString()
+  guide3Phone?: string;
+
+  @IsOptional()
+  @IsString()
+  narratorCode?: string;
+
+  @IsOptional()
+  @IsString()
+  narratorName?: string;
+
+  @IsOptional()
+  @IsString()
+  narratorPhone?: string;
 }

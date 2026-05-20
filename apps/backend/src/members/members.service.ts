@@ -5,11 +5,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { existsSync, mkdirSync } from 'fs';
+import { writeFile } from 'fs/promises';
+import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMemberDto } from './dto/create-member.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 
 const PAGE_SIZE = 50;
+const GUIDE_IMAGE_DIRECTORY = join(process.cwd(), 'uploads', 'guide-image');
+const GUIDE_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp'];
+mkdirSync(GUIDE_IMAGE_DIRECTORY, { recursive: true });
 
 @Injectable()
 export class MembersService {
@@ -80,6 +86,41 @@ export class MembersService {
     await this.ensureExists(id);
     await this.prisma.member.delete({ where: { id } });
     return { message: 'Member deleted successfully' };
+  }
+
+  async saveGuideImage(guideCode: string, contentType: string, body: Buffer) {
+    const normalizedGuideCode = this.normalizeGuideCode(guideCode);
+    if (!normalizedGuideCode) {
+      throw new BadRequestException('Guide code is required');
+    }
+    if (body.length === 0) {
+      throw new BadRequestException('Image file is required');
+    }
+    if (body.length > 5 * 1024 * 1024) {
+      throw new BadRequestException('File too large');
+    }
+
+    const extension = this.imageExtensionFromContentType(contentType);
+    const filename = `${normalizedGuideCode}.${extension}`;
+    await writeFile(join(GUIDE_IMAGE_DIRECTORY, filename), body);
+    const imageUrl = `/uploads/guide-image/${filename}`;
+
+    await this.prisma.member
+      .update({
+        where: { guideCode: normalizedGuideCode },
+        data: { imageUrl },
+      })
+      .catch((error) => {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2025'
+        ) {
+          return null;
+        }
+        throw error;
+      });
+
+    return { imageUrl };
   }
 
   private buildWhere(search?: string): Prisma.MemberWhereInput {
@@ -240,8 +281,30 @@ export class MembersService {
       cardIssueDate: row.cardIssueDate?.toISOString().slice(0, 10) ?? '',
       cardExpireDate: row.cardExpireDate?.toISOString().slice(0, 10) ?? '',
       guideLicenseExpireDate: row.guideLicenseExpireDate?.toISOString().slice(0, 10) ?? '',
-      imageUrl: row.imageUrl ?? '',
+      imageUrl: row.imageUrl ?? this.findGuideImageUrl(row.guideCode),
     };
+  }
+
+  private normalizeGuideCode(value: string) {
+    return value.trim().replace(/[^a-zA-Z0-9_-]/g, '').toUpperCase();
+  }
+
+  private imageExtensionFromContentType(contentType: string) {
+    if (contentType.includes('png')) return 'png';
+    if (contentType.includes('webp')) return 'webp';
+    return 'jpg';
+  }
+
+  private findGuideImageUrl(guideCode: string) {
+    const normalizedGuideCode = this.normalizeGuideCode(guideCode);
+    if (!normalizedGuideCode) return '';
+    for (const extension of GUIDE_IMAGE_EXTENSIONS) {
+      const filename = `${normalizedGuideCode}.${extension}`;
+      if (existsSync(join(GUIDE_IMAGE_DIRECTORY, filename))) {
+        return `/uploads/guide-image/${filename}`;
+      }
+    }
+    return '';
   }
 
   private handlePrismaError(error: unknown): never {

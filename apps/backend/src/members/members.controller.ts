@@ -1,14 +1,18 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { RequireAppAccess } from '../auth/decorators/app-access.decorator';
 import { AppAccessGuard } from '../auth/guards/app-access.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -37,6 +41,18 @@ export class MembersController {
     return this.membersService.create(body);
   }
 
+  @Post(':guideCode/image')
+  async uploadGuideImage(
+    @Param('guideCode') guideCode: string,
+    @Req() request: Request,
+    @Headers('content-type') contentType = '',
+  ) {
+    if (!contentType.startsWith('image/')) {
+      throw new BadRequestException('Only image files are allowed');
+    }
+    return this.membersService.saveGuideImage(guideCode, contentType, await this.readRequestBody(request));
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: UpdateMemberDto) {
     return this.membersService.update(id, body);
@@ -45,5 +61,14 @@ export class MembersController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.membersService.remove(id);
+  }
+
+  private readRequestBody(request: Request): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      request.on('data', (chunk: Buffer) => chunks.push(chunk));
+      request.on('end', () => resolve(Buffer.concat(chunks)));
+      request.on('error', reject);
+    });
   }
 }

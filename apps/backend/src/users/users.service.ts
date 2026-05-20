@@ -18,8 +18,13 @@ const MANAGED_APP_CODES = [
   'information-bonus-card',
   'information-booking',
   'information-name-list',
+  'information-report',
   'inventory',
   'inventory-stock',
+  'sales',
+  'sales-sales',
+  'sales-crm',
+  'sales-pos',
 ];
 
 @Injectable()

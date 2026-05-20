@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { CheckIcon } from '@/components/ui/icons';
 import { setAuthTokenCookie } from '@/lib/auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -49,56 +50,30 @@ export default function LoginPage() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f5f8fc] px-4 py-8 text-slate-950">
-      <div className="erp-fade-in relative grid w-full max-w-[900px] overflow-hidden rounded-xl border border-slate-200 bg-white md:grid-cols-[1fr_400px]">
-        <aside className="hidden border-r border-slate-200 bg-slate-50/60 p-8 md:flex md:flex-col md:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600">
-              <span className="h-2 w-2 rounded-full bg-[#22b7f5]" />
-              ERP Workspace 2026
-            </div>
-            <h2 className="mt-8 max-w-sm text-3xl font-semibold leading-tight text-slate-950">
-              Clean operation hub for daily business work.
-            </h2>
-            <p className="mt-3 max-w-md text-sm font-light leading-6 text-slate-600">
-              Built for booking, name list, member data, and document workflows
-              that need to stay fast and easy to scan.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            {['Booking', 'Name List', 'Members'].map((item) => (
-              <div
-                key={item}
-                className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600"
-              >
-                {item}
-              </div>
-            ))}
-          </div>
-        </aside>
-
-        <form onSubmit={onSubmit} className="px-6 py-7 sm:px-8">
-          <div className="mb-7">
-            <div className="mb-5 flex justify-center">
-              <img
-                src="/g-hub-login-logo.png"
-                alt="G-HUB"
-                className="h-auto w-full max-w-[176px] rounded-md object-contain"
-              />
-            </div>
-            <h1 className="text-2xl font-semibold leading-tight text-slate-950">
-              Welcome to G-HUB
-            </h1>
-            <p className="mt-1.5 text-sm font-light text-slate-500">
-              Sign in to continue to your operational workspace.
-            </p>
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-[-22rem] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-[#1478ff]/10 blur-3xl" />
+        <div className="absolute bottom-[-18rem] right-[-8rem] h-[32rem] w-[32rem] rounded-full bg-[#22b7f5]/10 blur-3xl" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#1478ff]/30 to-transparent" />
+      </div>
+      <div className="erp-fade-in relative w-full max-w-[420px]">
+        <form
+          onSubmit={onSubmit}
+          className="w-full rounded-2xl border border-slate-200 bg-white/92 px-6 py-7 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur sm:px-8"
+        >
+          <div className="mb-7 text-center">
+            <img
+              src="/logo-login.png"
+              alt="G-HUB"
+              className="mx-auto h-auto w-full max-w-[148px] rounded-md object-contain"
+            />
+            <p className="mt-5 text-xs font-medium uppercase tracking-wide text-slate-500">Secure sign in</p>
+            <h1 className="mt-1 text-2xl font-semibold leading-tight text-slate-950">Welcome back</h1>
+            <p className="mt-1 text-sm font-light text-slate-500">Continue to your G-HUB workspace.</p>
           </div>
 
           <div className="space-y-4">
             <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">
-                Username
-              </span>
+              <span className="text-sm font-medium text-slate-700">Username</span>
               <span className="flex h-11 rounded-lg border border-slate-200 bg-white transition focus-within:border-[#1478ff] focus-within:ring-4 focus-within:ring-[rgba(20,120,255,0.14)]">
                 <span className="flex w-11 items-center justify-center text-slate-400">
                   <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
@@ -108,7 +83,7 @@ export default function LoginPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Enter your username"
+                  placeholder="Enter username"
                   value={username}
                   onChange={(event) => {
                     const nextUsername = event.target.value;
@@ -124,15 +99,11 @@ export default function LoginPage() {
 
             <div
               className={`overflow-hidden transition-all duration-300 ease-out ${
-                showPassword
-                  ? 'max-h-24 translate-y-0 opacity-100'
-                  : 'max-h-0 -translate-y-2 opacity-0'
+                showPassword ? 'max-h-24 translate-y-0 opacity-100' : 'max-h-0 -translate-y-2 opacity-0'
               }`}
             >
               <label className="block space-y-1.5 pb-1">
-                <span className="text-sm font-medium text-slate-700">
-                  Password
-                </span>
+                <span className="text-sm font-medium text-slate-700">Password</span>
                 <span className="flex h-11 rounded-lg border border-slate-200 bg-white transition focus-within:border-[#1478ff] focus-within:ring-4 focus-within:ring-[rgba(20,120,255,0.14)]">
                   <span className="flex w-11 items-center justify-center text-slate-400">
                     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
@@ -143,7 +114,7 @@ export default function LoginPage() {
                     type="password"
                     required={showPassword}
                     disabled={!showPassword}
-                    placeholder="Enter your password"
+                    placeholder="Enter password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     className="min-w-0 flex-1 bg-transparent pr-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none"
@@ -159,19 +130,14 @@ export default function LoginPage() {
             </p>
           ) : null}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="toolbar-btn-primary mt-6 h-11 w-full rounded-lg"
-          >
-            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-current">
-              <path d="M17 8h-1V6c0-2.76-1.79-5-4-5S8 3.24 8 6v2H7c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2Zm-7-2c0-1.66.9-3 2-3s2 1.34 2 3v2h-4V6Z" />
-            </svg>
+          <button type="submit" disabled={loading} className="toolbar-btn-primary mt-6 h-11 w-full rounded-lg">
+            <CheckIcon className="h-4 w-4" />
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
 
-          <div className="mt-6 flex justify-center text-xs text-slate-400">
-            <span>2026 G-HUB. All rights reserved.</span>
+          <div className="mt-5 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            <span>ERP 2026</span>
+            <span className="font-medium text-slate-700">G-HUB</span>
           </div>
         </form>
       </div>

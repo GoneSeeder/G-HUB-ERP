@@ -77,6 +77,16 @@ export class BonusCardsService {
       tourOut: dto.tourOut ?? '',
       comment: dto.comment ?? '',
       imageUrl: dto.imageUrl,
+      nameListCode: dto.nameListCode ?? '',
+      guide2: dto.guide2 ?? '',
+      guide2Name: dto.guide2Name ?? '',
+      guide2Phone: dto.guide2Phone ?? '',
+      guide3: dto.guide3 ?? '',
+      guide3Name: dto.guide3Name ?? '',
+      guide3Phone: dto.guide3Phone ?? '',
+      narratorCode: dto.narratorCode ?? '',
+      narratorName: dto.narratorName ?? '',
+      narratorPhone: dto.narratorPhone ?? '',
     };
   }
 
@@ -103,6 +113,16 @@ export class BonusCardsService {
       ...(dto.tourOut !== undefined ? { tourOut: dto.tourOut } : {}),
       ...(dto.comment !== undefined ? { comment: dto.comment } : {}),
       ...(dto.imageUrl !== undefined ? { imageUrl: dto.imageUrl } : {}),
+      ...(dto.nameListCode !== undefined ? { nameListCode: dto.nameListCode } : {}),
+      ...(dto.guide2 !== undefined ? { guide2: dto.guide2 } : {}),
+      ...(dto.guide2Name !== undefined ? { guide2Name: dto.guide2Name } : {}),
+      ...(dto.guide2Phone !== undefined ? { guide2Phone: dto.guide2Phone } : {}),
+      ...(dto.guide3 !== undefined ? { guide3: dto.guide3 } : {}),
+      ...(dto.guide3Name !== undefined ? { guide3Name: dto.guide3Name } : {}),
+      ...(dto.guide3Phone !== undefined ? { guide3Phone: dto.guide3Phone } : {}),
+      ...(dto.narratorCode !== undefined ? { narratorCode: dto.narratorCode } : {}),
+      ...(dto.narratorName !== undefined ? { narratorName: dto.narratorName } : {}),
+      ...(dto.narratorPhone !== undefined ? { narratorPhone: dto.narratorPhone } : {}),
     };
   }
 
@@ -133,6 +153,16 @@ export class BonusCardsService {
     tourOut: string;
     comment: string;
     imageUrl: string | null;
+    nameListCode: string;
+    guide2: string;
+    guide2Name: string;
+    guide2Phone: string;
+    guide3: string;
+    guide3Name: string;
+    guide3Phone: string;
+    narratorCode: string;
+    narratorName: string;
+    narratorPhone: string;
   }) {
     return {
       ...row,

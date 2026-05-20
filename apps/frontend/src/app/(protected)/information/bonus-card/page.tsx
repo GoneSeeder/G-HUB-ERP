@@ -1,7 +1,7 @@
 'use client';
 
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
-import { DownloadIcon, EditIcon, PlusIcon, PrintIcon, SaveIcon, TrashIcon, XIcon } from '@/components/ui/icons';
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { DownloadIcon, EditIcon, PlusIcon, PrintIcon, SaveIcon, SearchIcon, TrashIcon, UploadIcon, XIcon } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { apiFetch, apiUpload } from '@/lib/api';
 
@@ -28,10 +28,45 @@ type BonusCard = {
   tourOut: string;
   comment: string;
   imageUrl: string;
+  nameListCode: string;
+  guide2: string;
+  guide2Name: string;
+  guide2Phone: string;
+  guide3: string;
+  guide3Name: string;
+  guide3Phone: string;
+  narratorCode: string;
+  narratorName: string;
+  narratorPhone: string;
 };
 
 type UploadImageResponse = {
   imageUrl: string;
+};
+
+type NameListItem = {
+  id?: string;
+  itemNo: number | '';
+  isLeader: boolean;
+  passportNo: string;
+  firstName: string;
+  lastName: string;
+  birthDate: string;
+  age: number | null;
+  gender: string;
+  nationCode: string;
+  province: string;
+  location: string;
+};
+
+type NameList = {
+  id: string;
+  code: string;
+  partyCode: string;
+  agentCode: string;
+  agentName: string;
+  pax: number;
+  items: NameListItem[];
 };
 
 const today = new Date().toISOString().slice(0, 10);
@@ -60,17 +95,27 @@ const emptyForm: BonusCard = {
   tourOut: '',
   comment: '',
   imageUrl: '',
+  nameListCode: '',
+  guide2: '',
+  guide2Name: '',
+  guide2Phone: '',
+  guide3: '',
+  guide3Name: '',
+  guide3Phone: '',
+  narratorCode: '',
+  narratorName: '',
+  narratorPhone: '',
 };
 
 const visibleColumns: Array<{ key: keyof BonusCard; label: string; width: string }> = [
-  { key: 'bonus', label: 'Bonus', width: '72px' },
-  { key: 'bonusName', label: 'Bonus Name', width: '190px' },
-  { key: 'agentCode', label: 'Agent Code', width: '92px' },
-  { key: 'agentName', label: 'Agent Name', width: '190px' },
-  { key: 'guide', label: 'Guide', width: '88px' },
-  { key: 'guideName', label: 'Guide Name', width: '170px' },
-  { key: 'partyCode', label: 'Party Code', width: '170px' },
-  { key: 'comment', label: 'Remark', width: '240px' },
+  { key: 'bonus', label: 'Bonus', width: '5%' },
+  { key: 'bonusName', label: 'Bonus Name', width: '12%' },
+  { key: 'agentCode', label: 'Agent Code', width: '7%' },
+  { key: 'agentName', label: 'Agent Name', width: '12%' },
+  { key: 'guide', label: 'Guide', width: '5%' },
+  { key: 'guideName', label: 'Guide Name', width: '10%' },
+  { key: 'partyCode', label: 'Party Code', width: '11%' },
+  { key: 'comment', label: 'Remark', width: '10%' },
 ];
 
 const exportColumns: Array<{ key: keyof BonusCard; label: string }> = [
@@ -82,6 +127,7 @@ const exportColumns: Array<{ key: keyof BonusCard; label: string }> = [
   { key: 'guide', label: 'Guide' },
   { key: 'guideName', label: 'Guide Name' },
   { key: 'partyCode', label: 'Party Code' },
+  { key: 'nameListCode', label: 'Namelist' },
   { key: 'nation', label: 'Nation' },
   { key: 'adult', label: 'Adult' },
   { key: 'child', label: 'Child' },
@@ -93,12 +139,21 @@ const exportColumns: Array<{ key: keyof BonusCard; label: string }> = [
   { key: 'busType', label: 'Bus Type' },
   { key: 'tourIn', label: 'Tour In' },
   { key: 'tourOut', label: 'Tour Out' },
+  { key: 'guide2', label: 'Guide 2' },
+  { key: 'guide2Name', label: 'Guide 2 Name' },
+  { key: 'guide2Phone', label: 'Guide 2 Phone' },
+  { key: 'guide3', label: 'Guide 3' },
+  { key: 'guide3Name', label: 'Guide 3 Name' },
+  { key: 'guide3Phone', label: 'Guide 3 Phone' },
+  { key: 'narratorCode', label: 'Narrator Code' },
+  { key: 'narratorName', label: 'Narrator Name' },
+  { key: 'narratorPhone', label: 'Narrator Phone' },
   { key: 'comment', label: 'Remark' },
 ];
 
 export default function BonusCardPage() {
   const [rows, setRows] = useState<BonusCard[]>([]);
-  const [workDate, setWorkDate] = useState('2026-05-14');
+  const [workDate, setWorkDate] = useState(today);
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
@@ -107,11 +162,12 @@ export default function BonusCardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
-  const [exportRange, setExportRange] = useState({ from: '2026-05-14', to: '2026-05-14' });
+  const [exportRange, setExportRange] = useState({ from: today, to: today });
   const [exportFileType, setExportFileType] = useState<'xlsx' | 'xls'>('xlsx');
   const [exportRows, setExportRows] = useState<BonusCard[]>([]);
   const [exportLoading, setExportLoading] = useState(false);
   const [printRow, setPrintRow] = useState<BonusCard | null>(null);
+  const [nameListRow, setNameListRow] = useState<BonusCard | null>(null);
 
   const filteredRows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -236,15 +292,21 @@ export default function BonusCardPage() {
   };
 
   return (
-    <PageShell className="!max-w-[1380px]">
+    <PageShell className="h-full !max-w-[calc(100vw-2rem)] gap-3 overflow-hidden">
       <PageHeader
         eyebrow="Document · Bonus Card"
         title="Bonus Card"
-        description="Enterprise bonus card records from PostgreSQL."
+        description="Bonus card records for document and operations workflow."
         actions={
           <>
             <button className="toolbar-btn-primary" onClick={openCreate}>
               <PlusIcon className="erp-action-icon" /> Add Bonus
+            </button>
+            <button className="toolbar-btn" disabled={selectedIds.length !== 1} onClick={() => {
+              const selected = rows.find((row) => row.id === selectedIds[0]);
+              if (selected) setNameListRow(selected);
+            }}>
+              <SearchIcon className="erp-action-icon" /> Show Name List
             </button>
             <button className="toolbar-btn" onClick={() => window.print()}>
               <PrintIcon className="erp-action-icon" /> Print
@@ -256,25 +318,27 @@ export default function BonusCardPage() {
         }
       />
 
-      <DataPanel className="erp-slide-left shrink-0 px-4 py-3">
-        <div className="mt-5 grid gap-3 md:grid-cols-[220px_1fr_150px]">
-          <input
-            type="text"
-            value={dateInputValue(workDate)}
-            placeholder="--/--/----"
-            onChange={(event) => setWorkDate(parseDateInput(event.target.value))}
-            onBlur={(event) => setWorkDate(completeDateInput(event.target.value))}
-            className="form-input"
-          />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search bonus, guide, party code, agent..."
-            className="form-input"
-          />
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-right">
-            <p className="text-xs text-slate-500">Records</p>
-            <p className="text-xl font-semibold text-blue-800">{filteredRows.length}</p>
+      <DataPanel className="erp-slide-left shrink-0 px-3 py-2.5">
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="block w-[170px] space-y-1">
+            <span className="text-[10px] font-medium uppercase text-slate-500">Date</span>
+            <BonusDateInput value={workDate} onChange={setWorkDate} />
+          </label>
+          <label className="block min-w-[280px] flex-1 space-y-1">
+            <span className="text-[10px] font-medium uppercase text-slate-500">Search</span>
+            <div className="relative">
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search bonus, guide, party code, agent..."
+                className="form-input pl-9"
+              />
+            </div>
+          </label>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-right">
+            <p className="text-[10px] font-medium uppercase text-slate-400">Records</p>
+            <p className="text-sm font-medium text-slate-900">{filteredRows.length}</p>
           </div>
         </div>
       </DataPanel>
@@ -283,40 +347,32 @@ export default function BonusCardPage() {
         <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       ) : null}
 
-      <DataPanel className="erp-slide-right overflow-hidden">
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-          <div className="flex items-center gap-3 text-sm">
-            <button
-              className="font-medium text-blue-700 underline"
-              onClick={() => setSelectedIds(filteredRows.map((row) => row.id))}
-            >
-              Select all
-            </button>
-            <button className="font-medium text-slate-400 underline" onClick={() => setSelectedIds([])}>
-              Deselect all
-            </button>
-            <span className="text-slate-400">Showing {filteredRows.length} items</span>
+      <DataPanel className="erp-slide-right flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-2">
+          <div className="flex items-center gap-3 text-sm text-slate-400">
+            Showing {filteredRows.length} items
+            {selectedIds.length ? <span>/ selected {selectedIds.length}</span> : null}
           </div>
         </div>
 
-        <div className="overflow-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
           <table className="w-full table-fixed border-collapse text-xs">
             <thead className="sticky top-0 z-10 bg-slate-50">
               <tr>
-                <th className="w-10 border-b border-slate-200 px-2 py-3 text-left" />
-                <th className="w-14 border-b border-slate-200 px-2 py-3 text-left text-xs font-semibold uppercase text-slate-400">
+                <th className="w-8 border-b border-slate-200 px-2 py-2.5 text-left" />
+                <th className="w-12 border-b border-slate-200 px-2 py-2.5 text-left text-[10px] font-semibold uppercase text-slate-400">
                   Image
                 </th>
                 {visibleColumns.map((column) => (
                   <th
                     key={column.key}
                     style={{ width: column.width }}
-                    className="border-b border-slate-200 px-3 py-3 text-left text-xs font-semibold uppercase text-slate-400"
+                    className="truncate border-b border-slate-200 px-2 py-2.5 text-left text-[10px] font-semibold uppercase text-slate-400"
                   >
                     {column.label}
                   </th>
                 ))}
-                <th className="w-[150px] border-b border-slate-200 px-2 py-3 text-right text-xs font-semibold uppercase text-slate-400">
+                <th className="w-[140px] border-b border-slate-200 px-2 py-2.5 text-right text-[10px] font-semibold uppercase text-slate-400">
                   Actions
                 </th>
               </tr>
@@ -339,7 +395,7 @@ export default function BonusCardPage() {
                         selected ? 'bg-sky-50' : 'hover:bg-slate-50'
                       }`}
                     >
-                      <td className="px-2 py-3">
+                      <td className="px-2 py-2">
                         <input
                           type="checkbox"
                           checked={selected}
@@ -347,7 +403,7 @@ export default function BonusCardPage() {
                           className="h-4 w-4 accent-[#1478ff]"
                         />
                       </td>
-                      <td className="px-2 py-3">
+                      <td className="px-2 py-2">
                         {row.imageUrl ? (
                           <img
                             src={getImageSrc(row.imageUrl)}
@@ -359,12 +415,15 @@ export default function BonusCardPage() {
                         )}
                       </td>
                       {visibleColumns.map((column) => (
-                        <td key={column.key} className="px-2 py-3 text-slate-700">
+                        <td key={column.key} className="px-2 py-2 text-slate-700">
                           <span className="block truncate">{String(row[column.key] ?? '')}</span>
                         </td>
                       ))}
-                      <td className="px-2 py-3 text-right">
+                      <td className="px-2 py-2 text-right">
                         <div className="flex justify-end gap-1.5 font-medium">
+                          <button className="toolbar-btn min-h-9 px-2.5" onClick={() => setNameListRow(row)}>
+                            Name List
+                          </button>
                           <button className="toolbar-btn min-h-9 px-2.5" onClick={() => setPrintRow(row)}>
                             Detail
                           </button>
@@ -392,6 +451,7 @@ export default function BonusCardPage() {
           onChange={setForm}
           onClose={() => setFormMode(null)}
           onSubmit={saveForm}
+          onOpenNameList={() => setNameListRow(form)}
         />
       ) : null}
 
@@ -409,6 +469,7 @@ export default function BonusCardPage() {
       ) : null}
 
       {printRow ? <PrintModal row={printRow} onClose={() => setPrintRow(null)} /> : null}
+      {nameListRow ? <NameListModal row={nameListRow} onClose={() => setNameListRow(null)} /> : null}
     </PageShell>
   );
 }
@@ -420,6 +481,7 @@ function BonusModal({
   onChange,
   onClose,
   onSubmit,
+  onOpenNameList,
 }: {
   form: BonusCard;
   mode: 'create' | 'edit';
@@ -427,9 +489,32 @@ function BonusModal({
   onChange: (value: BonusCard) => void;
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onOpenNameList: () => void;
 }) {
+  const [showExtraGuides, setShowExtraGuides] = useState(false);
+  const [showNarrator, setShowNarrator] = useState(false);
   const setField = (key: keyof BonusCard, value: string | number) => {
     onChange({ ...form, [key]: value });
+  };
+
+  const mapGuide = async (code: string, target: 'guide2' | 'guide3') => {
+    const normalizedCode = code.trim();
+    if (!normalizedCode) return;
+    try {
+      const result = await apiFetch<{ items: Array<{ guideCode: string; fullName: string; fullNameTh: string; phone: string }> }>(
+        `/api/members?page=1&search=${encodeURIComponent(normalizedCode)}`,
+      );
+      const guide = result.items.find((item) => item.guideCode.toLowerCase() === normalizedCode.toLowerCase()) ?? result.items[0];
+      if (!guide) return;
+      onChange({
+        ...form,
+        [target]: normalizedCode,
+        [`${target}Name`]: guide.fullName || guide.fullNameTh || guide.guideCode,
+        [`${target}Phone`]: guide.phone || '',
+      } as BonusCard);
+    } catch {
+      // Keep manually entered values if guide lookup is not available.
+    }
   };
 
   const uploadImage = async (file: File | null) => {
@@ -446,53 +531,50 @@ function BonusModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <form
         onSubmit={onSubmit}
-        className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
+        className="modal-pop flex max-h-[calc(100vh-2rem)] w-full max-w-[920px] flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
       >
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
           <div>
-            <h2 className="text-[24px] font-semibold leading-tight text-slate-950">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Document ยท Bonus Card</p>
+            <h2 className="mt-1 text-lg font-semibold leading-tight text-slate-950">
               {mode === 'create' ? 'Add Bonus' : 'Edit Bonus'}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">Manage bonus card profile, guide, travel, and print details.</p>
           </div>
           <button type="button" className="toolbar-btn" onClick={onClose}>
             <XIcon className="erp-action-icon" /> Close
           </button>
         </div>
-        <div className="grid gap-5 p-5 lg:grid-cols-[220px_1fr]">
-          <aside className="space-y-4">
-            <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
-              <div className="flex h-52 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white text-sm text-slate-400">
+        <div className="grid min-h-0 flex-1 gap-3 p-4 lg:grid-cols-[150px_1fr]">
+          <aside className="space-y-2">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+              <div className="flex h-28 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white text-xs text-slate-400">
                 {form.imageUrl ? (
                   <img src={getImageSrc(form.imageUrl)} alt="" className="h-full w-full bg-white object-contain" />
                 ) : (
                   <span>No image</span>
                 )}
               </div>
-              <p className="mt-3 text-xs leading-5 text-slate-500">
-                Upload guide or guest image. Large files are optimized before saving.
-              </p>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(event) => uploadImage(event.target.files?.[0] ?? null)}
-                className="mt-3 w-full text-sm"
-              />
+              <label className="toolbar-btn mt-2 w-full cursor-pointer">
+                <UploadIcon className="erp-action-icon" /> Upload
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => uploadImage(event.target.files?.[0] ?? null)}
+                  className="sr-only"
+                />
+              </label>
             </div>
 
-            <div className="rounded-[8px] border border-sky-100 bg-sky-50/70 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Bonus</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">{form.bonus || '-'}</p>
-              <p className="mt-2 text-xs leading-5 text-slate-500">
-                Main bonus number used for lookup, detail, and slip printing.
-              </p>
+            <div className="rounded-lg border border-sky-100 bg-sky-50/70 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-blue-700">Bonus</p>
+              <p className="mt-1 truncate text-xl font-semibold text-slate-950">{form.bonus || '-'}</p>
             </div>
           </aside>
 
-          <div className="space-y-4">
+          <div className="min-h-0 space-y-3 overflow-hidden">
             {error ? (
               <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                 {error}
@@ -502,6 +584,7 @@ function BonusModal({
             <BonusFormSection title="Bonus Information">
               <Field label="Work date" value={form.workDate} type="date" onChange={(value) => setField('workDate', value)} />
               <Field label="Bonus" value={form.bonus} onChange={(value) => setField('bonus', value)} />
+              <Field label="Namelist" value={form.nameListCode} onChange={(value) => setField('nameListCode', value)} />
               <Field
                 label="Bonus Name"
                 value={form.bonusName}
@@ -548,18 +631,36 @@ function BonusModal({
             </BonusFormSection>
 
             <BonusFormSection title="Remark">
-              <label className="space-y-2 md:col-span-2 xl:col-span-3">
-                <span className="text-sm font-semibold text-slate-700">Remark</span>
+              <label className="space-y-1 md:col-span-2 xl:col-span-4">
+                <span className="text-xs font-medium text-slate-700">Remark</span>
                 <textarea
                   value={form.comment}
                   onChange={(event) => setField('comment', event.target.value)}
-                  className="min-h-24 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]"
+                  className="min-h-12 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]"
                 />
               </label>
             </BonusFormSection>
+
+            <CollapsibleSection title="ข้อมูลไกด์คนที่ 2 และ 3" open={showExtraGuides} onToggle={() => setShowExtraGuides((current) => !current)}>
+              <Field label="Guide 2 Code" value={form.guide2} onChange={(value) => setField('guide2', value)} onBlur={() => mapGuide(form.guide2, 'guide2')} />
+              <Field label="Guide 2 Name" value={form.guide2Name} onChange={(value) => setField('guide2Name', value)} wide />
+              <Field label="Guide 2 Phone" value={form.guide2Phone} onChange={(value) => setField('guide2Phone', value)} />
+              <Field label="Guide 3 Code" value={form.guide3} onChange={(value) => setField('guide3', value)} onBlur={() => mapGuide(form.guide3, 'guide3')} />
+              <Field label="Guide 3 Name" value={form.guide3Name} onChange={(value) => setField('guide3Name', value)} wide />
+              <Field label="Guide 3 Phone" value={form.guide3Phone} onChange={(value) => setField('guide3Phone', value)} />
+            </CollapsibleSection>
+
+            <CollapsibleSection title="ข้อมูลอาจารย์ห้องพากย์" open={showNarrator} onToggle={() => setShowNarrator((current) => !current)}>
+              <Field label="Code" value={form.narratorCode} onChange={(value) => setField('narratorCode', value)} />
+              <Field label="Name" value={form.narratorName} onChange={(value) => setField('narratorName', value)} wide />
+              <Field label="Phone" value={form.narratorPhone} onChange={(value) => setField('narratorPhone', value)} />
+            </CollapsibleSection>
           </div>
         </div>
-        <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
+        <div className="flex shrink-0 justify-end gap-3 border-t border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
+          <button type="button" className="toolbar-btn mr-auto" onClick={onOpenNameList}>
+            <SearchIcon className="erp-action-icon" /> Name List
+          </button>
           <button type="button" className="toolbar-btn" onClick={onClose}>
             <XIcon className="erp-action-icon" /> Cancel
           </button>
@@ -574,9 +675,35 @@ function BonusModal({
 
 function BonusFormSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-[8px] border border-slate-200 bg-slate-50/60 p-4">
-      <h3 className="mb-4 text-sm font-semibold text-slate-800">{title}</h3>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{children}</div>
+    <section className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+      <h3 className="mb-2 text-xs font-semibold text-slate-800">{title}</h3>
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">{children}</div>
+    </section>
+  );
+}
+
+function CollapsibleSection({
+  title,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-slate-50/60">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold text-slate-800 transition hover:bg-[#0752d6]/[0.07]"
+      >
+        <span>{title}</span>
+        <span className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
+      </button>
+      {open ? <div className="grid gap-2 border-t border-slate-200 p-3 md:grid-cols-2 xl:grid-cols-4">{children}</div> : null}
     </section>
   );
 }
@@ -586,30 +713,100 @@ function Field({
   value,
   type = 'text',
   onChange,
+  onBlur,
   wide = false,
 }: {
   label: string;
   value: string | number;
   type?: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   wide?: boolean;
 }) {
+  if (type === 'date') {
+    return (
+      <label className={`space-y-1 ${wide ? 'md:col-span-2' : ''}`}>
+        <span className="text-xs font-medium text-slate-700">{label}</span>
+        <BonusDateInput value={String(value ?? '')} onChange={onChange} compact />
+      </label>
+    );
+  }
+
   return (
-    <label className={`space-y-2 ${wide ? 'md:col-span-2' : ''}`}>
-      <span className="text-sm font-semibold text-slate-700">{label}</span>
+    <label className={`space-y-1 ${wide ? 'md:col-span-2' : ''}`}>
+      <span className="text-xs font-medium text-slate-700">{label}</span>
       <input
-        type={type === 'date' ? 'text' : type}
-        value={type === 'date' ? dateInputValue(String(value ?? '')) : type === 'number' && value === 0 ? '' : value}
-        placeholder={type === 'date' ? '--/--/----' : undefined}
-        onChange={(event) => onChange(type === 'date' ? parseDateInput(event.target.value) : event.target.value)}
-        onBlur={(event) => {
-          if (type === 'date') {
-            onChange(completeDateInput(event.target.value));
-          }
-        }}
-        className="form-input rounded-md"
+        type={type}
+        value={type === 'number' && value === 0 ? '' : value}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
+        className="form-input h-8 rounded-md text-sm"
       />
     </label>
+  );
+}
+
+function BonusDateInput({
+  value,
+  onChange,
+  compact = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  compact?: boolean;
+}) {
+  const pickerRef = useRef<HTMLInputElement>(null);
+  const [displayValue, setDisplayValue] = useState(dateInputValue(value));
+
+  useEffect(() => {
+    setDisplayValue(dateInputValue(value));
+  }, [value]);
+
+  const commitDisplayValue = (nextValue: string) => {
+    const normalized = completeDateInput(nextValue);
+    onChange(normalized);
+    setDisplayValue(dateInputValue(normalized));
+  };
+
+  const openPicker = () => {
+    const picker = pickerRef.current as (HTMLInputElement & { showPicker?: () => void }) | null;
+    if (picker?.showPicker) {
+      picker.showPicker();
+    } else {
+      picker?.click();
+    }
+  };
+
+  return (
+    <div className="relative">
+      <input
+        value={displayValue}
+        placeholder="--/--/----"
+        onChange={(event) => setDisplayValue(event.target.value)}
+        onBlur={(event) => commitDisplayValue(event.target.value)}
+        className={`form-input rounded-md pr-9 ${compact ? 'h-8 text-sm' : ''}`}
+      />
+      <input
+        ref={pickerRef}
+        type="date"
+        value={value}
+        onChange={(event) => {
+          onChange(event.target.value);
+          setDisplayValue(dateInputValue(event.target.value));
+        }}
+        className="pointer-events-none absolute inset-0 opacity-0"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+      <button
+        type="button"
+        onClick={openPicker}
+        className="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-[#0752d6]/[0.07] hover:text-[#0752d6]"
+        aria-label="Open calendar"
+      >
+        ▾
+      </button>
+    </div>
   );
 }
 
@@ -633,7 +830,7 @@ function ExportModal({
   onExport: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="max-h-[92vh] w-full max-w-6xl overflow-hidden bg-white p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -720,6 +917,89 @@ function ExportModal({
   );
 }
 
+function NameListModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
+  const [nameLists, setNameLists] = useState<NameList[]>([]);
+  const [loading, setLoading] = useState(true);
+  const selected =
+    nameLists.find((item) => item.code === row.nameListCode) ??
+    nameLists.find((item) => item.partyCode === row.partyCode) ??
+    nameLists[0];
+
+  useEffect(() => {
+    const loadNameLists = async () => {
+      setLoading(true);
+      try {
+        const query = row.nameListCode || row.partyCode;
+        const data = await apiFetch<NameList[]>(`/api/name-lists?search=${encodeURIComponent(query)}`);
+        setNameLists(data);
+      } catch {
+        setNameLists([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void loadNameLists();
+  }, [row.nameListCode, row.partyCode]);
+
+  return (
+    <div className="modal-backdrop fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="modal-pop flex max-h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Name List</h2>
+            <p className="text-xs text-slate-500">{row.partyCode || row.nameListCode || 'No party code'}</p>
+          </div>
+          <button type="button" className="toolbar-btn" onClick={onClose}>
+            <XIcon className="erp-action-icon" /> Close
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-auto p-4">
+          {loading ? (
+            <div className="py-12 text-center text-sm text-slate-400">Loading name list...</div>
+          ) : selected ? (
+            <>
+              <div className="mb-3 grid gap-2 md:grid-cols-4">
+                <DetailLine label="Code" value={selected.code} />
+                <DetailLine label="Party Code" value={selected.partyCode} />
+                <DetailLine label="Agent" value={`${selected.agentCode} ${selected.agentName}`} />
+                <DetailLine label="Passengers" value={String(selected.items.length || selected.pax)} />
+              </div>
+              <table className="w-full table-fixed border-collapse text-xs">
+                <thead className="sticky top-0 bg-white">
+                  <tr>
+                    {['No.', 'Leader', 'Passport', 'First Name', 'Last Name', 'Birth Date', 'Age', 'Gender', 'Nation'].map((label) => (
+                      <th key={label} className="border-b border-slate-200 px-2 py-2 text-left text-[10px] font-semibold uppercase text-slate-400">
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {selected.items.map((item, index) => (
+                    <tr key={item.id ?? index} className="border-b border-slate-100 hover:bg-[#0752d6]/[0.06]">
+                      <td className="px-2 py-2">{item.itemNo || index + 1}</td>
+                      <td className="px-2 py-2 text-emerald-600">{item.isLeader ? '✓' : ''}</td>
+                      <td className="px-2 py-2">{item.passportNo}</td>
+                      <td className="px-2 py-2">{item.firstName}</td>
+                      <td className="px-2 py-2">{item.lastName}</td>
+                      <td className="px-2 py-2">{formatDate(item.birthDate)}</td>
+                      <td className="px-2 py-2">{item.age ?? '-'}</td>
+                      <td className="px-2 py-2">{item.gender}</td>
+                      <td className="px-2 py-2">{item.nationCode}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : (
+            <div className="py-12 text-center text-sm text-slate-400">No name list found for this bonus card.</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PrintModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
   const pax = row.adult + row.child + row.tourLeader;
   const bonusRows: Array<[string, string | number]> = [
@@ -734,6 +1014,15 @@ function PrintModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
     ['Agent name', row.agentName],
     ['Guide', row.guide],
     ['Guide name', row.guideName],
+    ['Guide 2', row.guide2],
+    ['Guide 2 name', row.guide2Name],
+    ['Guide 2 phone', row.guide2Phone],
+    ['Guide 3', row.guide3],
+    ['Guide 3 name', row.guide3Name],
+    ['Guide 3 phone', row.guide3Phone],
+    ['Narrator code', row.narratorCode],
+    ['Narrator name', row.narratorName],
+    ['Narrator phone', row.narratorPhone],
   ];
   const travelRows: Array<[string, string | number]> = [
     ['Adult', row.adult],
@@ -760,7 +1049,7 @@ function PrintModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur">
         <div className="no-print flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <div>
