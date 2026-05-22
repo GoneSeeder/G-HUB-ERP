@@ -109,6 +109,9 @@ model BonusCard {
   narrators        Json     @default("[]")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  lectureSessions  LectureSession[]
+  lectureHistories LectureHistory[]
 }
 
 model Member {
@@ -320,4 +323,66 @@ model BookingReference {
 
   @@index([bookingId])
   @@index([faxNo])
+}
+
+model LectureRoom {
+  id        String   @id @default(uuid())
+  roomCode  String   @unique
+  roomName  String
+  capacity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activeSession LectureSession?
+}
+
+model Speaker {
+  id          String   @id @default(uuid())
+  speakerCode String   @unique
+  speakerName String
+  status      String   @default("available") // "available" | "lecturing" | "inactive"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  activeSessions LectureSession[]
+}
+
+model LectureSession {
+  id            String    @id @default(uuid())
+  partyCode     String
+  bonusCardId   String?
+  roomId        String    @unique
+  roomCode      String
+  roomName      String
+  speakerId     String
+  speakerCode   String
+  speakerName   String
+  attendeeCount Int       @default(0)
+  status        String    @default("arriving") // "arriving" | "lecturing"
+  startedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  room      LectureRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  speaker   Speaker     @relation(fields: [speakerId], references: [id], onDelete: Cascade)
+  bonusCard BonusCard?  @relation(fields: [bonusCardId], references: [id], onDelete: SetNull)
+}
+
+model LectureHistory {
+  id              String   @id @default(uuid())
+  partyCode       String
+  bonusCardId     String?
+  roomId          String
+  roomCode        String
+  roomName        String
+  speakerId       String
+  speakerCode     String
+  speakerName     String
+  attendeeCount   Int      @default(0)
+  startedAt       DateTime
+  endedAt         DateTime
+  durationSeconds Int
+  createdAt       DateTime @default(now())
+
+  bonusCard BonusCard? @relation(fields: [bonusCardId], references: [id], onDelete: SetNull)
 }

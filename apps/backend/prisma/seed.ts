@@ -21,6 +21,7 @@ async function main() {
     informationBookingApp,
     informationNameListApp,
     informationReportApp,
+    informationLectureRoomApp,
     inventoryApp,
     inventoryStockApp,
     salesApp,
@@ -116,6 +117,18 @@ async function main() {
         code: 'information-report',
         name: 'รายงาน',
         description: 'Operational reports and analytics',
+      },
+    }),
+    prisma.app.upsert({
+      where: { code: 'information-lecture-room' },
+      update: {
+        name: 'ห้องบรรยาย',
+        description: 'Lecture room management and operational display',
+      },
+      create: {
+        code: 'information-lecture-room',
+        name: 'ห้องบรรยาย',
+        description: 'Lecture room management and operational display',
       },
     }),
     prisma.app.upsert({
@@ -302,6 +315,7 @@ async function main() {
     informationBookingApp,
     informationNameListApp,
     informationReportApp,
+    informationLectureRoomApp,
   ];
 
   const inventoryChildApps = [inventoryStockApp];

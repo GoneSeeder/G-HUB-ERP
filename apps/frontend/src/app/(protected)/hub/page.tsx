@@ -42,6 +42,7 @@ const informationApps = [
   'information-booking',
   'information-bonus-card',
   'information-member',
+  'information-lecture-room',
   'information-report',
 ];
 
@@ -80,6 +81,7 @@ const appHrefByCode: Record<string, string | undefined> = {
   'information-bonus-card': '/information/bonus-card',
   'information-booking': '/information/booking',
   'information-name-list': '/information/name-list',
+  'information-lecture-room': '/information/lecture-room',
 };
 
 const appMetaByCode: Record<string, HubAppMeta> = {
@@ -110,6 +112,13 @@ const appMetaByCode: Record<string, HubAppMeta> = {
     description: 'Create and verify bonus card records from bookings',
     accent: 'bg-orange-50 text-orange-600',
     icon: 'card',
+  },
+  'information-lecture-room': {
+    eyebrow: 'การจัดการข้อมูล',
+    title: 'ห้องบรรยาย',
+    description: 'จัดการห้องบรรยาย ข้อมูลผู้บรรยาย และรอบการบรรยายประจำวัน',
+    accent: 'bg-rose-50 text-rose-600',
+    icon: 'booking',
   },
   'information-report': {
     eyebrow: 'Report',

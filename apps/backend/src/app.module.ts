@@ -12,6 +12,7 @@ import { MembersModule } from './members/members.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { AgentsModule } from './agents/agents.module';
 import { NameListsModule } from './name-lists/name-lists.module';
+import { LectureRoomsModule } from './lecture-rooms/lecture-rooms.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { NameListsModule } from './name-lists/name-lists.module';
     AgentsModule,
     BookingsModule,
     NameListsModule,
+    LectureRoomsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
