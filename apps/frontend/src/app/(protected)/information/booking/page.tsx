@@ -4,11 +4,9 @@ import { FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
-  DownloadIcon,
   EditIcon,
   LinkIcon,
   PlusIcon,
-  PrintIcon,
   RefreshIcon,
   SaveIcon,
   SearchIcon,
@@ -18,6 +16,7 @@ import {
 } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { apiFetch } from '@/lib/api';
+import { preventEnterSubmit } from '@/lib/form-behavior';
 
 type BookingReference = {
   id?: string;
@@ -166,6 +165,7 @@ export default function InformationBookingPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [formMode, setFormMode] = useState<'create' | 'edit' | null>(null);
   const [form, setForm] = useState<Booking>(emptyBooking);
+  const [bookingSaveState, setBookingSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -223,27 +223,40 @@ export default function InformationBookingPage() {
       docTime: toTimeInput(now),
       docNo: toDocNo(now),
     });
+    setBookingSaveState('idle');
     setFormMode('create');
   };
 
   const openEdit = (row: Booking) => {
     setForm({ ...row, references: row.references ?? [] });
+    setBookingSaveState('idle');
     setFormMode('edit');
   };
 
   const saveForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setBookingSaveState('saving');
     const body = JSON.stringify({
       ...form,
       pax: Number(form.pax) || 0,
     });
-    if (formMode === 'edit') {
-      await apiFetch<Booking>(`/api/bookings/${form.id}`, { method: 'PATCH', body });
-    } else {
+    try {
+      if (formMode === 'edit') {
+        const saved = await apiFetch<Booking>(`/api/bookings/${form.id}`, { method: 'PATCH', body });
+        setForm({ ...saved, references: saved.references ?? [] });
+        await loadRows();
+        setBookingSaveState('saved');
+        return;
+      }
+
       await apiFetch<Booking>('/api/bookings', { method: 'POST', body });
+      setFormMode(null);
+      setBookingSaveState('idle');
+      await loadRows();
+    } catch (saveError) {
+      setBookingSaveState('idle');
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save booking.');
     }
-    setFormMode(null);
-    await loadRows();
   };
 
   const deleteSelected = async () => {
@@ -261,27 +274,6 @@ export default function InformationBookingPage() {
 
   const toggleAllRows = () => {
     setSelectedIds(allRowsSelected ? [] : rows.map((row) => row.id));
-  };
-
-  const exportRows = () => {
-    const htmlRows = rows
-      .map(
-        (row) =>
-          `<tr>${tableColumns
-            .map((column) => `<td>${escapeHtml(formatBookingValue(row, column.key))}</td>`)
-            .join('')}<td>${row.status ? 'Complete' : 'Incomplete'}</td><td>${row.upload ? 'Uploaded' : 'Not Up'}</td></tr>`,
-      )
-      .join('');
-    const html = `<table border="1"><thead><tr>${tableColumns
-      .map((column) => `<th>${escapeHtml(column.label)}</th>`)
-      .join('')}<th>Status</th><th>Upload</th></tr></thead><tbody>${htmlRows}</tbody></table>`;
-    const blob = new Blob([`<meta charset="utf-8" />${html}`], { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `information-booking-${filters.date || 'all'}.xls`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -303,12 +295,6 @@ export default function InformationBookingPage() {
             </button>
             <button type="button" className="toolbar-btn" onClick={() => setCreateBonusOpen(true)}>
               <PlusIcon className="erp-action-icon" /> Create to Bonus Card
-            </button>
-            <button type="button" className="toolbar-btn" onClick={exportRows}>
-              <DownloadIcon className="erp-action-icon" /> Export
-            </button>
-            <button type="button" className="toolbar-btn" onClick={() => window.print()}>
-              <PrintIcon className="erp-action-icon" /> Print
             </button>
           </>
         }
@@ -466,10 +452,20 @@ export default function InformationBookingPage() {
           mode={formMode}
           form={form}
           rows={rows}
-          onChange={setForm}
-          onClose={() => setFormMode(null)}
+          saveState={bookingSaveState}
+          onChange={(value) => {
+            setForm(value);
+            setBookingSaveState('idle');
+          }}
+          onClose={() => {
+            setFormMode(null);
+            setBookingSaveState('idle');
+          }}
           onSubmit={saveForm}
-          onNavigate={(row) => setForm({ ...row, references: row.references ?? [] })}
+          onNavigate={(row) => {
+            setForm({ ...row, references: row.references ?? [] });
+            setBookingSaveState('idle');
+          }}
         />
       ) : null}
       {importOpen ? (
@@ -489,7 +485,6 @@ export default function InformationBookingPage() {
       ) : null}
       {createBonusOpen ? (
         <CreateBonusModal
-          rows={rows}
           initialDate={filters.date || today}
           onClose={() => setCreateBonusOpen(false)}
         />
@@ -502,6 +497,7 @@ function BookingModal({
   mode,
   form,
   rows,
+  saveState,
   onChange,
   onClose,
   onSubmit,
@@ -510,6 +506,7 @@ function BookingModal({
   mode: 'create' | 'edit';
   form: Booking;
   rows: Booking[];
+  saveState: 'idle' | 'saving' | 'saved';
   onChange: (value: Booking) => void;
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -518,14 +515,30 @@ function BookingModal({
   const setField = (key: keyof Booking, value: string | number | boolean) => {
     onChange({ ...form, [key]: value });
   };
+  const setReferenceField = (index: number, key: keyof BookingReference, value: string) => {
+    const references = [...form.references];
+    const current = references[index] ?? {
+      orderDate: '',
+      faxNo: '',
+      agentCode: '',
+      code: '',
+      place: '',
+      startDate: '',
+      endDate: '',
+    };
+    references[index] = { ...current, [key]: value };
+    onChange({ ...form, references });
+  };
   const currentIndex = rows.findIndex((row) => row.id === form.id);
   const previousRow = currentIndex > 0 ? rows[currentIndex - 1] : null;
   const nextRow = currentIndex >= 0 && currentIndex < rows.length - 1 ? rows[currentIndex + 1] : null;
+  const positionLabel = mode === 'edit' && rows.length > 0 ? `${Math.max(currentIndex + 1, 1)}/${rows.length}` : '';
 
   return (
     <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <form
         onSubmit={onSubmit}
+        onKeyDown={preventEnterSubmit}
         className="flex max-h-[90vh] w-[calc(100vw-180px)] max-w-[1400px] flex-col overflow-hidden rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
       >
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-2">
@@ -541,7 +554,7 @@ function BookingModal({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-2">
-          <div className="grid shrink-0 gap-2 xl:grid-cols-[minmax(0,1fr)_540px]">
+          <div className="grid shrink-0 items-start gap-2 xl:grid-cols-[minmax(0,1fr)_540px]">
           <FormSection title="General">
             <CheckField label="Complete" checked={form.status} onChange={(status) => setField('status', status)} />
             <DateField label="Date" value={form.docDate} onChange={(value) => setField('docDate', value)} disabled />
@@ -585,16 +598,23 @@ function BookingModal({
           </div>
 
           <FormSection title="Booking Reference" compact>
-            <DateField label="Order Date" value={form.dateBookJw} onChange={(value) => setField('dateBookJw', value)} />
+            <DateField label="Order Date" value={form.references[0]?.orderDate ?? ''} onChange={(value) => setReferenceField(0, 'orderDate', value)} />
             <Field label="Agent Ref" value={form.agentCodeRef} onChange={(value) => setField('agentCodeRef', value)} />
             <Field label="Fax No" value={form.faxNo} onChange={(value) => setField('faxNo', value)} />
             <Field label="PartyCode Ref" value={form.partyCodeRef} onChange={(value) => setField('partyCodeRef', value)} />
-            <TextArea label="Book Remark" value={form.bookRemark} onChange={(value) => setField('bookRemark', value)} tall />
+            <label className="space-y-1 md:col-span-2">
+              <span className="text-xs font-semibold text-slate-700">Book Remark</span>
+              <textarea
+                value={form.bookRemark}
+                onChange={(event) => setField('bookRemark', event.target.value)}
+                className="h-[92px] w-full resize-none rounded-md border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]"
+              />
+            </label>
           </FormSection>
           </div>
           </div>
 
-          <section className="mt-2 flex min-h-0 flex-1 flex-col rounded-[8px] border border-slate-200 bg-slate-50/60 p-2">
+          <section className="mt-2 flex h-[134px] shrink-0 flex-col rounded-[8px] border border-slate-200 bg-slate-50/60 p-2">
             <div className="mb-1.5 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold text-slate-800">Reference Details</h3>
             </div>
@@ -619,19 +639,29 @@ function BookingModal({
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-4 py-2 backdrop-blur">
           <div className="flex gap-2">
-            <button type="button" className="toolbar-btn px-4" disabled={!previousRow} onClick={() => previousRow && onNavigate(previousRow)}>
+            <button type="button" className="toolbar-btn px-4 disabled:bg-slate-50 disabled:text-slate-400" disabled={!previousRow} onClick={() => previousRow && onNavigate(previousRow)}>
               <ArrowLeftIcon className="erp-action-icon" /> Previous
             </button>
-            <button type="button" className="toolbar-btn px-4" disabled={!nextRow} onClick={() => nextRow && onNavigate(nextRow)}>
+            {positionLabel ? (
+              <span className="inline-flex min-h-9 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-600">
+                {positionLabel}
+              </span>
+            ) : null}
+            <button type="button" className="toolbar-btn px-4 disabled:bg-slate-50 disabled:text-slate-400" disabled={!nextRow} onClick={() => nextRow && onNavigate(nextRow)}>
               Next <ArrowRightIcon className="erp-action-icon" />
             </button>
           </div>
           <div className="flex gap-3">
-          <button type="button" className="toolbar-btn px-5" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="toolbar-btn-primary px-5">
-            Save
+          <button
+            type="submit"
+            disabled={saveState === 'saving'}
+            className={
+              saveState === 'saved'
+                ? 'inline-flex min-h-9 items-center justify-center gap-2 rounded-[10px] border border-emerald-500 bg-emerald-600 px-5 text-sm font-medium leading-none text-white transition hover:bg-emerald-600 disabled:opacity-70'
+                : 'toolbar-btn-primary px-5'
+            }
+          >
+            <SaveIcon className="erp-action-icon" /> {saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? 'Save complete' : 'Save'}
           </button>
           </div>
         </div>
@@ -641,37 +671,83 @@ function BookingModal({
 }
 
 function CreateBonusModal({
-  rows,
   initialDate,
   onClose,
 }: {
-  rows: Booking[];
   initialDate: string;
   onClose: () => void;
 }) {
   const [bookDate, setBookDate] = useState(initialDate);
+  const [rows, setRows] = useState<Booking[]>([]);
   const [previewRows, setPreviewRows] = useState<BonusPreviewRow[]>([]);
-  const filteredRows = rows.filter((row) => (row.arriveDate || row.docDate)?.slice(0, 10) === bookDate);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [loadingRows, setLoadingRows] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const displayRows = previewRows.length ? previewRows : rows.map((row) => ({ ...row, previewBonus: '' }));
+  const selectedRows = displayRows.filter((row) => selectedIds.includes(row.id));
+  const allRowsSelected = displayRows.length > 0 && displayRows.every((row) => selectedIds.includes(row.id));
+  const canUpload = selectedRows.length > 0 && selectedRows.every((row) => Boolean(row.previewBonus));
 
   const genBonus = () => {
+    if (selectedIds.length === 0) return;
     setPreviewRows(
-      filteredRows.map((row, index) => ({
+      displayRows.map((row) => ({
         ...row,
-        previewBonus: String(8001 + index),
+        previewBonus: selectedIds.includes(row.id) ? String(8001 + selectedIds.indexOf(row.id)) : row.previewBonus,
       })),
     );
   };
 
   const clearBonus = () => {
-    setPreviewRows(filteredRows.map((row) => ({ ...row, previewBonus: '' })));
+    if (selectedIds.length === 0) return;
+    setPreviewRows(
+      displayRows.map((row) => ({
+        ...row,
+        previewBonus: selectedIds.includes(row.id) ? '' : row.previewBonus,
+      })),
+    );
+  };
+
+  const toggleRowSelection = (id: string) => {
+    setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
+
+  const toggleAllRows = () => {
+    setSelectedIds(allRowsSelected ? [] : displayRows.map((row) => row.id));
   };
 
   useEffect(() => {
-    setPreviewRows(filteredRows.map((row) => ({ ...row, previewBonus: '' })));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookDate, rows]);
+    let cancelled = false;
 
-  const displayRows = previewRows.length ? previewRows : filteredRows.map((row) => ({ ...row, previewBonus: '' }));
+    const loadRowsForDate = async () => {
+      setLoadingRows(true);
+      setLoadError(null);
+      try {
+        const params = new URLSearchParams();
+        if (bookDate) params.set('date', bookDate);
+        const data = await apiFetch<Booking[]>(`/api/bookings?${params.toString()}`);
+        if (cancelled) return;
+        setRows(data);
+        setPreviewRows(data.map((row) => ({ ...row, previewBonus: '' })));
+        setSelectedIds([]);
+      } catch (error) {
+        if (cancelled) return;
+        setRows([]);
+        setPreviewRows([]);
+        setSelectedIds([]);
+        setLoadError(error instanceof Error ? error.message : 'Failed to load booking rows.');
+      } finally {
+        if (!cancelled) setLoadingRows(false);
+      }
+    };
+
+    void loadRowsForDate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookDate]);
 
   return (
     <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -690,23 +766,34 @@ function CreateBonusModal({
           <div className="w-[170px]">
             <FilterDateInput label="Book Date" value={bookDate} onChange={setBookDate} />
           </div>
-          <button type="button" className="toolbar-btn-primary" onClick={genBonus}>
+          <button type="button" className="toolbar-btn-primary" disabled={selectedIds.length === 0} onClick={genBonus}>
             <PlusIcon className="erp-action-icon" /> Gen. Bonus Auto
           </button>
-          <button type="button" className="toolbar-btn" onClick={clearBonus}>
+          <button type="button" className="toolbar-btn disabled:bg-slate-50 disabled:text-slate-400" disabled={selectedIds.length === 0} onClick={clearBonus}>
             <RefreshIcon className="erp-action-icon" /> Clear Bonus Code
           </button>
-          <button type="button" className="toolbar-btn" onClick={() => undefined}>
+          <button type="button" className="toolbar-btn disabled:bg-slate-50 disabled:text-slate-400" disabled={!canUpload} onClick={() => undefined}>
             <UploadIcon className="erp-action-icon" /> Upload to Bonus
           </button>
-          <span className="ml-auto text-sm font-light text-slate-500">{displayRows.length} rows</span>
+          <span className="ml-auto text-sm font-light text-slate-500">
+            {loadingRows ? 'Loading...' : `${displayRows.length} rows / ${selectedIds.length} selected`}
+          </span>
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto">
           <table className="w-full min-w-[1320px] border-collapse text-xs">
             <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_rgba(226,232,240,1)]">
               <tr>
-                {['Status', 'Bonus Code', 'Date book JW', 'Time', 'Agent Code', 'Agent Name', 'Guide Code', 'Guide Name', 'Nation', 'Car Code', 'Pax', 'Party Code', 'First Shop', 'Remark', 'Shop', 'Doc No.', 'Complete'].map((label) => (
+                <th className="w-9 border-b border-slate-200 px-2 py-2 text-left">
+                  <input
+                    type="checkbox"
+                    checked={allRowsSelected}
+                    onChange={toggleAllRows}
+                    className="h-4 w-4 accent-[#1478ff]"
+                    aria-label="Select all bonus preview rows"
+                  />
+                </th>
+                {['Bonus Code', 'Date book JW', 'Time', 'Agent Code', 'Agent Name', 'Guide Code', 'Guide Name', 'Nation', 'Car Code', 'Pax', 'Party Code', 'First Shop', 'Remark', 'Shop', 'Doc No.', 'Complete', 'Upload'].map((label) => (
                   <th key={label} className="border-b border-slate-200 px-2 py-2 text-left text-[10px] font-semibold uppercase text-slate-400">
                     {label}
                   </th>
@@ -716,8 +803,21 @@ function CreateBonusModal({
             <tbody>
               {displayRows.length ? (
                 displayRows.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-100 hover:bg-[#0752d6]/[0.06]">
-                    <td className="px-2 py-2 text-emerald-700">Upload</td>
+                  <tr
+                    key={row.id}
+                    onClick={() => toggleRowSelection(row.id)}
+                    className={`cursor-pointer border-b border-slate-100 hover:bg-[#0752d6]/[0.06] ${selectedIds.includes(row.id) ? 'bg-sky-50' : ''}`}
+                  >
+                    <td className="px-2 py-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(row.id)}
+                        onChange={() => toggleRowSelection(row.id)}
+                        onClick={(event) => event.stopPropagation()}
+                        className="h-4 w-4 accent-[#1478ff]"
+                        aria-label={`Select ${row.partyCode}`}
+                      />
+                    </td>
                     <td className="px-2 py-2 font-medium text-slate-950">{row.previewBonus || '-'}</td>
                     <td className="px-2 py-2">{formatDisplayDate(row.dateBookJw || row.arriveDate || row.docDate)}</td>
                     <td className="px-2 py-2">{row.timeBookJw || row.docTime}</td>
@@ -733,13 +833,14 @@ function CreateBonusModal({
                     <td className="max-w-[230px] truncate px-2 py-2" title={row.bookRemark}>{row.bookRemark}</td>
                     <td className="px-2 py-2">R</td>
                     <td className="px-2 py-2">{row.docNo}</td>
-                    <td className="px-2 py-2">{row.status ? 'Complete' : 'Incomplete'}</td>
+                    <td className="px-2 py-2"><StatusMark value={row.status} /></td>
+                    <td className="px-2 py-2"><StatusMark value={row.upload} /></td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={17} className="px-4 py-16 text-center text-sm text-slate-400">
-                    No booking rows for selected date.
+                  <td colSpan={18} className="px-4 py-16 text-center text-sm text-slate-400">
+                    {loadError ?? (loadingRows ? 'Loading booking rows...' : 'No booking rows for selected date.')}
                   </td>
                 </tr>
               )}
@@ -748,6 +849,18 @@ function CreateBonusModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function StatusMark({ value }: { value: boolean }) {
+  return value ? (
+    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-sm font-bold leading-none text-emerald-700">
+      ✓
+    </span>
+  ) : (
+    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-50 text-base font-bold leading-none text-red-600">
+      ×
+    </span>
   );
 }
 
@@ -776,9 +889,9 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
         ]
       : agents;
 
-  const loadRows = async () => {
+  const loadRows = async (query = search) => {
     const params = new URLSearchParams();
-    if (search.trim()) params.set('search', search.trim());
+    if (query.trim()) params.set('search', query.trim());
     const data = await apiFetch<AgentMatching[]>(`/api/bookings/agent-matchings?${params.toString()}`);
     setRows(data);
     setSelectedId((current) => (current && data.some((row) => row.id === current) ? current : null));
@@ -790,15 +903,23 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
   };
 
   useEffect(() => {
-    void loadRows();
-    void loadAgents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadAgents().catch((loadError) => {
+      setError(loadError instanceof Error ? loadError.message : 'Failed to load agents.');
+    });
   }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadRows(search);
+    }, 250);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   const openAdd = () => {
     setEditing(null);
     setAgentCodeRef('');
-    setAgentId(agents[0]?.id ?? '');
+    setAgentId('');
     setError(null);
     setDetailOpen(true);
   };
@@ -816,7 +937,7 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
   };
 
   const save = async () => {
-    const agent = agents.find((item) => item.id === agentId);
+    const agent = agentOptions.find((item) => item.id === agentId);
     const body = JSON.stringify({
       agentCodeRef,
       agentId,
@@ -829,7 +950,7 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
     }
     setDetailOpen(false);
     setMessage('Agent matching saved.');
-    await loadRows();
+    await loadRows(search);
   };
 
   const remove = async () => {
@@ -839,7 +960,7 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
     await apiFetch(`/api/bookings/agent-matchings/${selected.id}`, { method: 'DELETE' });
     setSelectedId(null);
     setMessage('Agent matching deleted.');
-    await loadRows();
+    await loadRows(search);
   };
 
   return (
@@ -859,14 +980,16 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
           <button type="button" className="toolbar-btn-primary" onClick={openAdd}>
             <PlusIcon className="erp-action-icon" /> Add
           </button>
-          <button type="button" className="toolbar-btn" onClick={openEdit}>
+          <button
+            type="button"
+            className="toolbar-btn disabled:bg-slate-50 disabled:text-slate-400"
+            disabled={!selected}
+            onClick={openEdit}
+          >
             <EditIcon className="erp-action-icon" /> Edit
           </button>
           <button type="button" className="toolbar-btn-danger" onClick={remove}>
             <TrashIcon className="erp-action-icon" /> Delete
-          </button>
-          <button type="button" className="toolbar-btn" onClick={loadRows}>
-            <RefreshIcon className="erp-action-icon" /> Refresh
           </button>
           <input
             value={search}
@@ -874,9 +997,6 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
             placeholder="Enter text to search..."
             className="form-input form-input-search ml-auto max-w-xs rounded-md"
           />
-          <button type="button" className="toolbar-btn" onClick={loadRows}>
-            <SearchIcon className="erp-action-icon" /> Find
-          </button>
           {message ? <span className="text-sm font-semibold text-blue-800">{message}</span> : null}
           {error ? <span className="text-sm font-semibold text-red-700">{error}</span> : null}
         </div>
@@ -928,9 +1048,6 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
           <div className="w-full max-w-2xl rounded-[10px] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <h3 className="text-lg font-semibold text-slate-950">Matching Agent Detail</h3>
-              <button type="button" className="toolbar-btn" onClick={() => setDetailOpen(false)}>
-                <XIcon className="erp-action-icon" /> Cancel
-              </button>
             </div>
             <div className="space-y-4 px-5 py-5">
               <label className="grid gap-2 md:grid-cols-[150px_1fr] md:items-center">
@@ -943,25 +1060,89 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
               </label>
               <label className="grid gap-2 md:grid-cols-[150px_1fr] md:items-center">
                 <span className="text-sm font-semibold text-slate-700">Agent Code</span>
-                <select value={agentId} onChange={(event) => setAgentId(event.target.value)} className="form-input rounded-md">
-                  <option value="">Please select</option>
-                  {agentOptions.map((agent) => (
-                    <option key={agent.id} value={agent.id}>
-                      {agent.agentCode} - {agent.name || 'No Agent'}
-                    </option>
-                  ))}
-                </select>
+                <AgentCodeDropdown value={agentId} options={agentOptions} onChange={setAgentId} />
               </label>
             </div>
             <div className="flex justify-end gap-3 border-t border-slate-200 px-5 py-4">
               <button type="button" className="toolbar-btn" onClick={() => setDetailOpen(false)}>
                 <XIcon className="erp-action-icon" /> Cancel
               </button>
-              <button type="button" className="toolbar-btn-primary" onClick={save}>
+              <button type="button" className="toolbar-btn-primary" onClick={save} disabled={!agentId}>
                 <SaveIcon className="erp-action-icon" /> Save
               </button>
             </div>
           </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function AgentCodeDropdown({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: AgentOption[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const selected = options.find((agent) => agent.id === value);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+  }, [open]);
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      <button
+        type="button"
+        className="form-input flex w-full cursor-pointer items-center justify-between rounded-md bg-white text-left"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className={selected ? 'truncate text-slate-950' : 'text-slate-500'}>
+          {selected ? `${selected.agentCode} - ${selected.name || 'No Agent'}` : 'Please select'}
+        </span>
+        <span className="ml-3 text-slate-500">⌄</span>
+      </button>
+      {open ? (
+        <div className="absolute left-0 top-full z-[80] mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-[0_18px_45px_rgba(15,23,42,0.14)]">
+          <button
+            type="button"
+            className={`block w-full px-3 py-2 text-left hover:bg-blue-50 ${value ? 'text-slate-700' : 'bg-blue-600 text-white hover:bg-blue-600'}`}
+            onClick={() => {
+              onChange('');
+              setOpen(false);
+            }}
+          >
+            Please select
+          </button>
+          {options.map((agent) => (
+            <button
+              key={agent.id}
+              type="button"
+              className={`block w-full px-3 py-2 text-left hover:bg-blue-50 ${
+                agent.id === value ? 'bg-blue-600 text-white hover:bg-blue-600' : 'text-slate-900'
+              }`}
+              onClick={() => {
+                onChange(agent.id);
+                setOpen(false);
+              }}
+            >
+              {agent.agentCode} - {agent.name || 'No Agent'}
+            </button>
+          ))}
         </div>
       ) : null}
     </div>
@@ -1320,6 +1501,10 @@ function TimeField({
   disabled?: boolean;
   onChange: (value: string) => void;
 }) {
+  const updateValue = (rawValue: string) => {
+    onChange(formatTimeInput(rawValue));
+  };
+
   return (
     <label className="space-y-1">
       <span className="text-xs font-semibold text-slate-700">{label}</span>
@@ -1330,35 +1515,9 @@ function TimeField({
         value={value ? normalTimeValue(value) || value : ''}
         disabled={disabled}
         placeholder="--:--"
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => updateValue(event.target.value)}
+        onBlur={(event) => onChange(completeTimeInput(event.target.value))}
         className="form-input h-8 rounded-md text-sm disabled:bg-slate-100 disabled:text-slate-500"
-      />
-    </label>
-  );
-}
-
-function TextArea({
-  label,
-  value,
-  compact = false,
-  wide = false,
-  tall = false,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  compact?: boolean;
-  wide?: boolean;
-  tall?: boolean;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className={`space-y-1 md:col-span-2 ${wide ? 'xl:col-span-4' : ''}`}>
-      <span className="text-xs font-semibold text-slate-700">{label}</span>
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`${tall ? 'min-h-32' : compact ? 'min-h-8' : 'min-h-14'} w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]`}
       />
     </label>
   );
@@ -1410,14 +1569,14 @@ function FilterInput({
       <span className="text-[10px] font-medium uppercase text-slate-500">{label}</span>
       <div className="relative">
         {isSearch ? (
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         ) : null}
         <input
           type={type}
           value={value}
           placeholder={placeholder}
           onChange={(event) => onChange(event.target.value)}
-          className={`form-input rounded-md ${isSearch ? 'pl-9' : ''}`}
+          className={`form-input rounded-md ${isSearch ? 'pl-11' : ''}`}
         />
       </div>
     </label>
@@ -1633,11 +1792,42 @@ function completeDateInput(value: string) {
 }
 
 function normalTimeValue(value: string) {
+  const digitFormatted = formatTimeInput(value);
+  if (/^\d{1,2}:\d{1,2}$/.test(digitFormatted)) {
+    const [hours, minutes] = digitFormatted.split(':');
+    return minutes.length === 2 ? `${hours.padStart(2, '0')}:${minutes}` : `${hours}:${minutes}`;
+  }
   const match = value.match(/^(\d{1,2}):(\d{2})/);
   if (!match) {
     return '';
   }
   return `${match[1].padStart(2, '0')}:${match[2]}`;
+}
+
+function formatTimeInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+  const digits = trimmed.replace(/\D/g, '').slice(0, 4);
+  if (!digits) {
+    return '';
+  }
+  if (digits.length <= 2) {
+    return digits;
+  }
+  return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+}
+
+function completeTimeInput(value: string) {
+  const formatted = formatTimeInput(value);
+  if (!formatted) {
+    return '';
+  }
+  const [rawHours, rawMinutes = ''] = formatted.split(':');
+  const hours = Math.min(Number(rawHours || 0), 23);
+  const minutes = Math.min(Number(rawMinutes.padEnd(2, '0') || 0), 59);
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 function toDateInput(value: Date) {
@@ -1674,12 +1864,4 @@ function fileToBase64(file: File) {
     reader.onload = () => resolve(String(reader.result ?? '').split(',')[1] ?? '');
     reader.readAsDataURL(file);
   });
-}
-
-function escapeHtml(value: unknown) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

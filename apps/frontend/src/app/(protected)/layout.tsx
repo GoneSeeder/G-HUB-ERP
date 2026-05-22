@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { clearAuthTokenCookie } from '@/lib/auth';
+import { clearAuthTokenCookie, IDLE_TIMEOUT_MS, isSessionIdleExpired, touchSessionActivity } from '@/lib/auth';
 import { FolderIcon, LogOutIcon } from '@/components/ui/icons';
 
 interface MeResponse {
@@ -29,6 +29,36 @@ export default function ProtectedLayout({
       .catch(() => setCanSeeAdmin(false));
   }, []);
 
+  useEffect(() => {
+    let lastTouch = 0;
+    const resetIdleTimer = () => {
+      const now = Date.now();
+      if (now - lastTouch < 1000) {
+        return;
+      }
+      lastTouch = now;
+      touchSessionActivity();
+    };
+
+    const checkIdle = () => {
+      if (isSessionIdleExpired()) {
+        clearAuthTokenCookie();
+        router.push('/login');
+        router.refresh();
+      }
+    };
+
+    const activityEvents: Array<keyof WindowEventMap> = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, resetIdleTimer, { passive: true }));
+    resetIdleTimer();
+    const intervalId = window.setInterval(checkIdle, Math.min(IDLE_TIMEOUT_MS, 60 * 1000));
+
+    return () => {
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetIdleTimer));
+      window.clearInterval(intervalId);
+    };
+  }, [router]);
+
   const logout = () => {
     clearAuthTokenCookie();
     router.push('/login');
@@ -49,19 +79,15 @@ export default function ProtectedLayout({
           <div className="flex items-center gap-4">
             <Link
               href="/hub"
-              className="flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-white"
+              className="flex h-11 w-11 items-center justify-center rounded-xl transition hover:bg-white"
             >
               <img
                 src="/g-hub-nav-logo.png"
                 alt="G-HUB"
-                className="h-8 w-8 rounded-lg object-contain"
+                className="h-11 w-11 rounded-xl object-contain"
               />
             </Link>
             <nav className="flex items-center gap-2">
-              <Link className={navLinkClass('/hub')} href="/hub">
-                <FolderIcon className="h-3.5 w-3.5" />
-                Hub
-              </Link>
               {canSeeAdmin ? (
                 <Link className={navLinkClass('/admin')} href="/admin">
                   <FolderIcon className="h-3.5 w-3.5" />

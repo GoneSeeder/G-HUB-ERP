@@ -5,6 +5,17 @@ import { DownloadIcon, EditIcon, PlusIcon, PrintIcon, SaveIcon, SearchIcon, Tras
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { apiFetch, apiUpload } from '@/lib/api';
 
+type BonusGuide = {
+  code: string;
+  name: string;
+  phone: string;
+};
+
+type BonusNarrator = {
+  code: string;
+  name: string;
+};
+
 type BonusCard = {
   id: string;
   workDate: string;
@@ -12,15 +23,21 @@ type BonusCard = {
   bonusName: string;
   agentCode: string;
   agentName: string;
+  companyCode: string;
   guide: string;
   guideName: string;
+  memberCode: string;
+  supervisorCode: string;
   partyCode: string;
   nation: string;
+  province: string;
   adult: number;
   child: number;
   tourLeader: number;
+  student: number;
   carCode: string;
   shop: string;
+  charterCode: string;
   hotel: string;
   comeFrom: string;
   busType: string;
@@ -29,15 +46,10 @@ type BonusCard = {
   comment: string;
   imageUrl: string;
   nameListCode: string;
-  guide2: string;
-  guide2Name: string;
-  guide2Phone: string;
-  guide3: string;
-  guide3Name: string;
-  guide3Phone: string;
-  narratorCode: string;
-  narratorName: string;
-  narratorPhone: string;
+  extraGuides: BonusGuide[];
+  narratorGroup: string;
+  narratorPax: number;
+  narrators: BonusNarrator[];
 };
 
 type UploadImageResponse = {
@@ -71,6 +83,87 @@ type NameList = {
 
 const today = new Date().toISOString().slice(0, 10);
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
+const countryNameByCode: Record<string, string> = {
+  AD: 'ANDORRA',
+  AE: 'UNITED ARAB EMIRATES',
+  AF: 'AFGHANISTAN',
+  AG: 'ANTIGUA AND BARBUDA',
+  AI: 'ANGUILLA',
+  AL: 'ALBANIA',
+  AM: 'ARMENIA',
+  AO: 'ANGOLA',
+  AR: 'ARGENTINA',
+  AS: 'AMERICAN SAMOA',
+  AT: 'AUSTRIA',
+  AU: 'AUSTRALIA',
+  AW: 'ARUBA',
+  AZ: 'AZERBAIJAN',
+  BA: 'BOSNIA AND HERZEGOVINA',
+  BB: 'BARBADOS',
+  BD: 'BANGLADESH',
+  BE: 'BELGIUM',
+  BF: 'BURKINA FASO',
+  BG: 'BULGARIA',
+  BH: 'BAHRAIN',
+  BI: 'BURUNDI',
+  BJ: 'BENIN',
+  BN: 'BRUNEI',
+  BO: 'BOLIVIA',
+  BR: 'BRAZIL',
+  BS: 'BAHAMAS',
+  BT: 'BHUTAN',
+  BW: 'BOTSWANA',
+  BY: 'BELARUS',
+  BZ: 'BELIZE',
+  CA: 'CANADA',
+  KH: 'CAMBODIA',
+  CM: 'CAMEROON',
+  CN: 'CHINA',
+  CO: 'COLOMBIA',
+  CR: 'COSTA RICA',
+  CU: 'CUBA',
+  CY: 'CYPRUS',
+  CZ: 'CZECH REPUBLIC',
+  DE: 'GERMANY',
+  DK: 'DENMARK',
+  DO: 'DOMINICAN REPUBLIC',
+  DZ: 'ALGERIA',
+  EC: 'ECUADOR',
+  EE: 'ESTONIA',
+  EG: 'EGYPT',
+  ES: 'SPAIN',
+  FI: 'FINLAND',
+  FR: 'FRANCE',
+  GB: 'UNITED KINGDOM',
+  GE: 'GEORGIA',
+  GR: 'GREECE',
+  HK: 'HONG KONG',
+  ID: 'INDONESIA',
+  IE: 'IRELAND',
+  IL: 'ISRAEL',
+  IN: 'INDIA',
+  IR: 'IRAN',
+  IT: 'ITALY',
+  JP: 'JAPAN',
+  KR: 'KOREA',
+  LA: 'LAOS',
+  LK: 'SRI LANKA',
+  MM: 'MYANMAR',
+  MO: 'MACAU',
+  MY: 'MALAYSIA',
+  NL: 'NETHERLANDS',
+  NP: 'NEPAL',
+  NZ: 'NEW ZEALAND',
+  PH: 'PHILIPPINES',
+  RU: 'RUSSIA',
+  SA: 'SAUDI ARABIA',
+  SG: 'SINGAPORE',
+  TH: 'THAILAND',
+  TW: 'TAIWAN',
+  UK: 'UNITED KINGDOM',
+  US: 'UNITED STATES',
+  VN: 'VIETNAM',
+};
 
 const emptyForm: BonusCard = {
   id: '',
@@ -79,32 +172,33 @@ const emptyForm: BonusCard = {
   bonusName: '',
   agentCode: '',
   agentName: '',
+  companyCode: '',
   guide: '',
   guideName: '',
+  memberCode: '',
+  supervisorCode: '',
   partyCode: '',
-  nation: 'CN',
+  nation: '',
+  province: '',
   adult: 0,
   child: 0,
   tourLeader: 0,
+  student: 0,
   carCode: '',
   shop: '',
+  charterCode: '',
   hotel: '',
   comeFrom: '',
-  busType: 'BUSOA',
+  busType: '',
   tourIn: '',
   tourOut: '',
   comment: '',
   imageUrl: '',
   nameListCode: '',
-  guide2: '',
-  guide2Name: '',
-  guide2Phone: '',
-  guide3: '',
-  guide3Name: '',
-  guide3Phone: '',
-  narratorCode: '',
-  narratorName: '',
-  narratorPhone: '',
+  extraGuides: [],
+  narratorGroup: '',
+  narratorPax: 0,
+  narrators: [],
 };
 
 const visibleColumns: Array<{ key: keyof BonusCard; label: string; width: string }> = [
@@ -118,37 +212,37 @@ const visibleColumns: Array<{ key: keyof BonusCard; label: string; width: string
   { key: 'comment', label: 'Remark', width: '10%' },
 ];
 
-const exportColumns: Array<{ key: keyof BonusCard; label: string }> = [
-  { key: 'workDate', label: 'Work Date' },
-  { key: 'bonus', label: 'Bonus' },
-  { key: 'bonusName', label: 'Bonus Name' },
-  { key: 'agentCode', label: 'Agent Code' },
-  { key: 'agentName', label: 'Agent Name' },
-  { key: 'guide', label: 'Guide' },
-  { key: 'guideName', label: 'Guide Name' },
-  { key: 'partyCode', label: 'Party Code' },
-  { key: 'nameListCode', label: 'Namelist' },
-  { key: 'nation', label: 'Nation' },
-  { key: 'adult', label: 'Adult' },
-  { key: 'child', label: 'Child' },
-  { key: 'tourLeader', label: 'Tour Leader' },
-  { key: 'carCode', label: 'Car Code' },
-  { key: 'shop', label: 'Shop' },
-  { key: 'hotel', label: 'Hotel' },
-  { key: 'comeFrom', label: 'Come From' },
-  { key: 'busType', label: 'Bus Type' },
-  { key: 'tourIn', label: 'Tour In' },
-  { key: 'tourOut', label: 'Tour Out' },
-  { key: 'guide2', label: 'Guide 2' },
-  { key: 'guide2Name', label: 'Guide 2 Name' },
-  { key: 'guide2Phone', label: 'Guide 2 Phone' },
-  { key: 'guide3', label: 'Guide 3' },
-  { key: 'guide3Name', label: 'Guide 3 Name' },
-  { key: 'guide3Phone', label: 'Guide 3 Phone' },
-  { key: 'narratorCode', label: 'Narrator Code' },
-  { key: 'narratorName', label: 'Narrator Name' },
-  { key: 'narratorPhone', label: 'Narrator Phone' },
-  { key: 'comment', label: 'Remark' },
+const exportColumns: Array<{ label: string; getValue: (row: BonusCard) => string | number }> = [
+  { label: 'Work Date', getValue: (row) => formatDate(row.workDate) },
+  { label: 'Bonus', getValue: (row) => row.bonus },
+  { label: 'Bonus Name', getValue: (row) => row.bonusName },
+  { label: 'Agent Code', getValue: (row) => row.agentCode },
+  { label: 'Agent Name', getValue: (row) => row.agentName },
+  { label: 'Company Code', getValue: (row) => row.companyCode },
+  { label: 'Guide', getValue: (row) => row.guide },
+  { label: 'Guide Name', getValue: (row) => row.guideName },
+  { label: 'Member Code', getValue: (row) => row.memberCode },
+  { label: 'Supervisor Code', getValue: (row) => row.supervisorCode },
+  { label: 'Party Code', getValue: (row) => row.partyCode },
+  { label: 'Namelist', getValue: (row) => row.nameListCode },
+  { label: 'Nation', getValue: (row) => row.nation },
+  { label: 'Adult', getValue: (row) => row.adult },
+  { label: 'Child', getValue: (row) => row.child },
+  { label: 'Tour Leader', getValue: (row) => row.tourLeader },
+  { label: 'Student', getValue: (row) => row.student },
+  { label: 'Car Code', getValue: (row) => row.carCode },
+  { label: 'Shop', getValue: (row) => row.shop },
+  { label: 'Province / Origin', getValue: (row) => row.province },
+  { label: 'Charter Code', getValue: (row) => row.charterCode },
+  { label: 'Come From', getValue: (row) => row.comeFrom },
+  { label: 'Bus Type', getValue: (row) => row.busType },
+  { label: 'Tour In', getValue: (row) => row.tourIn },
+  { label: 'Tour Out', getValue: (row) => row.tourOut },
+  { label: 'Extra Guides', getValue: (row) => formatGuideList(row.extraGuides) },
+  { label: 'Narrator Group', getValue: (row) => row.narratorGroup },
+  { label: 'Narrator Pax', getValue: (row) => row.narratorPax },
+  { label: 'Narrators', getValue: (row) => formatNarratorList(row.narrators) },
+  { label: 'Remark', getValue: (row) => row.comment },
 ];
 
 export default function BonusCardPage() {
@@ -272,7 +366,7 @@ export default function BonusCardPage() {
       .map(
         (row) =>
           `<tr>${exportColumns
-            .map((column) => `<td>${escapeHtml(formatCellValue(row, column.key))}</td>`)
+            .map((column) => `<td>${escapeHtml(formatCellValue(column.getValue(row)))}</td>`)
             .join('')}</tr>`,
       )
       .join('');
@@ -424,9 +518,6 @@ export default function BonusCardPage() {
                           <button className="toolbar-btn min-h-9 px-2.5" onClick={() => setNameListRow(row)}>
                             Name List
                           </button>
-                          <button className="toolbar-btn min-h-9 px-2.5" onClick={() => setPrintRow(row)}>
-                            Detail
-                          </button>
                           <button className="toolbar-btn min-h-9 px-2.5" onClick={() => openEdit(row)}>
                             <EditIcon className="erp-action-icon" /> Edit
                           </button>
@@ -491,13 +582,79 @@ function BonusModal({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onOpenNameList: () => void;
 }) {
-  const [showExtraGuides, setShowExtraGuides] = useState(false);
-  const [showNarrator, setShowNarrator] = useState(false);
+  const [activeTab, setActiveTab] = useState<'details' | 'extra' | 'speaker'>('details');
+
   const setField = (key: keyof BonusCard, value: string | number) => {
     onChange({ ...form, [key]: value });
   };
+  const totalCount = Number(form.adult || 0) + Number(form.child || 0) + Number(form.tourLeader || 0) + Number(form.student || 0);
 
-  const mapGuide = async (code: string, target: 'guide2' | 'guide3') => {
+  const addExtraGuide = () => {
+    onChange({ ...form, extraGuides: [...form.extraGuides, { code: '', name: '', phone: '' }] });
+  };
+
+  const addSpeaker = () => {
+    if (form.narrators.length >= 2) return;
+    onChange({ ...form, narrators: [...form.narrators, { code: '', name: '' }] });
+  };
+  const updateExtraGuide = (index: number, guide: Partial<BonusGuide>) => {
+    const nextGuides = form.extraGuides.map((item, itemIndex) => (itemIndex === index ? { ...item, ...guide } : item));
+    onChange({ ...form, extraGuides: nextGuides });
+  };
+  const removeExtraGuide = (index: number) => {
+    onChange({ ...form, extraGuides: form.extraGuides.filter((_, itemIndex) => itemIndex !== index) });
+  };
+  const updateNarrator = (index: number, narrator: Partial<BonusNarrator>) => {
+    const nextNarrators = form.narrators.map((item, itemIndex) => (itemIndex === index ? { ...item, ...narrator } : item));
+    onChange({ ...form, narrators: nextNarrators });
+  };
+  const removeSpeaker = (index: number) => {
+    onChange({ ...form, narrators: form.narrators.filter((_, itemIndex) => itemIndex !== index) });
+  };
+
+  const mapMainGuide = async (code: string) => {
+    const normalizedCode = code.trim();
+    if (!normalizedCode) {
+      onChange({ ...form, guide: '', guideName: '' });
+      return;
+    }
+    try {
+      const result = await apiFetch<{ items: Array<{ guideCode: string; fullName: string; fullNameTh: string; phone: string }> }>(
+        `/api/members?page=1&search=${encodeURIComponent(normalizedCode)}`,
+      );
+      const guide = result.items.find((item) => item.guideCode.toLowerCase() === normalizedCode.toLowerCase()) ?? result.items[0];
+      onChange({
+        ...form,
+        guide: normalizedCode,
+        guideName: guide ? guide.fullName || guide.fullNameTh || guide.guideCode : '',
+      });
+    } catch {
+      onChange({ ...form, guide: normalizedCode });
+    }
+  };
+
+  const mapAgent = async (code: string) => {
+    const normalizedCode = code.trim().toUpperCase();
+    if (!normalizedCode) {
+      onChange({ ...form, agentCode: '', agentName: '' });
+      return;
+    }
+    try {
+      const agents = await apiFetch<Array<{ id: string; agentCode: string; name: string }>>(
+        `/api/agents/options?search=${encodeURIComponent(normalizedCode)}`,
+      );
+      const agent = agents.find((item) => item.agentCode.toUpperCase() === normalizedCode) ?? agents[0];
+      onChange({
+        ...form,
+        agentCode: normalizedCode,
+        agentName: agent ? agent.name || agent.agentCode : '',
+      });
+    } catch {
+      onChange({ ...form, agentCode: normalizedCode });
+    }
+  };
+
+  const mapGuide = async (code: string, index: number) => {
     const normalizedCode = code.trim();
     if (!normalizedCode) return;
     try {
@@ -506,21 +663,18 @@ function BonusModal({
       );
       const guide = result.items.find((item) => item.guideCode.toLowerCase() === normalizedCode.toLowerCase()) ?? result.items[0];
       if (!guide) return;
-      onChange({
-        ...form,
-        [target]: normalizedCode,
-        [`${target}Name`]: guide.fullName || guide.fullNameTh || guide.guideCode,
-        [`${target}Phone`]: guide.phone || '',
-      } as BonusCard);
+      updateExtraGuide(index, {
+        code: normalizedCode,
+        name: guide.fullName || guide.fullNameTh || guide.guideCode,
+        phone: guide.phone || '',
+      });
     } catch {
       // Keep manually entered values if guide lookup is not available.
     }
   };
 
   const uploadImage = async (file: File | null) => {
-    if (!file) {
-      return;
-    }
+    if (!file) return;
     try {
       const optimizedFile = await resizeImageToFile(file);
       const result = await apiUpload<UploadImageResponse>('/api/bonus-cards/images', optimizedFile);
@@ -534,11 +688,16 @@ function BonusModal({
     <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <form
         onSubmit={onSubmit}
-        className="modal-pop flex max-h-[calc(100vh-2rem)] w-full max-w-[920px] flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && event.target instanceof HTMLElement && event.target.tagName !== 'TEXTAREA') {
+            event.preventDefault();
+          }
+        }}
+        className="modal-pop flex max-h-[calc(100vh-1rem)] w-full max-w-[1160px] flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
       >
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Document ยท Bonus Card</p>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-500">Document / Bonus Card</p>
             <h2 className="mt-1 text-lg font-semibold leading-tight text-slate-950">
               {mode === 'create' ? 'Add Bonus' : 'Edit Bonus'}
             </h2>
@@ -547,120 +706,246 @@ function BonusModal({
             <XIcon className="erp-action-icon" /> Close
           </button>
         </div>
-        <div className="grid min-h-0 flex-1 gap-3 p-4 lg:grid-cols-[150px_1fr]">
+
+        <div className="flex shrink-0 gap-6 border-b border-slate-200 px-5">
+          {[
+            ['details', 'รายละเอียด'],
+            ['extra', 'ข้อมูลเพิ่มเติม'],
+            ['speaker', 'อาจารย์พากย์'],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setActiveTab(key as typeof activeTab)}
+              className={`border-b-2 px-2 py-3 text-sm font-medium transition ${
+                activeTab === key ? 'border-[#1478ff] text-[#0752d6]' : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid min-h-0 flex-1 gap-2 overflow-hidden p-2.5 lg:grid-cols-[130px_1fr]">
           <aside className="space-y-2">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
-              <div className="flex h-28 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white text-xs text-slate-400">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+              <div className="flex h-20 items-center justify-center overflow-hidden rounded-md border border-dashed border-blue-300 bg-white text-xs text-slate-400 transition hover:border-[#1478ff] hover:text-[#0752d6]">
                 {form.imageUrl ? (
                   <img src={getImageSrc(form.imageUrl)} alt="" className="h-full w-full bg-white object-contain" />
                 ) : (
-                  <span>No image</span>
+                  <span>Click to upload</span>
                 )}
               </div>
               <label className="toolbar-btn mt-2 w-full cursor-pointer">
                 <UploadIcon className="erp-action-icon" /> Upload
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => uploadImage(event.target.files?.[0] ?? null)}
-                  className="sr-only"
-                />
+                <input type="file" accept="image/*" onChange={(event) => uploadImage(event.target.files?.[0] ?? null)} className="sr-only" />
               </label>
             </div>
 
-            <div className="rounded-lg border border-sky-100 bg-sky-50/70 p-3">
+            <div className="rounded-lg border border-sky-100 bg-sky-50/70 p-2.5">
               <p className="text-[10px] font-medium uppercase tracking-wide text-blue-700">Bonus</p>
               <p className="mt-1 truncate text-xl font-semibold text-slate-950">{form.bonus || '-'}</p>
             </div>
           </aside>
 
-          <div className="min-h-0 space-y-3 overflow-hidden">
+          <div className="min-h-0">
             {error ? (
-              <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                {error}
+              <div className="mb-3 rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>
+            ) : null}
+
+            {activeTab === 'details' ? (
+              <div className="grid gap-2 xl:grid-cols-[1.35fr_0.8fr]">
+                <div className="space-y-1.5">
+                  <BonusFormSection title="Main / Document" columns="grid-cols-1">
+                    <div className="grid gap-1.5 md:grid-cols-3">
+                      <Field label="Group code" value={form.nameListCode} onChange={(value) => setField('nameListCode', value)} />
+                      <Field label="Work date" value={form.workDate} type="date" onChange={(value) => setField('workDate', value)} />
+                      <Field label="Bonus no." value={form.bonus} onChange={(value) => setField('bonus', value)} />
+                    </div>
+                    <div className="grid gap-1.5 md:grid-cols-[1fr_120px_120px]">
+                      <Field label="Bonus name" value={form.bonusName} onChange={(value) => setField('bonusName', value)} />
+                      <Field label="Car no." value={form.carCode} onChange={(value) => setField('carCode', value)} />
+                      <Field label="Car type" value={form.busType} onChange={(value) => setField('busType', value)} />
+                    </div>
+                  </BonusFormSection>
+
+                  <BonusFormSection title="Agent / Guide / Member Mapping" columns="grid-cols-1">
+                    <div className="grid gap-1.5 md:grid-cols-2">
+                      <MappedField
+                        label="Agent code"
+                        value={form.agentCode}
+                        mappedValue={form.agentName || '-'}
+                        onChange={(value) => setField('agentCode', value.toUpperCase())}
+                        onBlur={() => mapAgent(form.agentCode)}
+                      />
+                      <MappedField
+                        label="Guide code"
+                        value={form.guide}
+                        mappedValue={form.guideName || '-'}
+                        onChange={(value) => setField('guide', value)}
+                        onBlur={() => mapMainGuide(form.guide)}
+                      />
+                    </div>
+                    <div className="grid gap-1.5 md:grid-cols-3">
+                      <MappedField label="Company code" value={form.companyCode} mappedValue="-" onChange={(value) => setField('companyCode', value)} />
+                      <MappedField label="Member code" value={form.memberCode} mappedValue="-" onChange={(value) => setField('memberCode', value)} />
+                      <MappedField label="Supervisor / tour leader code" value={form.supervisorCode} mappedValue="-" onChange={(value) => setField('supervisorCode', value)} />
+                    </div>
+                  </BonusFormSection>
+
+                  <BonusFormSection title="Route / Nation / Shop" columns="grid-cols-1">
+                    <div className="grid gap-1.5 md:grid-cols-[2fr_1fr_1fr]">
+                      <Field label="Party code" value={form.partyCode} onChange={(value) => setField('partyCode', value)} />
+                      <MappedField
+                        label="Nation code"
+                        value={form.nation}
+                        mappedValue={countryNameByCode[String(form.nation || '').toUpperCase()] ?? '-'}
+                        onChange={(value) => setField('nation', value.toUpperCase())}
+                      />
+                      <MappedField label="Province / origin" value={form.province} mappedValue="-" onChange={(value) => setField('province', value)} />
+                    </div>
+                    <div className="grid gap-1.5 md:grid-cols-3">
+                      <Field label="Charter code" value={form.charterCode} onChange={(value) => setField('charterCode', value)} />
+                      <Field label="Shop no." value={form.shop} onChange={(value) => setField('shop', value)} />
+                      <Field label="Come from" value={form.comeFrom} onChange={(value) => setField('comeFrom', value)} />
+                    </div>
+                  </BonusFormSection>
+                </div>
+
+                <div className="space-y-1.5">
+                  <BonusFormSection title="Passenger Counts" columns="grid-cols-2">
+                    <Field label="Adult count" value={form.adult} type="number" onChange={(value) => setField('adult', Number(value))} />
+                    <Field label="Tour leader count" value={form.tourLeader} type="number" onChange={(value) => setField('tourLeader', Number(value))} />
+                    <Field label="Child count" value={form.child} type="number" onChange={(value) => setField('child', Number(value))} />
+                    <Field label="Student count" value={form.student} type="number" onChange={(value) => setField('student', Number(value))} />
+                    <Field label="Total count" value={totalCount} onChange={() => undefined} readOnly />
+                  </BonusFormSection>
+
+                  <BonusFormSection title="Time" columns="grid-cols-2">
+                    <Field label="Time in" value={form.tourIn} onChange={(value) => setField('tourIn', value)} />
+                    <Field label="Time out" value={form.tourOut} onChange={(value) => setField('tourOut', value)} />
+                  </BonusFormSection>
+
+                  <BonusFormSection title="Name List" columns="grid-cols-2">
+                    <button type="button" className="toolbar-btn h-8 justify-center" onClick={onOpenNameList}>
+                      Pull
+                    </button>
+                    <button type="button" className="toolbar-btn h-8 justify-center">
+                      Remove
+                    </button>
+                    <Field label="" value={form.partyCode} onChange={() => undefined} placeholder="Party Code" readOnly />
+                    <Field label="" value={form.agentCode} onChange={() => undefined} placeholder="Agent Code" readOnly />
+                  </BonusFormSection>
+
+                  <BonusFormSection title="Remark" columns="grid-cols-1">
+                    <label className="space-y-1">
+                      <textarea
+                        value={form.comment}
+                        onChange={(event) => setField('comment', event.target.value)}
+                        className="min-h-16 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]"
+                      />
+                    </label>
+                  </BonusFormSection>
+                </div>
               </div>
             ) : null}
 
-            <BonusFormSection title="Bonus Information">
-              <Field label="Work date" value={form.workDate} type="date" onChange={(value) => setField('workDate', value)} />
-              <Field label="Bonus" value={form.bonus} onChange={(value) => setField('bonus', value)} />
-              <Field label="Namelist" value={form.nameListCode} onChange={(value) => setField('nameListCode', value)} />
-              <Field
-                label="Bonus Name"
-                value={form.bonusName}
-                onChange={(value) => setField('bonusName', value)}
-                wide
-              />
-              <Field label="Party Code" value={form.partyCode} onChange={(value) => setField('partyCode', value)} />
-              <Field label="Nation" value={form.nation} onChange={(value) => setField('nation', value)} />
-            </BonusFormSection>
+            {activeTab === 'extra' ? (
+              <BonusFormSection
+                title="ข้อมูลเพิ่มเติม"
+                columns="grid-cols-1"
+                action={
+                  <button type="button" className="toolbar-btn h-9 px-4" onClick={addExtraGuide}>
+                    <PlusIcon className="erp-action-icon" /> เพิ่มไกด์
+                  </button>
+                }
+              >
+                {form.extraGuides.length === 0 ? (
+                  <div className="flex min-h-[84px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm font-medium text-slate-400">
+                    กดเพิ่มไกด์เพื่อกรอกรหัสไกด์เพิ่มเติม
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {form.extraGuides.map((guide, index) => (
+                      <div key={`extra-guide-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[1fr_1fr_1fr_auto]">
+                        <Field
+                          label={`รหัสไกด์ ${index + 2}`}
+                          value={guide.code}
+                          onChange={(value) => updateExtraGuide(index, { code: value })}
+                          onBlur={() => mapGuide(guide.code, index)}
+                        />
+                        <Field
+                          label="ชื่อไกด์"
+                          value={guide.name}
+                          onChange={(value) => updateExtraGuide(index, { name: value })}
+                          readOnly
+                        />
+                        <Field
+                          label="เบอร์โทร"
+                          value={guide.phone}
+                          onChange={(value) => updateExtraGuide(index, { phone: value })}
+                          readOnly
+                        />
+                        <div className="flex items-end">
+                          <button type="button" className="toolbar-btn-danger h-9 px-3" onClick={() => removeExtraGuide(index)}>
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </BonusFormSection>
+            ) : null}
 
-            <BonusFormSection title="Agent & Guide">
-              <Field label="Agent Code" value={form.agentCode} onChange={(value) => setField('agentCode', value)} />
-              <Field
-                label="Agent Name"
-                value={form.agentName}
-                onChange={(value) => setField('agentName', value)}
-                wide
-              />
-              <Field label="Guide" value={form.guide} onChange={(value) => setField('guide', value)} />
-              <Field
-                label="Guide Name"
-                value={form.guideName}
-                onChange={(value) => setField('guideName', value)}
-                wide
-              />
-            </BonusFormSection>
-
-            <BonusFormSection title="Passenger & Travel">
-              <Field label="Adult" value={form.adult} type="number" onChange={(value) => setField('adult', Number(value))} />
-              <Field label="Child" value={form.child} type="number" onChange={(value) => setField('child', Number(value))} />
-              <Field
-                label="Tour Leader"
-                value={form.tourLeader}
-                type="number"
-                onChange={(value) => setField('tourLeader', Number(value))}
-              />
-              <Field label="Car Code" value={form.carCode} onChange={(value) => setField('carCode', value)} />
-              <Field label="Shop" value={form.shop} onChange={(value) => setField('shop', value)} />
-              <Field label="Hotel" value={form.hotel} onChange={(value) => setField('hotel', value)} />
-              <Field label="Come From" value={form.comeFrom} onChange={(value) => setField('comeFrom', value)} />
-              <Field label="Bus Type" value={form.busType} onChange={(value) => setField('busType', value)} />
-              <Field label="Tour In" value={form.tourIn} onChange={(value) => setField('tourIn', value)} />
-              <Field label="Tour Out" value={form.tourOut} onChange={(value) => setField('tourOut', value)} />
-            </BonusFormSection>
-
-            <BonusFormSection title="Remark">
-              <label className="space-y-1 md:col-span-2 xl:col-span-4">
-                <span className="text-xs font-medium text-slate-700">Remark</span>
-                <textarea
-                  value={form.comment}
-                  onChange={(event) => setField('comment', event.target.value)}
-                  className="min-h-12 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]"
-                />
-              </label>
-            </BonusFormSection>
-
-            <CollapsibleSection title="ข้อมูลไกด์คนที่ 2 และ 3" open={showExtraGuides} onToggle={() => setShowExtraGuides((current) => !current)}>
-              <Field label="Guide 2 Code" value={form.guide2} onChange={(value) => setField('guide2', value)} onBlur={() => mapGuide(form.guide2, 'guide2')} />
-              <Field label="Guide 2 Name" value={form.guide2Name} onChange={(value) => setField('guide2Name', value)} wide />
-              <Field label="Guide 2 Phone" value={form.guide2Phone} onChange={(value) => setField('guide2Phone', value)} />
-              <Field label="Guide 3 Code" value={form.guide3} onChange={(value) => setField('guide3', value)} onBlur={() => mapGuide(form.guide3, 'guide3')} />
-              <Field label="Guide 3 Name" value={form.guide3Name} onChange={(value) => setField('guide3Name', value)} wide />
-              <Field label="Guide 3 Phone" value={form.guide3Phone} onChange={(value) => setField('guide3Phone', value)} />
-            </CollapsibleSection>
-
-            <CollapsibleSection title="ข้อมูลอาจารย์ห้องพากย์" open={showNarrator} onToggle={() => setShowNarrator((current) => !current)}>
-              <Field label="Code" value={form.narratorCode} onChange={(value) => setField('narratorCode', value)} />
-              <Field label="Name" value={form.narratorName} onChange={(value) => setField('narratorName', value)} wide />
-              <Field label="Phone" value={form.narratorPhone} onChange={(value) => setField('narratorPhone', value)} />
-            </CollapsibleSection>
+            {activeTab === 'speaker' ? (
+              <BonusFormSection
+                title="อาจารย์พากย์"
+                columns="grid-cols-1"
+                action={
+                  <button type="button" className="toolbar-btn h-9 px-4" onClick={addSpeaker} disabled={form.narrators.length >= 2}>
+                    <PlusIcon className="erp-action-icon" /> เพิ่มอาจารย์พากย์
+                  </button>
+                }
+              >
+                <div className="grid gap-2 md:grid-cols-2">
+                  <Field label="กลุ่มขาย" value={form.narratorGroup} onChange={(value) => setField('narratorGroup', value)} />
+                  <Field label="จำนวนคนเข้า" value={form.narratorPax} type="number" onChange={(value) => setField('narratorPax', Number(value))} />
+                </div>
+                {form.narrators.length === 0 ? (
+                  <div className="mt-3 flex min-h-[84px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm font-medium text-slate-400">
+                    กดเพิ่มอาจารย์พากย์เพื่อกรอกรหัส
+                  </div>
+                ) : (
+                  <div className="mt-3 space-y-2">
+                    {form.narrators.map((narrator, index) => (
+                      <div key={`narrator-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[1fr_1fr_auto]">
+                        <Field
+                          label={`รหัสอาจารย์พากย์ ${index + 1}`}
+                          value={narrator.code}
+                          onChange={(value) => updateNarrator(index, { code: value })}
+                        />
+                        <Field
+                          label="ชื่ออาจารย์พากย์"
+                          value={narrator.name}
+                          onChange={(value) => updateNarrator(index, { name: value })}
+                          readOnly
+                        />
+                        <div className="flex items-end">
+                          <button type="button" className="toolbar-btn-danger h-9 px-3" onClick={() => removeSpeaker(index)}>
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </BonusFormSection>
+            ) : null}
           </div>
         </div>
+
         <div className="flex shrink-0 justify-end gap-3 border-t border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
-          <button type="button" className="toolbar-btn mr-auto" onClick={onOpenNameList}>
-            <SearchIcon className="erp-action-icon" /> Name List
-          </button>
           <button type="button" className="toolbar-btn" onClick={onClose}>
             <XIcon className="erp-action-icon" /> Cancel
           </button>
@@ -673,38 +958,50 @@ function BonusModal({
   );
 }
 
-function BonusFormSection({ title, children }: { title: string; children: ReactNode }) {
+function BonusFormSection({
+  title,
+  children,
+  columns = 'grid-cols-4',
+  action,
+}: {
+  title: string;
+  children: ReactNode;
+  columns?: string;
+  action?: ReactNode;
+}) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
-      <h3 className="mb-2 text-xs font-semibold text-slate-800">{title}</h3>
-      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">{children}</div>
+    <section className="rounded-lg border border-slate-200 bg-slate-50/60 p-2">
+      <div className="mb-1 flex items-center justify-between gap-3">
+        <h3 className="text-xs font-semibold text-slate-800">{title}</h3>
+        {action}
+      </div>
+      <div className={`grid gap-1.5 ${columns}`}>{children}</div>
     </section>
   );
 }
 
-function CollapsibleSection({
-  title,
-  open,
-  onToggle,
-  children,
+function MappedText({ value }: { value: string }) {
+  return <div className="min-h-4 truncate text-[11px] font-medium leading-4 text-[#1478ff]">{value}</div>;
+}
+
+function MappedField({
+  label,
+  value,
+  mappedValue,
+  onChange,
+  onBlur,
 }: {
-  title: string;
-  open: boolean;
-  onToggle: () => void;
-  children: ReactNode;
+  label: string;
+  value: string | number;
+  mappedValue: string;
+  onChange: (value: string) => void;
+  onBlur?: () => void;
 }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-slate-50/60">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-semibold text-slate-800 transition hover:bg-[#0752d6]/[0.07]"
-      >
-        <span>{title}</span>
-        <span className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
-      </button>
-      {open ? <div className="grid gap-2 border-t border-slate-200 p-3 md:grid-cols-2 xl:grid-cols-4">{children}</div> : null}
-    </section>
+    <div className="space-y-0.5">
+      <Field label={label} value={value} onChange={onChange} onBlur={onBlur} />
+      <MappedText value={mappedValue} />
+    </div>
   );
 }
 
@@ -715,6 +1012,8 @@ function Field({
   onChange,
   onBlur,
   wide = false,
+  readOnly = false,
+  placeholder,
 }: {
   label: string;
   value: string | number;
@@ -722,10 +1021,12 @@ function Field({
   onChange: (value: string) => void;
   onBlur?: () => void;
   wide?: boolean;
+  readOnly?: boolean;
+  placeholder?: string;
 }) {
   if (type === 'date') {
     return (
-      <label className={`space-y-1 ${wide ? 'md:col-span-2' : ''}`}>
+      <label className={`space-y-0.5 ${wide ? 'md:col-span-2' : ''}`}>
         <span className="text-xs font-medium text-slate-700">{label}</span>
         <BonusDateInput value={String(value ?? '')} onChange={onChange} compact />
       </label>
@@ -733,14 +1034,19 @@ function Field({
   }
 
   return (
-    <label className={`space-y-1 ${wide ? 'md:col-span-2' : ''}`}>
-      <span className="text-xs font-medium text-slate-700">{label}</span>
+    <label className={`space-y-0.5 ${wide ? 'md:col-span-2' : ''}`}>
+      {label ? <span className="text-xs font-medium text-slate-700">{label}</span> : null}
       <input
         type={type}
         value={type === 'number' && value === 0 ? '' : value}
         onChange={(event) => onChange(event.target.value)}
         onBlur={onBlur}
-        className="form-input h-8 rounded-md text-sm"
+        readOnly={readOnly}
+        tabIndex={readOnly ? -1 : undefined}
+        placeholder={placeholder}
+        className={`form-input h-7 rounded-md text-sm ${
+          readOnly ? 'cursor-default bg-slate-100 text-slate-400 focus:border-slate-200 focus:ring-0' : ''
+        }`}
       />
     </label>
   );
@@ -868,7 +1174,7 @@ function ExportModal({
               <tr>
                 {exportColumns.map((column) => (
                   <th
-                    key={column.key}
+                    key={column.label}
                     className="border-b border-slate-200 px-3 py-2 text-left font-semibold uppercase text-slate-500"
                   >
                     {column.label}
@@ -895,8 +1201,8 @@ function ExportModal({
                 rows.map((row) => (
                   <tr key={row.id} className="border-b border-slate-100 hover:bg-sky-50/60">
                     {exportColumns.map((column) => (
-                      <td key={column.key} className="px-3 py-2 text-slate-700">
-                        {formatCellValue(row, column.key)}
+                      <td key={column.label} className="px-3 py-2 text-slate-700">
+                        {formatCellValue(column.getValue(row))}
                       </td>
                     ))}
                   </tr>
@@ -1001,7 +1307,7 @@ function NameListModal({ row, onClose }: { row: BonusCard; onClose: () => void }
 }
 
 function PrintModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
-  const pax = row.adult + row.child + row.tourLeader;
+  const pax = row.adult + row.child + row.tourLeader + row.student;
   const bonusRows: Array<[string, string | number]> = [
     ['Work date', formatDate(row.workDate)],
     ['Bonus', row.bonus],
@@ -1012,26 +1318,24 @@ function PrintModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
   const agentRows: Array<[string, string | number]> = [
     ['Agent code', row.agentCode],
     ['Agent name', row.agentName],
+    ['Company code', row.companyCode],
     ['Guide', row.guide],
     ['Guide name', row.guideName],
-    ['Guide 2', row.guide2],
-    ['Guide 2 name', row.guide2Name],
-    ['Guide 2 phone', row.guide2Phone],
-    ['Guide 3', row.guide3],
-    ['Guide 3 name', row.guide3Name],
-    ['Guide 3 phone', row.guide3Phone],
-    ['Narrator code', row.narratorCode],
-    ['Narrator name', row.narratorName],
-    ['Narrator phone', row.narratorPhone],
+    ['Member code', row.memberCode],
+    ['Supervisor code', row.supervisorCode],
+    ['Extra guides', formatGuideList(row.extraGuides)],
+    ['Narrators', formatNarratorList(row.narrators)],
   ];
   const travelRows: Array<[string, string | number]> = [
     ['Adult', row.adult],
     ['Child', row.child],
     ['Tour leader', row.tourLeader],
+    ['Student', row.student],
     ['Pax total', pax],
     ['Car code', row.carCode],
     ['Shop', row.shop],
-    ['Hotel', row.hotel],
+    ['Province / origin', row.province],
+    ['Charter code', row.charterCode],
     ['Come from', row.comeFrom],
     ['Bus type', row.busType],
     ['Tour in', row.tourIn],
@@ -1136,11 +1440,16 @@ function DetailLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatCellValue(row: BonusCard, key: keyof BonusCard) {
-  if (key === 'workDate') {
-    return formatDate(row.workDate);
-  }
-  return String(row[key] ?? '');
+function formatCellValue(value: string | number) {
+  return String(value ?? '');
+}
+
+function formatGuideList(guides: BonusGuide[]) {
+  return guides.map((guide) => [guide.code, guide.name, guide.phone].filter(Boolean).join(' - ')).join('; ');
+}
+
+function formatNarratorList(narrators: BonusNarrator[]) {
+  return narrators.map((narrator) => [narrator.code, narrator.name].filter(Boolean).join(' - ')).join('; ');
 }
 
 function formatDate(value: string) {

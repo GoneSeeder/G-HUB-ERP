@@ -55,6 +55,11 @@ export class BookingsController {
     return this.bookingsService.matchSelectedAgents(body.ids);
   }
 
+  @Get('agent-options')
+  findAgentOptions(@Query('search') search?: string) {
+    return this.bookingsService.findAgentOptions(search);
+  }
+
   @Get('agent-matchings')
   findAgentMatchings(@Query('search') search?: string) {
     return this.bookingsService.findAgentMatchings({ search });

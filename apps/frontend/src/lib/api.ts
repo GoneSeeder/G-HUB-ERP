@@ -1,4 +1,4 @@
-import { clearAuthTokenCookie, getAuthTokenFromCookie } from './auth';
+import { clearAuthTokenCookie, getAuthTokenFromCookie, isSessionIdleExpired } from './auth';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in again.';
@@ -24,7 +24,7 @@ export async function apiFetch<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const token = getAuthTokenFromCookie();
-  if (!token) {
+  if (!token || isSessionIdleExpired()) {
     handleUnauthorized();
   }
 
@@ -60,7 +60,7 @@ export async function apiFetch<T>(
 
 export async function apiUpload<T>(path: string, file: Blob): Promise<T> {
   const token = getAuthTokenFromCookie();
-  if (!token) {
+  if (!token || isSessionIdleExpired()) {
     handleUnauthorized();
   }
 

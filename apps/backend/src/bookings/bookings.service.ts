@@ -276,16 +276,17 @@ export class BookingsService {
         skipped += row.refs.length;
         continue;
       }
+      const mappedName = row.name || agent.name;
       for (const agentCodeRef of row.refs) {
         await this.prisma.agentMatching.upsert({
           where: { agentCodeRef },
           update: {
-            agentNameRef: row.name,
+            agentNameRef: mappedName,
             agentId: agent.id,
           },
           create: {
             agentCodeRef,
-            agentNameRef: row.name,
+            agentNameRef: mappedName,
             agentId: agent.id,
           },
         });
@@ -403,6 +404,33 @@ export class BookingsService {
       matched,
       unmatched: Math.max(0, uniqueIds.length - matched),
     };
+  }
+
+  async findAgentOptions(search = '') {
+    const contains = search.trim()
+      ? { contains: search.trim(), mode: 'insensitive' as const }
+      : null;
+
+    return this.prisma.agent.findMany({
+      where: {
+        active: true,
+        ...(contains
+          ? {
+              OR: [
+                { agentCode: contains },
+                { name: contains },
+              ],
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        agentCode: true,
+        name: true,
+      },
+      orderBy: [{ agentCode: 'asc' }],
+      take: 500,
+    });
   }
 
   async applyAgentCodeRefMapping(ids: string[]) {
@@ -737,7 +765,7 @@ export class BookingsService {
             arriveDate: this.cellDate(row[7]),
             departDate: this.cellDate(row[8]),
             nation: this.cellText(row[9]),
-            dateBookJw: this.cellDate(row[10]),
+            dateBookJw: null,
             timeBookJw: '',
             ptyStartDate: detailGroup?.ptyStartDate ?? null,
             ptyEndDate: detailGroup?.ptyEndDate ?? null,
@@ -958,6 +986,11 @@ export class BookingsService {
   }
 
   private parseAgentImportSql(text: string) {
+    const bookingInfoRows = this.parseBookingInfoAgentSql(text);
+    if (bookingInfoRows.length > 0) {
+      return bookingInfoRows;
+    }
+
     const valuesBlock = text.match(/INSERT INTO\s+"AgentImport"[\s\S]*?VALUES\s*([\s\S]*?);/i)?.[1];
     if (!valuesBlock) {
       return [];
@@ -986,6 +1019,38 @@ export class BookingsService {
         primaryCode: rth,
         secondaryCodes: [spl, rth].filter((value) => value && value !== '-'),
         refs: [...new Set(refs.map((value) => this.normalizeCode(value)))],
+      });
+    }
+
+    return rows;
+  }
+
+  private parseBookingInfoAgentSql(text: string) {
+    const valuesBlock = text.match(/INSERT INTO\s+"BookingInfor_Agent"[\s\S]*?VALUES\s*([\s\S]*?);/i)?.[1];
+    if (!valuesBlock) {
+      return [];
+    }
+
+    const rowMatches = valuesBlock.matchAll(/\(([\s\S]*?)\)(?:,|$)/g);
+    const rows: Array<{
+      name: string;
+      primaryCode: string;
+      secondaryCodes: string[];
+      refs: string[];
+    }> = [];
+
+    for (const match of rowMatches) {
+      const cells = this.parseSqlTuple(match[1]);
+      const agentCodeRef = this.normalizeCode(cells[0] ?? '');
+      const agentCode = this.normalizeCode(cells[1] ?? '');
+      if (!agentCodeRef || !agentCode || agentCode === '-') {
+        continue;
+      }
+      rows.push({
+        name: '',
+        primaryCode: agentCode,
+        secondaryCodes: [],
+        refs: [agentCodeRef],
       });
     }
 

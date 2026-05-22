@@ -210,3 +210,15 @@ ERP Form Layout Rules:
 - For master data forms with many fields, use compact sections side by side.
 - Target desktop ERP usage first: 1366x768 and above.
 - UI should look like an operational ERP screen, not a public website form.
+
+
+Use compact ERP-style layouts.
+Avoid unnecessary cards and excessive spacing.
+
+Avoid unnecessary scrollbars.
+Only tables may scroll horizontally if required.
+
+Readonly fields must not be focusable.
+
+Never generate escaped Unicode Thai text in frontend source files.
+Keep all files UTF-8 encoded and human-readable.

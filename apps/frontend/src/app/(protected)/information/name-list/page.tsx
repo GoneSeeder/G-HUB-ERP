@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/icons';
 import { PageHeader, PageShell } from '@/components/ui/page-shell';
 import { apiFetch } from '@/lib/api';
+import { preventEnterSubmit } from '@/lib/form-behavior';
 
 type NameListItem = {
   id?: string;
@@ -247,12 +248,12 @@ export default function NameListPage() {
 
       <div className="erp-slide-left shrink-0 rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
         <div className="relative">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search code, party code, agent, guide, nation, source file..."
-            className="form-input rounded-md pl-9"
+            className="form-input rounded-md pl-11"
           />
         </div>
         {message ? <p className="mt-2 text-sm font-semibold text-blue-800">{message}</p> : null}
@@ -914,6 +915,7 @@ function NameListModal({
     <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center overflow-hidden p-4">
       <form
         onSubmit={save}
+        onKeyDown={preventEnterSubmit}
         className="flex h-[90vh] w-full max-w-[min(1500px,96vw)] flex-col overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]"
       >
         <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-2.5">

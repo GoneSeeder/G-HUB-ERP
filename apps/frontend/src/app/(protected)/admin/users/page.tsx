@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { apiFetch } from '@/lib/api';
+import { preventEnterSubmit } from '@/lib/form-behavior';
 
 interface UserItem {
   id: string;
@@ -352,6 +353,7 @@ export default function AdminUsersPage() {
         <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
           <form
             onSubmit={onSubmitUser}
+            onKeyDown={preventEnterSubmit}
             className="erp-fade-in max-h-[92vh] w-full max-w-[640px] overflow-auto rounded-xl border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.18)]"
           >
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">

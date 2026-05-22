@@ -246,12 +246,62 @@ body {
   box-shadow: 0 0 0 3px var(--ghub-focus);
 }
 
+input.form-input:read-only:not([type='date']),
+.form-input:disabled,
+textarea.form-input:read-only,
+textarea.form-input:disabled,
+select.form-input:disabled {
+  border-color: #dbe3ee;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
+}
+
+input.form-input:read-only:not([type='date']):focus,
+.form-input:disabled:focus,
+textarea.form-input:read-only:focus,
+textarea.form-input:disabled:focus,
+select.form-input:disabled:focus {
+  border-color: #dbe3ee;
+  box-shadow: none;
+}
+
+.mapped-display {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  color: var(--ghub-blue-700);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.mapped-display-compact {
+  min-height: 1rem;
+  font-size: 0.75rem;
+}
+
+.mapped-display-muted {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
 .form-input-search {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m21 21-4.35-4.35m1.35-5.15a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z'/%3E%3C/svg%3E");
-  background-position: 0.75rem 50%;
+  background-position: 1rem 50%;
   background-repeat: no-repeat;
   background-size: 1rem 1rem;
-  padding-left: 2.35rem;
+  padding-left: 2.65rem;
+}
+
+.form-input.pl-9,
+.form-input.pl-10,
+.form-input.pl-11,
+.form-input[class*='pl-'] {
+  padding-left: 2.75rem;
 }
 
 .modal-backdrop {
@@ -260,11 +310,11 @@ body {
 }
 
 .modal-pop {
-  animation: erp-fade-up 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: erp-fade-up 550ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .modal-backdrop > * {
-  animation: erp-fade-up 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: erp-fade-up 550ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .erp-table {

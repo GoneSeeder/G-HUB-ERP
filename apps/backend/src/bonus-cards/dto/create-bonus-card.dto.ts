@@ -1,4 +1,29 @@
-import { IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsInt, IsOptional, IsString, Min, MinLength, ValidateNested } from 'class-validator';
+
+export class BonusGuideDto {
+  @IsOptional()
+  @IsString()
+  code?: string;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+}
+
+export class BonusNarratorDto {
+  @IsOptional()
+  @IsString()
+  code?: string;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
+}
 
 export class CreateBonusCardDto {
   @IsString()
@@ -19,17 +44,33 @@ export class CreateBonusCardDto {
   @IsString()
   agentName!: string;
 
+  @IsOptional()
+  @IsString()
+  companyCode?: string;
+
   @IsString()
   guide!: string;
 
   @IsString()
   guideName!: string;
 
+  @IsOptional()
+  @IsString()
+  memberCode?: string;
+
+  @IsOptional()
+  @IsString()
+  supervisorCode?: string;
+
   @IsString()
   partyCode!: string;
 
   @IsString()
   nation!: string;
+
+  @IsOptional()
+  @IsString()
+  province?: string;
 
   @IsInt()
   @Min(0)
@@ -44,12 +85,21 @@ export class CreateBonusCardDto {
   tourLeader!: number;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  student?: number;
+
+  @IsOptional()
   @IsString()
   carCode?: string;
 
   @IsOptional()
   @IsString()
   shop?: string;
+
+  @IsOptional()
+  @IsString()
+  charterCode?: string;
 
   @IsOptional()
   @IsString()
@@ -84,38 +134,23 @@ export class CreateBonusCardDto {
   nameListCode?: string;
 
   @IsOptional()
-  @IsString()
-  guide2?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BonusGuideDto)
+  extraGuides?: BonusGuideDto[];
 
   @IsOptional()
   @IsString()
-  guide2Name?: string;
+  narratorGroup?: string;
 
   @IsOptional()
-  @IsString()
-  guide2Phone?: string;
+  @IsInt()
+  @Min(0)
+  narratorPax?: number;
 
   @IsOptional()
-  @IsString()
-  guide3?: string;
-
-  @IsOptional()
-  @IsString()
-  guide3Name?: string;
-
-  @IsOptional()
-  @IsString()
-  guide3Phone?: string;
-
-  @IsOptional()
-  @IsString()
-  narratorCode?: string;
-
-  @IsOptional()
-  @IsString()
-  narratorName?: string;
-
-  @IsOptional()
-  @IsString()
-  narratorPhone?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BonusNarratorDto)
+  narrators?: BonusNarratorDto[];
 }

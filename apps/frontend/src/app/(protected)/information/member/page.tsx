@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, KeyboardEvent, useEffect, useMemo, useState } f
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon, UploadIcon } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { apiFetch, apiUpload } from '@/lib/api';
+import { preventEnterSubmit } from '@/lib/form-behavior';
 
 const THAI_ID_BRIDGE_URL = 'http://127.0.0.1:32123';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -258,14 +259,12 @@ export default function MemberPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<MemberForm>(() => createEmptyForm());
   const [currentUserName, setCurrentUserName] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     apiFetch<MeResponse>('/api/auth/me')
       .then((me) => {
         const displayName = me.name || me.username;
         setCurrentUserName(displayName);
-        setIsAdmin(me.roles.includes('admin'));
         setForm((current) => ({
           ...current,
           recorder: current.recorder || displayName,
@@ -321,7 +320,6 @@ export default function MemberPage() {
 
   const openEdit = () => {
     if (!selectedMember) {
-      setError('Please select a member to edit.');
       return;
     }
     setEditingMember(selectedMember);
@@ -377,47 +375,32 @@ export default function MemberPage() {
 
   return (
     <PageShell className="h-full !max-w-[1216px] gap-4 overflow-hidden">
-      <PageHeader
+      {activeTab === 'guides' ? (
+        <PageHeader
         eyebrow="Master Data · Members"
         title="Members"
         description="Guide information and member profile management."
         actions={
-          activeTab === 'guides' ? (
-            <>
+          <>
               <button type="button" className="toolbar-btn-primary" onClick={openCreate}>
                 <PlusIcon className="erp-action-icon" /> Add Guide
               </button>
-              <button type="button" className="toolbar-btn" onClick={openEdit}>
+              <button type="button" className="toolbar-btn disabled:bg-slate-50 disabled:text-slate-400" disabled={!selectedMember} onClick={openEdit}>
                 <EditIcon className="erp-action-icon" /> Edit
               </button>
-              <button type="button" className="toolbar-btn-danger" onClick={onDeleteSelected}>
+              <button type="button" className="toolbar-btn-danger disabled:bg-slate-50 disabled:text-slate-400" disabled={!selectedMember} onClick={onDeleteSelected}>
                 <TrashIcon className="erp-action-icon" /> Delete
               </button>
             </>
-          ) : null
         }
-      />
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab('guides')}
-            className={activeTab === 'guides' ? 'toolbar-btn-primary min-h-9 px-4' : 'toolbar-btn min-h-9 px-4'}
-          >
-            Guides
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('agents')}
-            className={activeTab === 'agents' ? 'toolbar-btn-primary min-h-9 px-4' : 'toolbar-btn min-h-9 px-4'}
-          >
-            Agents
-          </button>
-        </div>
-        {activeTab === 'guides' ? (
+        />
+      ) : null}
+      {activeTab === 'guides' ? (
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+          <MemberTabs activeTab={activeTab} onChange={setActiveTab} />
           <div className="flex min-w-[360px] flex-1 items-center justify-end gap-3">
             <div className="relative w-full max-w-[520px]">
-              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
                 value={search}
                 onChange={(event) => {
@@ -425,13 +408,13 @@ export default function MemberPage() {
                   setPage(1);
                 }}
                 placeholder="Search guide code, name, phone, passport..."
-                className="form-input rounded-md pl-9"
+                className="form-input rounded-md pl-11"
               />
             </div>
             <span className="shrink-0 text-sm font-light text-slate-500">{total} records</span>
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       {activeTab === 'guides' ? (
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
@@ -549,15 +532,50 @@ export default function MemberPage() {
       ) : null}
         </div>
       ) : (
-        <AgentManagement isAdmin={isAdmin} />
+        <AgentManagement onSwitchToGuides={() => setActiveTab('guides')} />
       )}
     </PageShell>
   );
 }
 
-function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
+function MemberTabs({
+  activeTab,
+  onChange,
+}: {
+  activeTab: 'guides' | 'agents';
+  onChange: (tab: 'guides' | 'agents') => void;
+}) {
+  return (
+    <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1">
+      <button
+        type="button"
+        onClick={() => onChange('guides')}
+        className={`min-h-9 rounded-lg px-4 text-sm font-medium transition-colors ${
+          activeTab === 'guides'
+            ? 'bg-white text-slate-950 shadow-sm'
+            : 'text-slate-600 hover:text-slate-950'
+        }`}
+      >
+        Guides
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('agents')}
+        className={`min-h-9 rounded-lg px-4 text-sm font-medium transition-colors ${
+          activeTab === 'agents'
+            ? 'bg-white text-slate-950 shadow-sm'
+            : 'text-slate-600 hover:text-slate-950'
+        }`}
+      >
+        Agents
+      </button>
+    </div>
+  );
+}
+
+function AgentManagement({ onSwitchToGuides }: { onSwitchToGuides: () => void }) {
   const [search, setSearch] = useState('');
-  const [activeFilter, setActiveFilter] = useState('');
+  const [activeStatus, setActiveStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [page, setPage] = useState(1);
   const [agents, setAgents] = useState<AgentItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -576,12 +594,12 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
 
   useEffect(() => {
     loadAgents();
-  }, [page, search, activeFilter]);
+  }, [page, search, activeStatus]);
 
   const loadAgents = () => {
     const params = new URLSearchParams({ page: String(page) });
     if (search.trim()) params.set('search', search.trim());
-    if (activeFilter) params.set('active', activeFilter);
+    if (activeStatus !== 'all') params.set('active', activeStatus);
 
     apiFetch<AgentsResponse>(`/api/agents?${params.toString()}`)
       .then((data) => {
@@ -609,7 +627,6 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
 
   const openEdit = () => {
     if (!selectedAgent) {
-      setError('Please select an agent to edit.');
       return;
     }
     setEditingAgent(selectedAgent);
@@ -709,11 +726,34 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
-      <div className="shrink-0">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-[320px] flex-1 flex-wrap items-center gap-3">
-            <div className="relative min-w-[280px] flex-1">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+      <PageHeader
+        eyebrow="Master Data ยท Members"
+        title="Members"
+        description="Guide information and member profile management."
+        actions={
+          <>
+            <button type="button" className="toolbar-btn-primary" onClick={openCreate}>
+              <PlusIcon className="erp-action-icon" /> Add Agent
+            </button>
+            <button type="button" className="toolbar-btn disabled:bg-slate-50 disabled:text-slate-400" disabled={!selectedAgent} onClick={openEdit}>
+              <EditIcon className="erp-action-icon" /> Edit
+            </button>
+            <button type="button" className="toolbar-btn-danger disabled:bg-slate-50 disabled:text-slate-400" disabled={!selectedAgent} onClick={deleteSelected}>
+              <TrashIcon className="erp-action-icon" /> Delete
+            </button>
+          </>
+        }
+      />
+
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <MemberTabs activeTab="agents" onChange={(tab) => {
+          if (tab === 'guides') {
+            onSwitchToGuides();
+          }
+        }} />
+        <div className="flex min-w-[360px] flex-1 items-center justify-end gap-3">
+          <div className="relative w-full max-w-[520px]">
+            <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
             <input
               value={search}
               onChange={(event) => {
@@ -721,39 +761,23 @@ function AgentManagement({ isAdmin }: { isAdmin: boolean }) {
                 setPage(1);
               }}
               placeholder="Search agent code, name, phone, tax id..."
-              className="form-input rounded-md pl-9"
+              className="form-input rounded-md pl-11"
             />
-            </div>
-            <select
-              value={activeFilter}
-              onChange={(event) => {
-                setActiveFilter(event.target.value);
-                setPage(1);
-              }}
-              className="form-input h-10 w-[138px] rounded-md"
-            >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <span className="whitespace-nowrap text-sm font-light text-slate-500">{total} รายการ</span>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {isAdmin ? (
-              <button type="button" className="toolbar-btn" onClick={() => setImportOpen(true)}>
-                <UploadIcon className="erp-action-icon" /> Import Legacy DB
-              </button>
-            ) : null}
-            <button type="button" className="toolbar-btn-primary" onClick={openCreate}>
-              <PlusIcon className="erp-action-icon" /> Add Agent
-            </button>
-            <button type="button" className="toolbar-btn" onClick={openEdit}>
-              <EditIcon className="erp-action-icon" /> Edit
-            </button>
-            <button type="button" className="toolbar-btn-danger" onClick={deleteSelected}>
-              <TrashIcon className="erp-action-icon" /> Delete
-            </button>
-          </div>
+          <select
+            value={activeStatus}
+            onChange={(event) => {
+              setActiveStatus(event.target.value as 'all' | 'active' | 'inactive');
+              setPage(1);
+            }}
+            className="form-input h-10 w-36 rounded-md text-sm"
+            aria-label="Filter active status"
+          >
+            <option value="all">All status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <span className="shrink-0 whitespace-nowrap text-sm font-light text-slate-500">{total} records</span>
         </div>
       </div>
 
@@ -1018,6 +1042,7 @@ function MemberModal({
     <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <form
         onSubmit={handleSubmit}
+        onKeyDown={preventEnterSubmit}
         className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
       >
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
@@ -1300,12 +1325,13 @@ function AgentModal({
     <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <form
         onSubmit={onSubmit}
-        className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
+        onKeyDown={preventEnterSubmit}
+        className="modal-pop flex max-h-[calc(100vh-2rem)] w-full max-w-[1120px] flex-col overflow-hidden rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
       >
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
           <div>
-            <h2 className="text-[24px] font-semibold leading-tight text-slate-950">{title}</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <h2 className="text-xl font-semibold leading-tight text-slate-950">{title}</h2>
+            <p className="mt-1 text-xs text-slate-500">
               Agent master data and alias patterns for booking import matching.
             </p>
           </div>
@@ -1314,13 +1340,15 @@ function AgentModal({
           </button>
         </div>
 
-        <div className="space-y-4 p-5">
+        <div className="min-h-0 flex-1 overflow-hidden p-4">
           {saveError ? (
-            <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            <div className="mb-3 rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
               {saveError}
             </div>
           ) : null}
 
+          <div className="grid h-full min-h-0 gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(380px,0.8fr)]">
+            <div className="min-h-0 overflow-y-auto pr-1">
           <FormSection
             title="Agent Information"
             headerRight={
@@ -1360,21 +1388,23 @@ function AgentModal({
             <Field label="NAV Code" value={form.navCode} onChange={(value) => setField('navCode', value)} />
             <Field label="Email" value={form.email} onChange={(value) => setField('email', value)} />
           </FormSection>
+            </div>
 
-          <FormSection title="Tax and Banking">
-            <Field label="Tax ID" value={form.taxId} onChange={(value) => setField('taxId', value)} />
-            <Field label="Branch" value={form.branch} onChange={(value) => setField('branch', value)} />
-            <Field label="Bank Name" value={form.bankName} onChange={(value) => setField('bankName', value)} />
-            <Field label="Bank Branch" value={form.bankBranch} onChange={(value) => setField('bankBranch', value)} />
-            <Field label="Bank Account" value={form.bankAccount} onChange={(value) => setField('bankAccount', value)} />
-            <TextArea label="Address" value={form.address} onChange={(value) => setField('address', value)} wide />
-          </FormSection>
+            <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+              <FormSection title="Tax and Banking" compact>
+                <Field label="Tax ID" value={form.taxId} onChange={(value) => setField('taxId', value)} />
+                <Field label="Branch" value={form.branch} onChange={(value) => setField('branch', value)} />
+                <Field label="Bank Name" value={form.bankName} onChange={(value) => setField('bankName', value)} />
+                <Field label="Bank Branch" value={form.bankBranch} onChange={(value) => setField('bankBranch', value)} />
+                <Field label="Bank Account" value={form.bankAccount} onChange={(value) => setField('bankAccount', value)} />
+                <TextArea label="Address" value={form.address} onChange={(value) => setField('address', value)} wide />
+              </FormSection>
 
-          <section className="rounded-[8px] border border-slate-200 bg-slate-50/60 p-4">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <section className="flex min-h-0 flex-1 flex-col rounded-[8px] border border-slate-200 bg-slate-50/60 p-3">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-slate-800">Alias Matching</h3>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-[11px] text-slate-500">
                   Used by booking import. Matching is contains, case-insensitive, and stored in database.
                 </p>
               </div>
@@ -1383,7 +1413,7 @@ function AgentModal({
               </button>
             </div>
 
-            <div className="space-y-2">
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
               {form.aliases.length > 0 ? (
                 form.aliases.map((alias, index) => (
                   <div key={`${alias.id ?? 'new'}-${index}`} className="grid gap-2 md:grid-cols-[1fr_140px_90px]">
@@ -1408,9 +1438,11 @@ function AgentModal({
               )}
             </div>
           </section>
+            </div>
+          </div>
         </div>
 
-        <div className="sticky bottom-0 flex justify-end gap-3 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur">
+        <div className="flex shrink-0 justify-end gap-3 border-t border-slate-200 bg-white/95 px-5 py-3 backdrop-blur">
           <button type="button" className="toolbar-btn px-5" onClick={onClose}>
             Cancel
           </button>
@@ -1427,18 +1459,20 @@ function FormSection({
   title,
   children,
   headerRight,
+  compact = false,
 }: {
   title: string;
   children: React.ReactNode;
   headerRight?: React.ReactNode;
+  compact?: boolean;
 }) {
   return (
-    <section className="rounded-[8px] border border-slate-200 bg-slate-50/60 p-4">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <section className={`rounded-[8px] border border-slate-200 bg-slate-50/60 ${compact ? 'p-3' : 'p-4'}`}>
+      <div className={`${compact ? 'mb-3' : 'mb-4'} flex flex-wrap items-center justify-between gap-3`}>
         <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
         {headerRight}
       </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{children}</div>
+      <div className={`grid ${compact ? 'gap-3' : 'gap-4 md:grid-cols-2 xl:grid-cols-3'}`}>{children}</div>
     </section>
   );
 }

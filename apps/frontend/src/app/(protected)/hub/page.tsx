@@ -188,8 +188,11 @@ export default function HubPage() {
   const canSeeSupplyChain =
     profile?.apps.includes('inventory') ||
     profile?.apps.includes('inventory-stock');
+  const canSeeSales =
+    profile?.apps.includes('sales') ||
+    salesCards.some((app) => profile?.apps.includes(app.code));
   const activeCount = visibleInformationApps.filter((app) => app.code !== 'information-report').length;
-  const plannedCount = (canSeeSupplyChain ? 1 : 0) + salesCards.length;
+  const plannedCount = (canSeeSupplyChain ? 1 : 0) + (canSeeSales ? salesCards.length : 0);
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
@@ -303,6 +306,7 @@ export default function HubPage() {
         </section>
       ) : null}
 
+      {canSeeSales ? (
       <section className="erp-slide-right space-y-3">
         <div className="flex flex-wrap items-baseline gap-2">
           <h2 className="text-sm font-semibold text-slate-950">Sales</h2>
@@ -329,6 +333,7 @@ export default function HubPage() {
           ))}
         </div>
       </section>
+      ) : null}
     </PageShell>
   );
 }

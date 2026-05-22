@@ -1,4 +1,6 @@
-import { IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsInt, IsOptional, IsString, Min, MinLength, ValidateNested } from 'class-validator';
+import { BonusGuideDto, BonusNarratorDto } from './create-bonus-card.dto';
 
 export class UpdateBonusCardDto {
   @IsOptional()
@@ -26,6 +28,10 @@ export class UpdateBonusCardDto {
 
   @IsOptional()
   @IsString()
+  companyCode?: string;
+
+  @IsOptional()
+  @IsString()
   guide?: string;
 
   @IsOptional()
@@ -34,11 +40,23 @@ export class UpdateBonusCardDto {
 
   @IsOptional()
   @IsString()
+  memberCode?: string;
+
+  @IsOptional()
+  @IsString()
+  supervisorCode?: string;
+
+  @IsOptional()
+  @IsString()
   partyCode?: string;
 
   @IsOptional()
   @IsString()
   nation?: string;
+
+  @IsOptional()
+  @IsString()
+  province?: string;
 
   @IsOptional()
   @IsInt()
@@ -56,12 +74,21 @@ export class UpdateBonusCardDto {
   tourLeader?: number;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  student?: number;
+
+  @IsOptional()
   @IsString()
   carCode?: string;
 
   @IsOptional()
   @IsString()
   shop?: string;
+
+  @IsOptional()
+  @IsString()
+  charterCode?: string;
 
   @IsOptional()
   @IsString()
@@ -96,38 +123,23 @@ export class UpdateBonusCardDto {
   nameListCode?: string;
 
   @IsOptional()
-  @IsString()
-  guide2?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BonusGuideDto)
+  extraGuides?: BonusGuideDto[];
 
   @IsOptional()
   @IsString()
-  guide2Name?: string;
+  narratorGroup?: string;
 
   @IsOptional()
-  @IsString()
-  guide2Phone?: string;
+  @IsInt()
+  @Min(0)
+  narratorPax?: number;
 
   @IsOptional()
-  @IsString()
-  guide3?: string;
-
-  @IsOptional()
-  @IsString()
-  guide3Name?: string;
-
-  @IsOptional()
-  @IsString()
-  guide3Phone?: string;
-
-  @IsOptional()
-  @IsString()
-  narratorCode?: string;
-
-  @IsOptional()
-  @IsString()
-  narratorName?: string;
-
-  @IsOptional()
-  @IsString()
-  narratorPhone?: string;
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BonusNarratorDto)
+  narrators?: BonusNarratorDto[];
 }

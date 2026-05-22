@@ -17,7 +17,7 @@ import { AppAccessGuard } from './guards/app-access.guard';
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') ?? 'dev-secret',
         signOptions: {
-          expiresIn: Number(configService.get<string>('JWT_EXPIRES_IN') ?? 3600),
+          expiresIn: Number(configService.get<string>('JWT_EXPIRES_IN') ?? 7 * 24 * 60 * 60),
         },
       }),
     }),
