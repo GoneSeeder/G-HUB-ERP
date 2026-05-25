@@ -509,8 +509,17 @@ input[type='number']::-webkit-inner-spin-button {
   body.report-print .report-table {
     min-width: 0 !important;
     max-width: 100% !important;
-    table-layout: fixed;
     font-size: 8.5pt;
+  }
+
+  body.report-print .report-table-bonus {
+    table-layout: fixed;
+  }
+
+  body.report-print .report-table-booking {
+    min-width: 900px !important;
+    table-layout: auto;
+    width: 100% !important;
   }
 
   body.report-print .report-table th,
@@ -589,6 +598,11 @@ input[type='number']::-webkit-inner-spin-button {
   min-width: 0;
 }
 
+.report-table-booking {
+  table-layout: auto;
+  min-width: 900px;
+}
+
 .report-table-bonus th,
 .report-table-bonus td {
   overflow: hidden;
@@ -662,15 +676,15 @@ input[type='number']::-webkit-inner-spin-button {
 }
 
 .report-bonus-agent {
-  width: 4.6%;
+  width: 3.5%;
 }
 
 .report-bonus-guide {
-  width: 4.6%;
+  width: 4.5%;
 }
 
 .report-bonus-no {
-  width: 4.2%;
+  width: 3%;
 }
 
 .report-bonus-detail {
@@ -678,7 +692,7 @@ input[type='number']::-webkit-inner-spin-button {
 }
 
 .report-bonus-party {
-  width: 10%;
+  width: 6%;
 }
 
 .report-bonus-nation {
@@ -690,11 +704,11 @@ input[type='number']::-webkit-inner-spin-button {
 }
 
 .report-bonus-time-in {
-  width: 3.8%;
+  width: 3.5%;
 }
 
 .report-bonus-time-out {
-  width: 3.8%;
+  width: 3.5%;
 }
 
 .report-bonus-recorder {
@@ -702,11 +716,11 @@ input[type='number']::-webkit-inner-spin-button {
 }
 
 .report-bonus-car {
-  width: 5.2%;
+  width: 4%;
 }
 
 .report-bonus-shop {
-  width: 2.8%;
+  width: 3%;
 }
 
 .report-bonus-origin {
@@ -718,25 +732,5 @@ input[type='number']::-webkit-inner-spin-button {
 }
 
 .report-bonus-remark {
-  width: 10.3%;
-}
-
-.report-table-booking th:nth-child(1),
-.report-table-booking td:nth-child(1) {
-  width: 42px;
-}
-
-.report-table-booking th:nth-child(2),
-.report-table-booking td:nth-child(2) {
-  width: 170px;
-}
-
-.report-table-booking th:nth-child(3),
-.report-table-booking td:nth-child(3) {
-  width: 130px;
-}
-
-.report-table-booking th:nth-child(8),
-.report-table-booking td:nth-child(8) {
-  width: 190px;
+  width: 18.3%;
 }

@@ -120,6 +120,14 @@ export class UpdateBonusCardDto {
 
   @IsOptional()
   @IsString()
+  recorder?: string;
+
+  @IsOptional()
+  @IsString()
+  recorderTime?: string;
+
+  @IsOptional()
+  @IsString()
   comment?: string;
 
   @IsOptional()

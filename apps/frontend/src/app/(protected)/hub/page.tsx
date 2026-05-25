@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { AppCard } from '@/components/ui/app-card';
 import {
   CardIcon,
-  FolderIcon,
   InventoryIcon,
   ListIcon,
   UsersIcon,
@@ -35,7 +34,7 @@ type HubAppMeta = {
   title: string;
   description: string;
   accent: string;
-  icon: 'users' | 'booking' | 'card' | 'list' | 'report';
+  icon: 'users' | 'booking' | 'card' | 'list' | 'lecture' | 'report';
 };
 
 const informationApps = [
@@ -119,14 +118,14 @@ const appMetaByCode: Record<string, HubAppMeta> = {
     eyebrow: 'Data management',
     title: 'Lecture Room',
     description: 'Manage lecture rooms, speaker information, and daily lecture schedules',
-    accent: 'bg-rose-50 text-rose-600',
-    icon: 'booking',
+    accent: 'bg-pink-50 text-pink-600',
+    icon: 'lecture',
   },
   'information-report': {
     eyebrow: 'Report',
     title: 'Reports',
     description: 'Operational reports and analytics dashboard',
-    accent: 'bg-slate-100 text-slate-600',
+    accent: 'bg-sky-50 text-sky-600',
     icon: 'report',
   },
 };
@@ -359,6 +358,32 @@ function HubIcon({ type }: { type: HubAppMeta['icon'] }) {
   if (type === 'users') return <UsersIcon />;
   if (type === 'card') return <CardIcon />;
   if (type === 'list') return <ListIcon />;
-  if (type === 'report') return <FolderIcon />;
-  return <FolderIcon />;
+  if (type === 'booking') return <BookingHubIcon />;
+  if (type === 'lecture') return <LectureHubIcon />;
+  if (type === 'report') return <ReportHubIcon />;
+  return <ListIcon />;
+}
+
+function BookingHubIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+      <path d="M7 2.75A.75.75 0 0 1 7.75 2h.5a.75.75 0 0 1 .75.75V4h6V2.75A.75.75 0 0 1 15.75 2h.5a.75.75 0 0 1 .75.75V4h.75A3.25 3.25 0 0 1 21 7.25v10.5A3.25 3.25 0 0 1 17.75 21H6.25A3.25 3.25 0 0 1 3 17.75V7.25A3.25 3.25 0 0 1 6.25 4H7V2.75ZM5 9v8.75C5 18.44 5.56 19 6.25 19h11.5c.69 0 1.25-.56 1.25-1.25V9H5Zm11.53 3.53-4.25 4.25a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 1 1 1.06-1.06l1.47 1.47 3.72-3.72a.75.75 0 1 1 1.06 1.06Z" />
+    </svg>
+  );
+}
+
+function LectureHubIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+      <path d="M4.5 4A2.5 2.5 0 0 0 2 6.5v8A2.5 2.5 0 0 0 4.5 17H11v2H8.75a.75.75 0 0 0 0 1.5h6.5a.75.75 0 0 0 0-1.5H13v-2h6.5a2.5 2.5 0 0 0 2.5-2.5v-8A2.5 2.5 0 0 0 19.5 4h-15Zm2 4.25A1.25 1.25 0 1 1 9 8.25a1.25 1.25 0 0 1-2.5 0Zm4.25-.5h6a.75.75 0 0 1 0 1.5h-6a.75.75 0 0 1 0-1.5Zm0 3h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM5.75 13.5c0-1.24 1.01-2.25 2.25-2.25h.5c1.24 0 2.25 1.01 2.25 2.25V14h-5v-.5Z" />
+    </svg>
+  );
+}
+
+function ReportHubIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+      <path d="M6.75 2.5A2.75 2.75 0 0 0 4 5.25v13.5a2.75 2.75 0 0 0 2.75 2.75h10.5A2.75 2.75 0 0 0 20 18.75V8.62a2.75 2.75 0 0 0-.8-1.94L15.82 3.3a2.75 2.75 0 0 0-1.94-.8H6.75Zm7.5 1.95V7c0 .41.34.75.75.75h2.55l-3.3-3.3ZM8 17.25a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0v2.5Zm3.25 0a.75.75 0 0 1-1.5 0v-5a.75.75 0 0 1 1.5 0v5Zm3.25 0a.75.75 0 0 1-1.5 0v-3.5a.75.75 0 0 1 1.5 0v3.5Zm2.5.75a.75.75 0 0 0 .75-.75v-6.5a.75.75 0 0 0-1.5 0v6.5c0 .41.34.75.75.75Z" />
+    </svg>
+  );
 }

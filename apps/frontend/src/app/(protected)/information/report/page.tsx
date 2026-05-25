@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { CalendarIcon, PrintIcon, SearchIcon } from '@/components/ui/icons';
@@ -17,12 +17,15 @@ type ReportBonusCard = {
   agentName: string;
   guide: string;
   guideName: string;
+  province: string;
   adult: number;
   child: number;
   tourLeader: number;
   student: number;
   tourIn: string;
   tourOut: string;
+  recorder: string;
+  recorderName: string;
   shop: string;
   nation: string;
   comeFrom: string;
@@ -42,6 +45,7 @@ type ReportBooking = {
   departDate: string;
   guideCode: string;
   guideName: string;
+  telGuide: string;
   pax: number;
   carCode: string;
   shop: string;
@@ -97,6 +101,10 @@ export default function ReportPage() {
   const [currentUserName, setCurrentUserName] = useState('');
   const [reportUserName, setReportUserName] = useState('');
   const selectedReport = reportOptions.find((option) => option.value === reportType) ?? reportOptions[0];
+  const selectedReportIconClass =
+    selectedReport.value === 'bonus-card' ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-[#1478ff]';
+  const selectedReportTitleClass =
+    selectedReport.value === 'bonus-card' ? 'text-slate-950' : 'text-[#0752d6]';
 
   useEffect(() => {
     loadReportUserName()
@@ -141,7 +149,7 @@ export default function ReportPage() {
   return (
     <PageShell className="h-full !max-w-[1340px] gap-6 overflow-visible py-6">
       <PageHeader
-        eyebrow="Document · Reports"
+        eyebrow="Document / Reports"
         title="พิมพ์รายงาน"
         description="รายงานเอกสารและข้อมูลปฏิบัติงานประจำวัน"
         actions={
@@ -168,11 +176,11 @@ export default function ReportPage() {
               className="flex h-[62px] w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 text-left shadow-sm transition hover:border-[#9bc0ff] hover:bg-white focus:border-[#1478ff] focus:outline-none focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]"
             >
               <span className="flex min-w-0 items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${selectedReportIconClass}`}>
                   <ReportCardIcon className="h-4 w-4" />
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-semibold text-slate-950">
+                  <span className={`block truncate text-sm font-semibold ${selectedReportTitleClass}`}>
                     {selectedReport.label}
                   </span>
                   <span className="mt-0.5 block truncate text-xs font-light text-slate-500">
@@ -239,7 +247,7 @@ export default function ReportPage() {
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
             <span>แสดงผลรายงาน:</span>
             <span className="font-semibold text-slate-950">{selectedReport.label}</span>
-            <span>·</span>
+            <span>•</span>
             <span>{formatReportDisplayDate(fromDate)} - {formatReportDisplayDate(toDate)}</span>
           </div>
         ) : null}
@@ -292,7 +300,7 @@ function ReportPreview({
       <div className={`print-area report-print-stack mx-auto w-full space-y-6 ${reportType === 'bonus-card' ? 'report-print-bonus' : 'report-print-booking'}`}>
         {reportType === 'bonus-card' ? (
           <>
-            {(groups as Array<{ date: string; rows: ReportBonusCard[] }>).map((group, index) => (
+            {(groups as Array<{ date: string; rows: ReportBonusCard[] }>).map((group) => (
               <section key={group.date} className="report-sheet min-h-full rounded-sm border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="report-doc-header report-doc-header-bonus">
                   <div className="report-doc-brand">GEI</div>
@@ -300,7 +308,7 @@ function ReportPreview({
                   <div className="report-doc-meta">วันที่พิมพ์ {printDate}</div>
                   <div className="report-doc-code">[{userName}]</div>
                   <div className="report-doc-date">รายการของวันที่ : {formatReportDisplayDate(group.date)}</div>
-                  <div className="report-doc-page">หน้า : {index + 1}</div>
+                  <div className="report-doc-page">หน้า : 1</div>
                 </div>
                 <BonusReportTable rows={group.rows} />
               </section>
@@ -308,14 +316,15 @@ function ReportPreview({
           </>
         ) : (
           <>
-            {(groups as Array<{ date: string; rows: ReportBooking[] }>).map((group, index) => (
+            {(groups as Array<{ date: string; rows: ReportBooking[] }>).map((group) => (
               <section key={group.date} className="report-sheet min-h-full rounded-sm border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="report-doc-header report-doc-header-booking">
-                  <div className="report-doc-code">[BookingInfor_JW]</div>
+                  <div className="report-doc-brand">GEI</div>
                   <div className="report-doc-title">รายงานการจองเข้าร้าน</div>
-                  <div className="report-doc-page">Page {index + 1} of {groups.length}</div>
-                  <div className="report-doc-date">วันที่ {formatReportDisplayDate(group.date)}</div>
-                  <div className="report-doc-meta">Print Date {printDate}</div>
+                  <div className="report-doc-meta">วันที่พิมพ์ {printDate}</div>
+                  <div className="report-doc-code">[{userName}]</div>
+                  <div className="report-doc-date">รายการของวันที่ : {formatReportDisplayDate(group.date)}</div>
+                  <div className="report-doc-page">หน้า : 1</div>
                 </div>
                 <BookingReportTable rows={group.rows} />
               </section>
@@ -352,7 +361,7 @@ function BonusReportTable({ rows }: { rows: ReportBonusCard[] }) {
       </colgroup>
       <thead>
         <tr>
-          <th colSpan={2}>รหัสทัวร์/สมาชิก</th>
+          <th colSpan={2} className="text-center">รหัสทัวร์/สมาชิก</th>
           <th>โบนัส</th>
           <th>รายละเอียด</th>
           <th>PartyCode</th>
@@ -388,10 +397,10 @@ function BonusReportTable({ rows }: { rows: ReportBonusCard[] }) {
               <td className="text-center">{Number(row.child || 0)}</td>
               <td title={row.tourIn || ''}>{row.tourIn || '-'}</td>
               <td title={row.tourOut || ''}>{row.tourOut || '-'}</td>
-              <td title={row.guideName || row.guide || ''}>{row.guideName || row.guide || '-'}</td>
+              <td title={row.recorderName || row.recorder || ''}>{row.recorderName || row.recorder || '-'}</td>
               <td title={row.carCode || ''}>{row.carCode || '-'}</td>
               <td title={row.shop || ''}>{row.shop || '-'}</td>
-              <td title={row.comeFrom || ''}>{row.comeFrom || '-'}</td>
+              <td title={row.province || ''}>{row.province || '-'}</td>
               <td title={row.busType || ''}>{row.busType || '-'}</td>
               <td title={row.comment || ''}>{row.comment || '-'}</td>
             </tr>
@@ -420,12 +429,12 @@ function BookingReportTable({ rows }: { rows: ReportBooking[] }) {
           <th>No</th>
           <th>Company</th>
           <th>Party Code</th>
-          <th>Guide</th>
-          <th>No.bus</th>
           <th className="text-center">Pax</th>
+          <th colSpan={2} className="text-center">Guide</th>
+          <th>No.bus</th>
+          <th>Driver</th>
           <th>Time</th>
           <th>Remark</th>
-          <th>Driver</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-slate-100">
@@ -434,20 +443,21 @@ function BookingReportTable({ rows }: { rows: ReportBooking[] }) {
             <td className="text-center">{index + 1}</td>
             <td>{row.agentName || row.agentCode || '-'}</td>
             <td>{row.partyCode || '-'}</td>
-            <td>{row.guideName || row.guideCode || '-'}</td>
-            <td>{row.carCode || '-'}</td>
             <td className="text-center">{Number(row.pax || 0)}</td>
+            <td>{row.guideName || row.guideCode || '-'}</td>
+            <td>{row.telGuide || '-'}</td>
+            <td>{row.carCode || '-'}</td>
+            <td>{row.telDriver || '-'}</td>
             <td>{row.timeBookJw || row.docTime || '-'}</td>
             <td>{row.bookRemark || '-'}</td>
-            <td>{row.telDriver || '-'}</td>
           </tr>
         ))}
       </tbody>
       <tfoot>
         <tr>
-          <td colSpan={5}>จำนวน {rows.length} ราย</td>
+          <td colSpan={3}>จำนวน {rows.length} ราย</td>
           <td className="text-center">{sum(rows, (row) => Number(row.pax || 0))}</td>
-          <td colSpan={3} />
+          <td colSpan={6} />
         </tr>
       </tfoot>
     </table>
@@ -615,3 +625,6 @@ function ChevronDownIcon({ className = '' }: { className?: string }) {
     </svg>
   );
 }
+
+
+

@@ -45,6 +45,9 @@ type LectureSession = {
   speakerId: string;
   speakerCode: string;
   speakerName: string;
+  speaker2Id: string | null;
+  speaker2Code: string;
+  speaker2Name: string;
   attendeeCount: number;
   status: 'arriving' | 'lecturing';
   startedAt: string | null;
@@ -62,6 +65,8 @@ type LectureHistory = {
   roomName: string;
   speakerCode: string;
   speakerName: string;
+  speaker2Code?: string;
+  speaker2Name?: string;
   attendeeCount: number;
   startedAt: string;
   endedAt: string;
@@ -117,16 +122,6 @@ function displayDateToIso(value: string) {
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
-function normalizeNarrators(value: BonusCard['narrators']): BonusNarrator[] {
-  if (Array.isArray(value)) return value;
-  try {
-    const parsed = JSON.parse(value || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
 function formatDate(value: string | null | undefined) {
   if (!value) return '--/--/----';
   const date = new Date(value);
@@ -146,6 +141,14 @@ function formatDuration(seconds: number) {
 function elapsed(startedAt: string | null, now: number) {
   if (!startedAt) return '00:00';
   return formatDuration(Math.floor((now - new Date(startedAt).getTime()) / 1000));
+}
+
+function formatSessionLecturers(session: LectureSession | null | undefined) {
+  if (!session) return '-';
+  return [
+    session.speakerName,
+    session.speaker2Name,
+  ].map((name) => name?.trim()).filter(Boolean).join(' / ') || '-';
 }
 
 function cn(...classes: Array<string | false | null | undefined>) {
@@ -447,7 +450,7 @@ export default function LectureRoomPage() {
     speakerName: '',
     status: 'available' as SpeakerStatus,
   });
-  const [assignForm, setAssignForm] = useState({ roomId: '', speakerId: '' });
+  const [assignForm, setAssignForm] = useState({ roomId: '', speakerId: '', speaker2Id: '' });
   const [isAdmin, setIsAdmin] = useState(false);
   const [historyEditEnabled, setHistoryEditEnabled] = useState(false);
   const [selectedHistoryIds, setSelectedHistoryIds] = useState<string[]>([]);
@@ -464,7 +467,13 @@ export default function LectureRoomPage() {
   };
   const loadBonusCards = async (date = assignmentDate) => {
     const data = await apiFetch<BonusCard[]>(`/api/bonus-cards?workDate=${date}`);
-    setBonusCards(data.filter((card) => normalizeNarrators(card.narrators).length > 0));
+    setBonusCards(data);
+  };
+
+  const notifyLectureRegistrationChanged = (detail: { workDate?: string; bonusCardId?: string; action: string }) => {
+    const payload = { ...detail, changedAt: Date.now() };
+    window.dispatchEvent(new CustomEvent('g-hub:lecture-registration-changed', { detail: payload }));
+    window.localStorage.setItem('g-hub:lecture-registration-changed', JSON.stringify(payload));
   };
 
   const refreshAll = async () => {
@@ -502,7 +511,10 @@ export default function LectureRoomPage() {
   };
 
   const activeRoomIds = useMemo(() => new Set(sessions.map((session) => session.roomId)), [sessions]);
-  const activeSpeakerIds = useMemo(() => new Set(sessions.map((session) => session.speakerId)), [sessions]);
+  const activeSpeakerIds = useMemo(
+    () => new Set(sessions.flatMap((session) => [session.speakerId, session.speaker2Id].filter(Boolean) as string[])),
+    [sessions],
+  );
 
   const roomCards = useMemo(
     () =>
@@ -527,7 +539,7 @@ export default function LectureRoomPage() {
     const term = assignmentSearch.trim().toLowerCase();
     if (!term) return bonusCards;
     return bonusCards.filter((card) =>
-      [card.bonus, card.partyCode, card.agentName, card.agentCode, normalizeNarrators(card.narrators)[0]?.name]
+      [card.bonus, card.partyCode, card.agentName, card.agentCode]
         .join(' ')
         .toLowerCase()
         .includes(term),
@@ -625,13 +637,10 @@ export default function LectureRoomPage() {
   };
 
   const openAssign = (card: BonusCard) => {
-    const narrator = normalizeNarrators(card.narrators)[0];
-    const matchedSpeaker = narrator?.code
-      ? speakers.find((speaker) => speaker.speakerCode.trim() === narrator.code?.trim())
-      : null;
     setAssignForm({
       roomId: '',
-      speakerId: matchedSpeaker?.id || '',
+      speakerId: '',
+      speaker2Id: '',
     });
     setAssignModal({ card });
   };
@@ -640,26 +649,25 @@ export default function LectureRoomPage() {
     event.preventDefault();
     if (!assignModal) return;
     const card = assignModal.card;
-    const narrator = normalizeNarrators(card.narrators)[0];
-    const selectedSpeakerId =
-      assignForm.speakerId ||
-      (narrator?.code ? speakers.find((speaker) => speaker.speakerCode === narrator.code)?.id || '' : '');
     const body = JSON.stringify({
       roomId: assignForm.roomId,
-      speakerId: selectedSpeakerId || 'NEW_AUTO_CREATE',
+      speakerId: assignForm.speakerId,
+      speaker2Id: assignForm.speaker2Id || undefined,
       bonusCardId: card.id,
       partyCode: card.partyCode,
       attendeeCount: card.adult + card.child + card.student + card.tourLeader,
     });
     await apiFetch('/api/lecture-sessions', { method: 'POST', body });
     setAssignModal(null);
-    await Promise.all([loadRooms(), loadSessions(), loadSpeakers()]);
+    notifyLectureRegistrationChanged({ workDate: card.workDate, bonusCardId: card.id, action: 'assigned' });
+    await Promise.all([loadRooms(), loadSessions(), loadSpeakers(), loadBonusCards(card.workDate)]);
   };
 
   const clearSession = async (session: LectureSession) => {
     if (!(await requestConfirmation({ message: `เคลียร์ session ห้อง ${session.roomName} หรือไม่?`, variant: 'danger' }))) return;
     await apiFetch(`/api/lecture-sessions/${session.id}`, { method: 'DELETE' });
-    await Promise.all([loadRooms(), loadSessions(), loadSpeakers()]);
+    notifyLectureRegistrationChanged({ bonusCardId: session.bonusCardId ?? undefined, action: 'cleared' });
+    await Promise.all([loadRooms(), loadSessions(), loadSpeakers(), loadBonusCards()]);
   };
 
   const toggleHistorySelection = (id: string) => {
@@ -786,7 +794,7 @@ export default function LectureRoomPage() {
                     </div>
                     <div>
                       <p className="text-xs font-medium uppercase text-slate-400">Speaker</p>
-                      <p className="mt-1 truncate font-medium text-slate-900">{session?.speakerName || '-'}</p>
+                      <p className="mt-1 truncate font-medium text-slate-900">{formatSessionLecturers(session)}</p>
                     </div>
                     <div>
                       <p className="text-xs font-medium uppercase text-slate-400">Attendees</p>
@@ -1276,7 +1284,7 @@ export default function LectureRoomPage() {
                   </p>
                 </div>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-3">
                 <label className="grid gap-1 text-sm font-medium text-slate-700">
                   ห้องบรรยาย
                   <select
@@ -1296,15 +1304,33 @@ export default function LectureRoomPage() {
                   </select>
                 </label>
                 <label className="grid gap-1 text-sm font-medium text-slate-700">
-                  อาจารย์พากย์
+                  อาจารย์พากย์ 1
                   <select
                     value={assignForm.speakerId}
                     onChange={(event) => setAssignForm((prev) => ({ ...prev, speakerId: event.target.value }))}
                     className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
+                    required
                   >
-                    <option value="">ใช้ผู้พากย์จาก Bonus Card</option>
+                    <option value="">เลือกอาจารย์พากย์</option>
                     {speakers
-                      .filter((speaker) => speaker.status !== 'inactive' && !activeSpeakerIds.has(speaker.id))
+                      .filter((speaker) => speaker.status !== 'inactive' && !activeSpeakerIds.has(speaker.id) && speaker.id !== assignForm.speaker2Id)
+                      .map((speaker) => (
+                        <option key={speaker.id} value={speaker.id}>
+                          {speaker.speakerCode} - {speaker.speakerName}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="grid gap-1 text-sm font-medium text-slate-700">
+                  อาจารย์พากย์ 2
+                  <select
+                    value={assignForm.speaker2Id}
+                    onChange={(event) => setAssignForm((prev) => ({ ...prev, speaker2Id: event.target.value }))}
+                    className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
+                  >
+                    <option value="">ไม่เลือก</option>
+                    {speakers
+                      .filter((speaker) => speaker.status !== 'inactive' && !activeSpeakerIds.has(speaker.id) && speaker.id !== assignForm.speakerId)
                       .map((speaker) => (
                         <option key={speaker.id} value={speaker.id}>
                           {speaker.speakerCode} - {speaker.speakerName}

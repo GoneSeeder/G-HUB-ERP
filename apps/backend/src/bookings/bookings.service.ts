@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { BookingReferenceDto, CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
@@ -593,7 +594,7 @@ export class BookingsService {
     };
   }
 
-  async createBonusCardsFromBookings(entries: BonusUploadEntry[]) {
+  async createBonusCardsFromBookings(entries: BonusUploadEntry[], user: AuthUser) {
     const normalizedEntries = entries
       .map((entry) => ({ id: entry.id, bonus: String(entry.bonus ?? '').trim() }))
       .filter((entry) => entry.id);
@@ -603,6 +604,22 @@ export class BookingsService {
     const ids = normalizedEntries.map((entry) => entry.id);
     const rows = await this.prisma.booking.findMany({ where: { id: { in: ids } } });
     const rowById = new Map(rows.map((row) => [row.id, row]));
+    const guideCodes = [...new Set(rows.map((row) => (row.guideCode ?? '').trim()).filter(Boolean))];
+    const guides = guideCodes.length
+      ? await this.prisma.member.findMany({
+          where: { guideCode: { in: guideCodes } },
+          select: {
+            guideCode: true,
+            fullName: true,
+            fullNameTh: true,
+            firstNameEn: true,
+            lastNameEn: true,
+            firstNameTh: true,
+            lastNameTh: true,
+          },
+        })
+      : [];
+    const guideByCode = new Map(guides.map((guide) => [guide.guideCode.toUpperCase(), guide]));
     let created = 0;
 
     await this.prisma.$transaction(async (tx) => {
@@ -631,17 +648,16 @@ export class BookingsService {
         if (exists) {
           throw new BadRequestException(`Bonus card "${bonus}" already exists`);
         }
-        const bonusName = [row.agentName, row.guideName ? `[${row.guideName}]` : '']
-          .filter(Boolean)
-          .join(' ');
         const guideCode = (row.guideCode ?? '').trim();
+        const mappedGuide = guideByCode.get(guideCode.toUpperCase());
         const guideName = (row.guideName ?? '').trim();
         const bonusGuide = guideCode || guideName;
+        const recorder = user.username || '';
         await tx.bonusCard.create({
           data: {
             workDate,
             bonus,
-            bonusName: bonusName.slice(0, 150),
+            bonusName: this.formatBonusName(row.agentName, guideName, mappedGuide).slice(0, 150),
             agentCode: row.agentCode,
             agentName: row.agentName,
             guide: bonusGuide,
@@ -655,6 +671,8 @@ export class BookingsService {
             shop: '1',
             busType: '',
             tourIn: row.timeBookJw,
+            recorder,
+            recorderTime: this.currentRecorderTime(),
             comment: row.bookRemark,
           },
         });
@@ -671,6 +689,65 @@ export class BookingsService {
       created,
       skipped: Math.max(0, normalizedEntries.length - created),
     };
+  }
+
+  private formatBonusName(
+    agentNameValue: string,
+    bookingGuideName: string,
+    guide?: {
+      fullName: string;
+      fullNameTh: string;
+      firstNameEn: string;
+      lastNameEn: string;
+      firstNameTh: string;
+      lastNameTh: string;
+    },
+  ) {
+    const agentName = agentNameValue.trim();
+    const guideName = this.guideEnglishName(guide) || bookingGuideName.trim();
+    const guideThaiName = this.guideThaiName(guide);
+    const guidePart = guideName && guideThaiName
+      ? `${guideName}(${guideThaiName})`
+      : guideName || guideThaiName;
+
+    if (agentName && guidePart) return `${agentName} (${guidePart})`;
+    if (agentName) return agentName;
+    return guidePart ? `(${guidePart})` : '';
+  }
+
+  private guideEnglishName(guide?: {
+    fullName: string;
+    firstNameEn: string;
+    lastNameEn: string;
+  }) {
+    if (!guide) return '';
+    return guide.fullName?.trim()
+      || [guide.firstNameEn, guide.lastNameEn].map((value) => value?.trim()).filter(Boolean).join(' ');
+  }
+
+  private guideThaiName(guide?: {
+    fullNameTh: string;
+    firstNameTh: string;
+    lastNameTh: string;
+  }) {
+    if (!guide) return '';
+    return guide.fullNameTh?.trim()
+      || [guide.firstNameTh, guide.lastNameTh].map((value) => value?.trim()).filter(Boolean).join(' ');
+  }
+
+  private currentRecorderTime() {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+    const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
+    return `${value('day')}/${value('month')}/${value('year')} ${value('hour')}:${value('minute')}:${value('second')}`;
   }
 
   private compareBonusSourceRows(

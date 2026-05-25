@@ -11,6 +11,10 @@ export class AssignSessionDto {
 
   @IsString()
   @IsOptional()
+  speaker2Id?: string;
+
+  @IsString()
+  @IsOptional()
   bonusCardId?: string;
 
   @IsString()

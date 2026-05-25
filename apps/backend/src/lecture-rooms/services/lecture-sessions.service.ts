@@ -81,7 +81,7 @@ export class LectureSessionsService {
         narrators = [];
       }
 
-      if (!Array.isArray(narrators) || narrators.length === 0) {
+      if (!dto.speakerId && (!Array.isArray(narrators) || narrators.length === 0)) {
         throw new BadRequestException('สามารถมอบหมายได้เฉพาะ Bonus Card ที่มีข้อมูลผู้บรรยายพากย์เท่านั้น');
       }
 
@@ -132,6 +132,25 @@ export class LectureSessionsService {
       throw new BadRequestException('ผู้บรรยายท่านนี้ปิดใช้งานชั่วคราว');
     }
 
+    let speaker2: typeof speaker | null = null;
+    if (dto.speaker2Id?.trim()) {
+      if (dto.speaker2Id === speaker.id) {
+        throw new BadRequestException('ไม่สามารถเลือกอาจารย์พากย์ซ้ำกันได้');
+      }
+      speaker2 = await this.prisma.speaker.findUnique({
+        where: { id: dto.speaker2Id },
+      });
+      if (!speaker2) {
+        throw new NotFoundException('ไม่พบข้อมูลอาจารย์พากย์คนที่ 2');
+      }
+      if (speaker2.status === 'lecturing') {
+        throw new ConflictException('อาจารย์พากย์คนที่ 2 กำลังติดภารกิจบรรยายในห้องอื่น');
+      }
+      if (speaker2.status === 'inactive') {
+        throw new BadRequestException('อาจารย์พากย์คนที่ 2 ปิดใช้งานชั่วคราว');
+      }
+    }
+
     // 4. บันทึกและเชื่อมโยงข้อมูลรอบการบรรยายใหม่
     const session = await this.prisma.lectureSession.create({
       data: {
@@ -142,6 +161,9 @@ export class LectureSessionsService {
         speakerId: speaker.id,
         speakerCode: speaker.speakerCode,
         speakerName: speaker.speakerName,
+        speaker2Id: speaker2?.id ?? null,
+        speaker2Code: speaker2?.speakerCode ?? '',
+        speaker2Name: speaker2?.speakerName ?? '',
         bonusCardId: dto.bonusCardId || null,
         attendeeCount: dto.attendeeCount,
         status: 'arriving', // สถานะเริ่มต้นเมื่อมอบหมาย
@@ -182,6 +204,12 @@ export class LectureSessionsService {
       where: { id: session.speakerId },
       data: { status: 'lecturing' },
     });
+    if (session.speaker2Id) {
+      await this.prisma.speaker.update({
+        where: { id: session.speaker2Id },
+        data: { status: 'lecturing' },
+      });
+    }
 
     // ส่งสัญญาณ Real-time แจ้งเตือนไปยังหน้า Dashboard
     this.gateway.broadcastRoomStatusChange(roomCode, 'lecturing');
@@ -212,6 +240,9 @@ export class LectureSessionsService {
         speakerId: session.speakerId,
         speakerCode: session.speakerCode,
         speakerName: session.speakerName,
+        speaker2Id: session.speaker2Id,
+        speaker2Code: session.speaker2Code,
+        speaker2Name: session.speaker2Name,
         bonusCardId: session.bonusCardId,
         attendeeCount: session.attendeeCount,
         startedAt,
@@ -230,6 +261,12 @@ export class LectureSessionsService {
       where: { id: session.speakerId },
       data: { status: 'available' },
     });
+    if (session.speaker2Id) {
+      await this.prisma.speaker.update({
+        where: { id: session.speaker2Id },
+        data: { status: 'available' },
+      });
+    }
 
     // ส่งสัญญาณ Real-time แจ้งเตือนไปยังหน้า Dashboard
     this.gateway.broadcastRoomStatusChange(roomCode, 'available');
@@ -256,6 +293,12 @@ export class LectureSessionsService {
       where: { id: session.speakerId },
       data: { status: 'available' },
     });
+    if (session.speaker2Id) {
+      await this.prisma.speaker.update({
+        where: { id: session.speaker2Id },
+        data: { status: 'available' },
+      });
+    }
 
     // ส่งสัญญาณ Real-time แจ้งเตือนไปยังหน้า Dashboard
     this.gateway.broadcastRoomStatusChange(session.roomCode, 'available');

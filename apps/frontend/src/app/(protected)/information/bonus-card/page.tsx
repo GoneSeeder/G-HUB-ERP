@@ -19,6 +19,16 @@ type BonusNarrator = {
   name: string;
 };
 
+type LectureRegistration = {
+  roomCode: string;
+  roomName: string;
+  speakerCode: string;
+  speakerName: string;
+  speaker2Code: string;
+  speaker2Name: string;
+  attendeeCount: number;
+};
+
 type GuideLookup = {
   guideCode: string;
   fullName: string;
@@ -29,12 +39,6 @@ type GuideLookup = {
   lastNameTh?: string;
   phone: string;
   imageUrl?: string;
-};
-
-type Speaker = {
-  id: string;
-  speakerCode: string;
-  speakerName: string;
 };
 
 type BonusCard = {
@@ -65,6 +69,9 @@ type BonusCard = {
   busType: string;
   tourIn: string;
   tourOut: string;
+  recorder: string;
+  recorderName: string;
+  recorderTime: string;
   comment: string;
   imageUrl: string;
   nameListCode: string;
@@ -74,6 +81,7 @@ type BonusCard = {
   narratorGroup: string;
   narratorPax: number;
   narrators: BonusNarrator[];
+  lectureRegistration: LectureRegistration | null;
 };
 
 type UploadImageResponse = {
@@ -81,6 +89,8 @@ type UploadImageResponse = {
 };
 
 type CurrentUser = {
+  username: string;
+  name: string;
   roles: string[];
 };
 
@@ -127,6 +137,21 @@ function getTodayLocalDate() {
   const month = parts.find((part) => part.type === 'month')?.value ?? '';
   const day = parts.find((part) => part.type === 'day')?.value ?? '';
   return `${year}-${month}-${day}`;
+}
+
+function getCurrentLocalDateTime() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Bangkok',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date());
+  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '';
+  return `${value('day')}/${value('month')}/${value('year')} ${value('hour')}:${value('minute')}:${value('second')}`;
 }
 
 const today = getTodayLocalDate();
@@ -257,13 +282,24 @@ function normalizeBonusCardForm(row: BonusCard): BonusCard {
   return {
     ...emptyForm,
     ...bonusCard,
+    tourLeaderName: bonusCard.tourLeaderName ?? '',
+    tourLeaderPassport: bonusCard.tourLeaderPassport ?? '',
     guideName: isValidLookupCode(bonusCard.guide) ? bonusCard.guideName : '',
+    recorder: bonusCard.recorder ?? '',
+    recorderName: bonusCard.recorderName ?? bonusCard.recorder ?? '',
+    recorderTime: bonusCard.recorderTime ?? '',
   };
 }
 
 function toBonusCardPayload(form: BonusCard) {
   const payload = normalizeBonusCardForm(form);
-  const { nameListPartyCode: _nameListPartyCode, nameListAgentCode: _nameListAgentCode, ...persistedPayload } = payload;
+  const {
+    nameListPartyCode: _nameListPartyCode,
+    nameListAgentCode: _nameListAgentCode,
+    recorderName: _recorderName,
+    lectureRegistration: _lectureRegistration,
+    ...persistedPayload
+  } = payload;
   return JSON.stringify(persistedPayload);
 }
 
@@ -295,6 +331,9 @@ const emptyForm: BonusCard = {
   busType: '',
   tourIn: '',
   tourOut: '',
+  recorder: '',
+  recorderName: '',
+  recorderTime: '',
   comment: '',
   imageUrl: '',
   nameListCode: '',
@@ -304,6 +343,7 @@ const emptyForm: BonusCard = {
   narratorGroup: '',
   narratorPax: 0,
   narrators: [],
+  lectureRegistration: null,
 };
 
 const visibleColumns: Array<{ key: keyof BonusCard; label: string; width: string; align?: 'left' | 'right' | 'center' }> = [
@@ -377,6 +417,7 @@ export default function BonusCardPage() {
   const [nameListRow, setNameListRow] = useState<BonusCard | null>(null);
   const [nameListPullOpen, setNameListPullOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [lookupTarget, setLookupTarget] = useState<{ type: ReferenceLookupType; field: keyof BonusCard } | null>(null);
   const [referenceLabels, setReferenceLabels] = useState<Partial<Record<keyof BonusCard, { code: string; name: string }>>>({});
 
@@ -399,6 +440,11 @@ export default function BonusCardPage() {
     try {
       const data = await apiFetch<BonusCard[]>(`/api/bonus-cards?workDate=${encodeURIComponent(workDate)}`);
       setRows(data);
+      setForm((current) => {
+        if (!current.id) return current;
+        const refreshed = data.find((row) => row.id === current.id);
+        return refreshed ? normalizeBonusCardForm(refreshed) : current;
+      });
       setSelectedIds([]);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load data.');
@@ -422,11 +468,29 @@ export default function BonusCardPage() {
   }, [workDate]);
 
   useEffect(() => {
+    const refreshBonusCards = () => {
+      loadRows().catch(() => undefined);
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'g-hub:lecture-registration-changed') refreshBonusCards();
+    };
+    window.addEventListener('g-hub:lecture-registration-changed', refreshBonusCards);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('g-hub:lecture-registration-changed', refreshBonusCards);
+      window.removeEventListener('storage', handleStorage);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workDate]);
+
+  useEffect(() => {
     const loadCurrentUser = async () => {
       try {
         const user = await apiFetch<CurrentUser>('/api/auth/me');
+        setCurrentUser(user);
         setIsAdmin(user.roles.includes('admin'));
       } catch {
+        setCurrentUser(null);
         setIsAdmin(false);
       }
     };
@@ -458,7 +522,14 @@ export default function BonusCardPage() {
 
   const openCreate = async () => {
     const nextBonus = await nextBonusForDate(workDate);
-    setForm({ ...emptyForm, id: '', workDate, bonus: nextBonus });
+    setForm({
+      ...emptyForm,
+      id: '',
+      workDate,
+      bonus: nextBonus,
+      recorder: currentUser?.username ?? '',
+      recorderName: currentUser?.name ?? currentUser?.username ?? '',
+    });
     setFormError(null);
     setFormMode('create');
   };
@@ -472,13 +543,28 @@ export default function BonusCardPage() {
   const saveForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFormError(null);
+    const nextForm = {
+      ...form,
+      recorder: currentUser?.username ?? form.recorder,
+      recorderName: currentUser?.name ?? currentUser?.username ?? form.recorderName,
+      recorderTime: getCurrentLocalDateTime(),
+    };
+    setForm(nextForm);
     try {
-      const body = toBonusCardPayload(form);
+      let savedRow: BonusCard;
+      const body = toBonusCardPayload(nextForm);
       if (formMode === 'edit') {
-        await apiFetch<BonusCard>(`/api/bonus-cards/${form.id}`, { method: 'PATCH', body });
+        savedRow = await apiFetch<BonusCard>(`/api/bonus-cards/${nextForm.id}`, { method: 'PATCH', body });
       } else {
-        await apiFetch<BonusCard>('/api/bonus-cards', { method: 'POST', body });
+        savedRow = await apiFetch<BonusCard>('/api/bonus-cards', { method: 'POST', body });
       }
+      setRows((current) => {
+        const normalizedSavedRow = normalizeBonusCardForm(savedRow);
+        if (formMode === 'edit') {
+          return current.map((row) => (row.id === normalizedSavedRow.id ? normalizedSavedRow : row));
+        }
+        return normalizedSavedRow.workDate === workDate ? [normalizedSavedRow, ...current] : current;
+      });
       setFormMode(null);
       await loadRows();
     } catch (saveError) {
@@ -798,6 +884,7 @@ export default function BonusCardPage() {
           form={form}
           mode={formMode}
           error={formError}
+          currentUser={currentUser}
           onChange={setForm}
           onClose={() => setFormMode(null)}
           onSubmit={saveForm}
@@ -850,6 +937,7 @@ function BonusModal({
   form,
   mode,
   error,
+  currentUser,
   onChange,
   onClose,
   onSubmit,
@@ -861,6 +949,7 @@ function BonusModal({
   form: BonusCard;
   mode: 'create' | 'edit';
   error: string | null;
+  currentUser: CurrentUser | null;
   onChange: (value: BonusCard) => void;
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -905,23 +994,12 @@ function BonusModal({
     onChange({ ...form, extraGuides: [...form.extraGuides, { code: '', name: '', phone: '' }] });
   };
 
-  const addSpeaker = () => {
-    if (form.narrators.length >= 2) return;
-    onChange({ ...form, narrators: [...form.narrators, { code: '', name: '' }] });
-  };
   const updateExtraGuide = (index: number, guide: Partial<BonusGuide>) => {
     const nextGuides = form.extraGuides.map((item, itemIndex) => (itemIndex === index ? { ...item, ...guide } : item));
     onChange({ ...form, extraGuides: nextGuides });
   };
   const removeExtraGuide = (index: number) => {
     onChange({ ...form, extraGuides: form.extraGuides.filter((_, itemIndex) => itemIndex !== index) });
-  };
-  const updateNarrator = (index: number, narrator: Partial<BonusNarrator>) => {
-    const nextNarrators = form.narrators.map((item, itemIndex) => (itemIndex === index ? { ...item, ...narrator } : item));
-    onChange({ ...form, narrators: nextNarrators });
-  };
-  const removeSpeaker = (index: number) => {
-    onChange({ ...form, narrators: form.narrators.filter((_, itemIndex) => itemIndex !== index) });
   };
 
   const guideDisplayName = (guide: GuideLookup) => {
@@ -932,6 +1010,42 @@ function BonusModal({
     if (englishName && thaiName) return `${englishName} (${thaiName})`;
     return englishName || thaiName || guide.fullNameTh || guide.guideCode;
   };
+
+  const guideBonusName = (guide: GuideLookup | null, fallbackGuideName = '') => {
+    const englishName =
+      guide?.fullName?.trim()
+      || [guide?.firstNameEn, guide?.lastNameEn].map((value) => value?.trim()).filter(Boolean).join(' ')
+      || fallbackGuideName.trim();
+    const thaiName =
+      guide?.fullNameTh?.trim()
+      || [guide?.firstNameTh, guide?.lastNameTh].map((value) => value?.trim()).filter(Boolean).join(' ');
+    if (englishName && thaiName) return `${englishName}(${thaiName})`;
+    return englishName || thaiName;
+  };
+
+  const bonusNameFromMapping = (agentName: string, guideName: string) => {
+    const agentPart = agentName.trim();
+    const guidePart = guideName.trim();
+    if (agentPart && guidePart) return `${agentPart} (${guidePart})`;
+    if (agentPart) return agentPart;
+    return guidePart ? `(${guidePart})` : '';
+  };
+
+  const loadGuideBonusName = async (code: string, fallbackGuideName = '') => {
+    const normalizedCode = code.trim();
+    if (!isValidLookupCode(normalizedCode)) return fallbackGuideName;
+    try {
+      const result = await apiFetch<{ items: GuideLookup[] }>(
+        `/api/members?page=1&search=${encodeURIComponent(normalizedCode)}`,
+      );
+      const guide = result.items.find((item) => item.guideCode.toLowerCase() === normalizedCode.toLowerCase());
+      return guide ? guideBonusName(guide, fallbackGuideName) : fallbackGuideName;
+    } catch {
+      return fallbackGuideName;
+    }
+  };
+
+  const editorDisplayName = form.recorderName || (form.recorder === currentUser?.username ? currentUser?.name : '') || form.recorder || '';
 
   useEffect(() => {
     if (!form.nameListCode || (form.nameListPartyCode && form.nameListAgentCode)) {
@@ -964,7 +1078,13 @@ function BonusModal({
     if (!isValidLookupCode(normalizedCode)) {
       const shouldClearMappedImage = mappedGuideImageRef.current && form.imageUrl === mappedGuideImageRef.current;
       mappedGuideImageRef.current = '';
-      onChange({ ...form, guide: normalizedCode, guideName: '', imageUrl: shouldClearMappedImage ? '' : form.imageUrl });
+      onChange({
+        ...form,
+        guide: normalizedCode,
+        guideName: '',
+        bonusName: bonusNameFromMapping(form.agentName, ''),
+        imageUrl: shouldClearMappedImage ? '' : form.imageUrl,
+      });
       return;
     }
     try {
@@ -980,6 +1100,7 @@ function BonusModal({
         ...form,
         guide: normalizedCode,
         guideName: guide ? guideDisplayName(guide) : '',
+        bonusName: bonusNameFromMapping(form.agentName, guide ? guideBonusName(guide, form.guideName) : ''),
         imageUrl: guideImage || form.imageUrl,
       });
     } catch {
@@ -989,8 +1110,14 @@ function BonusModal({
 
   const mapAgent = async (code: string) => {
     const normalizedCode = code.trim().toUpperCase();
+    const guidePart = await loadGuideBonusName(form.guide, form.guideName);
     if (!normalizedCode) {
-      onChange({ ...form, agentCode: '', agentName: '' });
+      onChange({
+        ...form,
+        agentCode: '',
+        agentName: '',
+        bonusName: bonusNameFromMapping('', guidePart),
+      });
       return;
     }
     try {
@@ -998,10 +1125,12 @@ function BonusModal({
         `/api/agents/options?search=${encodeURIComponent(normalizedCode)}`,
       );
       const agent = agents.find((item) => item.agentCode.toUpperCase() === normalizedCode);
+      const mappedAgentName = agent ? agent.name || agent.agentCode : '';
       onChange({
         ...form,
         agentCode: normalizedCode,
-        agentName: agent ? agent.name || agent.agentCode : '',
+        agentName: mappedAgentName,
+        bonusName: bonusNameFromMapping(mappedAgentName, guidePart),
       });
     } catch {
       onChange({ ...form, agentCode: normalizedCode });
@@ -1039,24 +1168,6 @@ function BonusModal({
     }
   };
 
-  const mapNarrator = async (code: string, index: number) => {
-    const normalizedCode = code.trim().toUpperCase();
-    if (!normalizedCode) {
-      updateNarrator(index, { code: '', name: '' });
-      return;
-    }
-    try {
-      const speakers = await apiFetch<Speaker[]>('/api/speakers');
-      const speaker = speakers.find((item) => item.speakerCode.trim().toUpperCase() === normalizedCode);
-      updateNarrator(index, {
-        code: normalizedCode,
-        name: speaker?.speakerName || '',
-      });
-    } catch {
-      updateNarrator(index, { code: normalizedCode });
-    }
-  };
-
   return (
     <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
       <form
@@ -1075,9 +1186,6 @@ function BonusModal({
               {mode === 'create' ? 'Add Bonus' : 'Edit Bonus'}
             </h2>
           </div>
-          <button type="button" className="toolbar-btn" onClick={() => undefined}>
-            <SearchIcon className="erp-action-icon" /> Namelist
-          </button>
         </div>
 
         <div className="flex shrink-0 gap-6 border-b border-slate-200 px-5">
@@ -1138,12 +1246,9 @@ function BonusModal({
               <div className="grid gap-2 xl:grid-cols-[1.35fr_0.8fr]">
                 <div className="space-y-1.5">
                   <BonusFormSection title="Main / Document" columns="grid-cols-1">
-                    <div className="grid gap-1.5 md:grid-cols-[minmax(140px,1fr)_minmax(140px,1fr)_minmax(170px,1fr)]">
+                    <div className="grid gap-1.5 md:grid-cols-[minmax(140px,1fr)_96px_minmax(120px,0.8fr)_minmax(150px,1fr)]">
                       <Field label="Work date" value={form.workDate} type="date" onChange={setWorkDate} />
-                      <Field label="Bonus no." value={form.bonus} onChange={(value) => setField('bonus', value)} wide />
-                    </div>
-                    <div className="grid gap-1.5 md:grid-cols-[1fr_120px_120px]">
-                      <Field label="Bonus name" value={form.bonusName} onChange={(value) => setField('bonusName', value)} />
+                      <Field label="Bonus no." value={form.bonus} onChange={(value) => setField('bonus', value)} />
                       <Field label="Car no." value={form.carCode} onChange={(value) => setField('carCode', value)} />
                       <LookupField
                         label="Car type"
@@ -1151,7 +1256,11 @@ function BonusModal({
                         onChange={(value) => setField('busType', value.toUpperCase())}
                         onLookup={() => onOpenLookup('busType', 'busType')}
                         helper={getReferenceHelper('busType', form.busType)}
+                        compactHelper
                       />
+                    </div>
+                    <div className="-mt-5">
+                      <Field label="Bonus name" value={form.bonusName} onChange={(value) => setField('bonusName', value)} />
                     </div>
                   </BonusFormSection>
 
@@ -1203,7 +1312,7 @@ function BonusModal({
                         helper={getReferenceHelper('province', form.province)}
                       />
                     </div>
-                    <div className="grid gap-1.5 md:grid-cols-3">
+                    <div className="grid gap-1.5 md:grid-cols-2">
                       <LookupField
                         label="Charter code"
                         value={form.charterCode}
@@ -1212,25 +1321,11 @@ function BonusModal({
                         helper={getReferenceHelper('charterCode', form.charterCode)}
                       />
                       <Field label="Shop no." value={form.shop} onChange={(value) => setField('shop', value)} />
-                      <Field label="Come from" value={form.comeFrom} onChange={(value) => setField('comeFrom', value)} />
                     </div>
                   </BonusFormSection>
                 </div>
 
                 <div className="space-y-1.5">
-                  <BonusFormSection title="Passenger Counts" columns="grid-cols-2">
-                    <Field label="Adult count" value={form.adult} type="number" onChange={(value) => setField('adult', Number(value))} />
-                    <Field label="Tour leader count" value={form.tourLeader} type="number" onChange={(value) => setField('tourLeader', Number(value))} />
-                    <Field label="Child count" value={form.child} type="number" onChange={(value) => setField('child', Number(value))} />
-                    <Field label="Student count" value={form.student} type="number" onChange={(value) => setField('student', Number(value))} />
-                    <Field label="Total count" value={totalCount} onChange={() => undefined} readOnly />
-                  </BonusFormSection>
-
-                  <BonusFormSection title="Time" columns="grid-cols-2">
-                    <Field label="Time in" value={form.tourIn} onChange={(value) => setField('tourIn', value)} />
-                    <Field label="Time out" value={form.tourOut} onChange={(value) => setField('tourOut', value)} />
-                  </BonusFormSection>
-
                   <BonusFormSection title="Name List" columns="grid-cols-2">
                     <button type="button" className="toolbar-btn h-8 justify-center" onClick={onOpenNameList} disabled={Boolean(form.nameListCode)}>
                       Pull
@@ -1242,15 +1337,35 @@ function BonusModal({
                     <Field label="" value={form.nameListAgentCode} onChange={() => undefined} placeholder="Namelist Agent Code" readOnly />
                   </BonusFormSection>
 
+                  <BonusFormSection title="Passenger Counts" columns="grid-cols-[1fr_1.28fr_1fr_1fr]" compact>
+                    <Field label="Adult count" value={form.adult} type="number" onChange={(value) => setField('adult', Number(value))} compactNumber />
+                    <Field label="Tour leader count" value={form.tourLeader} type="number" onChange={(value) => setField('tourLeader', Number(value))} compactNumber />
+                    <Field label="Child count" value={form.child} type="number" onChange={(value) => setField('child', Number(value))} compactNumber />
+                    <Field label="Student count" value={form.student} type="number" onChange={(value) => setField('student', Number(value))} compactNumber />
+                    <Field label="Total count" value={totalCount} onChange={() => undefined} readOnly compactNumber fullRow />
+                  </BonusFormSection>
+
+                  <BonusFormSection title="Time" columns="grid-cols-2">
+                    <Field label="Time in" value={form.tourIn} onChange={(value) => setField('tourIn', value)} />
+                    <Field label="Time out" value={form.tourOut} onChange={(value) => setField('tourOut', value)} />
+                  </BonusFormSection>
+
                   <BonusFormSection title="Remark" columns="grid-cols-1">
                     <label className="space-y-1">
                       <textarea
                         value={form.comment}
                         onChange={(event) => setField('comment', event.target.value)}
-                        className="h-[6.5rem] w-full resize-none rounded-md border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]"
+                        className="h-[4.1rem] w-full resize-none rounded-md border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.14)]"
                       />
                     </label>
                   </BonusFormSection>
+                  
+                  <BonusFormSection title="Record" columns="grid-cols-2">
+                    <Field label="ผู้แก้ไขล่าสุด" value={editorDisplayName || '-'} onChange={() => undefined} readOnly />
+                    <Field label="Latest edited datetime" value={form.recorderTime || '-'} onChange={() => undefined} readOnly />
+                  </BonusFormSection>
+
+
                 </div>
               </div>
             ) : null}
@@ -1308,44 +1423,24 @@ function BonusModal({
               <BonusFormSection
                 title="อาจารย์พากย์"
                 columns="grid-cols-1"
-                action={
-                  <button type="button" className="toolbar-btn h-9 px-4" onClick={addSpeaker} disabled={form.narrators.length >= 2}>
-                    <PlusIcon className="erp-action-icon" /> เพิ่มอาจารย์พากย์
-                  </button>
-                }
               >
-                <div className="grid gap-2 md:grid-cols-2">
-                  <Field label="กลุ่มขาย" value={form.narratorGroup} onChange={(value) => setField('narratorGroup', value)} />
-                  <Field label="จำนวนคนเข้า" value={form.narratorPax} type="number" onChange={(value) => setField('narratorPax', Number(value))} />
-                </div>
-                {form.narrators.length === 0 ? (
-                  <div className="mt-3 flex min-h-[84px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm font-medium text-slate-400">
-                    กดเพิ่มอาจารย์พากย์เพื่อกรอกรหัส
+                {form.lectureRegistration ? (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <Field label="รหัสอาจารย์พากย์" value={form.lectureRegistration.speakerCode} onChange={() => undefined} readOnly />
+                    <Field label="ชื่ออาจารย์พากย์" value={form.lectureRegistration.speakerName} onChange={() => undefined} readOnly />
+                    {form.lectureRegistration.speaker2Code || form.lectureRegistration.speaker2Name ? (
+                      <>
+                        <Field label="รหัสอาจารย์พากย์ 2" value={form.lectureRegistration.speaker2Code} onChange={() => undefined} readOnly />
+                        <Field label="ชื่ออาจารย์พากย์ 2" value={form.lectureRegistration.speaker2Name} onChange={() => undefined} readOnly />
+                      </>
+                    ) : null}
+                    <Field label="รหัสห้อง" value={form.lectureRegistration.roomCode} onChange={() => undefined} readOnly />
+                    <Field label="ชื่อห้อง" value={form.lectureRegistration.roomName} onChange={() => undefined} readOnly />
+                    <Field label="จำนวนคนเข้าฟังบรรยาย" value={totalCount} onChange={() => undefined} readOnly />
                   </div>
                 ) : (
-                  <div className="mt-3 space-y-2">
-                    {form.narrators.map((narrator, index) => (
-                      <div key={`narrator-${index}`} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-[1fr_1fr_auto]">
-                        <Field
-                          label={`รหัสอาจารย์พากย์ ${index + 1}`}
-                          value={narrator.code}
-                          onChange={(value) => updateNarrator(index, { code: value.toUpperCase() })}
-                          onBlur={() => mapNarrator(narrator.code, index)}
-                          onEnter={() => mapNarrator(narrator.code, index)}
-                        />
-                        <Field
-                          label="ชื่ออาจารย์พากย์"
-                          value={narrator.name}
-                          onChange={(value) => updateNarrator(index, { name: value })}
-                          readOnly
-                        />
-                        <div className="flex items-end">
-                          <button type="button" className="toolbar-btn-danger h-9 px-3" onClick={() => removeSpeaker(index)}>
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex min-h-[84px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-white px-4 py-6 text-center text-sm font-medium text-slate-400">
+                    ยังไม่ได้ลงทะเบียนการบรรยาย
                   </div>
                 )}
               </BonusFormSection>
@@ -1390,8 +1485,12 @@ function BonusFormSection({
   );
 }
 
-function MappedText({ value }: { value: string }) {
-  return <div className="ml-2 min-h-[22px] truncate pt-2 text-[11px] font-medium leading-[14px] text-[#1478ff]">{value}</div>;
+function MappedText({ value, compact = false }: { value: string; compact?: boolean }) {
+  return (
+    <div className={`ml-2 truncate text-[11px] font-medium leading-[14px] text-[#1478ff] ${compact ? 'min-h-[10px] pt-0' : 'min-h-[22px] pt-2'}`}>
+      {value}
+    </div>
+  );
 }
 
 function MappedField({
@@ -1423,12 +1522,14 @@ function LookupField({
   onChange,
   onLookup,
   helper,
+  compactHelper = false,
 }: {
   label: string;
   value: string | number;
   onChange: (value: string) => void;
   onLookup: () => void;
   helper?: string;
+  compactHelper?: boolean;
 }) {
   return (
     <label className="space-y-0.5">
@@ -1455,7 +1556,7 @@ function LookupField({
           <SearchIcon className="h-3.5 w-3.5" />
         </button>
       </div>
-      <MappedText value={helper || '-'} />
+      <MappedText value={helper || '-'} compact={compactHelper} />
     </label>
   );
 }
@@ -1468,9 +1569,11 @@ function Field({
   onBlur,
   onEnter,
   wide = false,
+  fullRow = false,
   readOnly = false,
   placeholder,
   compact = false,
+  compactNumber = false,
 }: {
   label: string;
   value: string | number;
@@ -1479,9 +1582,11 @@ function Field({
   onBlur?: () => void;
   onEnter?: () => void;
   wide?: boolean;
+  fullRow?: boolean;
   readOnly?: boolean;
   placeholder?: string;
   compact?: boolean;
+  compactNumber?: boolean;
 }) {
   if (type === 'date') {
     return (
@@ -1493,8 +1598,8 @@ function Field({
   }
 
   return (
-    <label className={`space-y-0.5 ${wide ? 'md:col-span-2' : ''}`}>
-      {label ? <span className="text-xs font-medium text-slate-700">{label}</span> : null}
+    <label className={`space-y-0.5 ${wide ? 'md:col-span-2' : ''} ${fullRow ? 'col-span-full' : ''}`}>
+      {label ? <span className={`${compactNumber ? 'block truncate whitespace-nowrap text-[10px]' : 'text-xs'} font-medium text-slate-700`}>{label}</span> : null}
       <input
         type={type}
         value={type === 'number' && value === 0 ? '' : value}
@@ -1509,7 +1614,7 @@ function Field({
         readOnly={readOnly}
         tabIndex={readOnly ? -1 : undefined}
         placeholder={placeholder}
-        className={`form-input ${compact ? 'h-5 px-2 text-xs' : 'h-7 text-sm'} rounded-md ${
+        className={`form-input ${compact ? 'h-5 px-2 text-xs' : 'h-7 text-sm'} ${compactNumber ? 'h-6 px-2 text-center' : ''} rounded-md ${
           readOnly ? 'cursor-default bg-slate-100 text-slate-400 focus:border-slate-200 focus:ring-0' : ''
         }`}
       />

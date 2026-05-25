@@ -49,7 +49,7 @@ export class BonusCardsController {
 
   @Post()
   create(@Body() body: CreateBonusCardDto, @CurrentUser() user: AuthUser) {
-    return this.bonusCardsService.create(body, this.recorderName(user));
+    return this.bonusCardsService.create(body, user);
   }
 
   @Post('images')
@@ -79,7 +79,7 @@ export class BonusCardsController {
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: UpdateBonusCardDto, @CurrentUser() user: AuthUser) {
-    return this.bonusCardsService.update(id, body, this.recorderName(user));
+    return this.bonusCardsService.update(id, body, user);
   }
 
   @Delete(':id')
@@ -96,7 +96,4 @@ export class BonusCardsController {
     });
   }
 
-  private recorderName(user: AuthUser) {
-    return user.name || user.username || '';
-  }
 }

@@ -1,0 +1,9 @@
+ALTER TABLE "LectureSession"
+ADD COLUMN "speaker2Id" TEXT,
+ADD COLUMN "speaker2Code" TEXT NOT NULL DEFAULT '',
+ADD COLUMN "speaker2Name" TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE "LectureHistory"
+ADD COLUMN "speaker2Id" TEXT,
+ADD COLUMN "speaker2Code" TEXT NOT NULL DEFAULT '',
+ADD COLUMN "speaker2Name" TEXT NOT NULL DEFAULT '';

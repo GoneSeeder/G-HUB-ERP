@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeftIcon } from '@/components/ui/icons';
-import { useDialog } from '@/components/ui/dialog-provider';
-import { apiFetch } from '@/lib/api';
+import { useParams } from 'next/navigation';
+import { publicApiFetch } from '@/lib/api';
 
 type LectureRoom = {
   id: string;
@@ -21,6 +19,9 @@ type LectureSession = {
   speakerId: string;
   speakerCode: string;
   speakerName: string;
+  speaker2Id: string | null;
+  speaker2Code: string;
+  speaker2Name: string;
   attendeeCount: number;
   status: 'arriving' | 'lecturing';
   startedAt: string | null;
@@ -43,9 +44,7 @@ function formatTimer(seconds: number) {
 }
 
 export default function LectureRoomDisplayPage() {
-  const { notify, requestConfirmation } = useDialog();
   const params = useParams();
-  const router = useRouter();
   const roomCode = String(params?.roomCode || '');
 
   const [loading, setLoading] = useState(true);
@@ -56,7 +55,7 @@ export default function LectureRoomDisplayPage() {
 
   const loadState = async () => {
     try {
-      const response = await apiFetch<DisplayState>(`/api/lecture-rooms/display/${roomCode}`);
+      const response = await publicApiFetch<DisplayState>(`/api/public/lecture-rooms/display/${roomCode}`);
       setData(response);
       setError('');
       if (response.activeSession?.startedAt) {
@@ -81,25 +80,6 @@ export default function LectureRoomDisplayPage() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const startLecture = async () => {
-    try {
-      await apiFetch(`/api/lecture-rooms/display/${roomCode}/start`, { method: 'POST' });
-      await loadState();
-    } catch (err) {
-      notify(err instanceof Error ? err.message : 'ไม่สามารถเริ่มการบรรยายได้', 'error');
-    }
-  };
-
-  const endLecture = async () => {
-    if (!(await requestConfirmation('ยืนยันสิ้นสุดการบรรยายรอบนี้หรือไม่?'))) return;
-    try {
-      await apiFetch(`/api/lecture-rooms/display/${roomCode}/end`, { method: 'POST' });
-      await loadState();
-    } catch (err) {
-      notify(err instanceof Error ? err.message : 'ไม่สามารถสิ้นสุดการบรรยายได้', 'error');
-    }
-  };
-
   const elapsed = () => {
     const startedAt = data?.activeSession?.startedAt;
     if (!startedAt) return '00:00:00';
@@ -109,7 +89,7 @@ export default function LectureRoomDisplayPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-300">
+      <main className="flex h-screen w-screen items-center justify-center overflow-hidden bg-slate-950 text-slate-300">
         <div className="space-y-4 text-center">
           <div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-slate-700 border-t-blue-500" />
           <p className="text-sm font-light">กำลังโหลดข้อมูลห้องบรรยาย...</p>
@@ -120,17 +100,10 @@ export default function LectureRoomDisplayPage() {
 
   if (error || !data) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-slate-100">
+      <main className="flex h-screen w-screen items-center justify-center overflow-hidden bg-slate-950 p-6 text-slate-100">
         <section className="max-w-md rounded-2xl border border-red-900/50 bg-red-950/20 p-6 text-center">
           <h1 className="text-xl font-semibold">เกิดข้อผิดพลาด</h1>
           <p className="mt-2 text-sm font-light text-red-200">{error || 'ไม่พบข้อมูลห้องบรรยาย'}</p>
-          <button
-            type="button"
-            onClick={() => router.push('/information/lecture-room')}
-            className="mt-5 rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-100 transition-colors hover:bg-slate-800"
-          >
-            กลับหน้าห้องบรรยาย
-          </button>
         </section>
       </main>
     );
@@ -142,18 +115,10 @@ export default function LectureRoomDisplayPage() {
     status === 'lecturing' ? 'กำลังบรรยาย' : status === 'arriving' ? 'กำลังเข้าห้อง' : 'พร้อมใช้งาน';
 
   return (
-    <main className="min-h-screen bg-slate-950 p-6 text-white">
-      <section className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-6xl flex-col rounded-3xl border border-slate-800 bg-slate-900/70 p-8">
+    <main className="h-screen w-screen overflow-hidden bg-slate-950 p-6 text-white">
+      <section className="mx-auto flex h-[calc(100vh-3rem)] max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/70 p-8">
         <header className="flex items-center justify-between border-b border-slate-800 pb-6">
           <div>
-            <button
-              type="button"
-              onClick={() => router.push('/information/lecture-room')}
-              className="mb-4 inline-flex items-center gap-2 text-sm font-light text-slate-400 transition-colors hover:text-white"
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-              Control Center
-            </button>
             <div className="flex items-center gap-3">
               <span className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-medium text-slate-300">
                 {room.roomCode}
@@ -191,6 +156,12 @@ export default function LectureRoomDisplayPage() {
                     <p className="text-xs font-medium uppercase text-slate-500">อาจารย์พากย์</p>
                     <p className="mt-2 text-xl font-semibold text-blue-300">{activeSession.speakerName}</p>
                     <p className="mt-1 text-xs text-slate-500">{activeSession.speakerCode}</p>
+                    {activeSession.speaker2Name || activeSession.speaker2Code ? (
+                      <>
+                        <p className="mt-3 text-xl font-semibold text-blue-300">{activeSession.speaker2Name}</p>
+                        <p className="mt-1 text-xs text-slate-500">{activeSession.speaker2Code}</p>
+                      </>
+                    ) : null}
                   </div>
                   <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-5">
                     <p className="text-xs font-medium uppercase text-slate-500">ผู้เข้าฟัง</p>
@@ -208,24 +179,8 @@ export default function LectureRoomDisplayPage() {
               <section className="rounded-3xl border border-slate-800 bg-slate-950/50 p-8 text-center">
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Lecture Timer</p>
                 <p className="mt-3 font-mono text-6xl font-semibold tracking-tight text-white">{elapsed()}</p>
-                <div className="mt-8">
-                  {status === 'arriving' ? (
-                    <button
-                      type="button"
-                      onClick={startLecture}
-                      className="w-full rounded-xl border border-[#1167e8] bg-[#1167e8] px-6 py-4 text-base font-medium text-white transition-colors hover:bg-[#0f5fd6]"
-                    >
-                      Start Lecture
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={endLecture}
-                      className="w-full rounded-xl border border-red-500 bg-red-500 px-6 py-4 text-base font-medium text-white transition-colors hover:bg-red-600"
-                    >
-                      End Lecture
-                    </button>
-                  )}
+                <div className="mt-8 rounded-xl border border-slate-800 bg-slate-900/70 px-5 py-4 text-sm text-slate-400">
+                  {status === 'arriving' ? 'รอเริ่มการบรรยาย' : 'กำลังแสดงผลการบรรยายแบบสด'}
                 </div>
               </section>
             </>

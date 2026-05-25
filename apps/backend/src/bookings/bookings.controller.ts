@@ -1,7 +1,9 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { RequireAppAccess } from '../auth/decorators/app-access.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AppAccessGuard } from '../auth/guards/app-access.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
@@ -20,8 +22,10 @@ export class BookingsController {
     @Query('status') status?: string,
     @Query('upload') upload?: string,
     @Query('search') search?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
   ) {
-    return this.bookingsService.findAll({ date, agent, nation, status, upload, search });
+    return this.bookingsService.findAll({ date, agent, nation, status, upload, search, from, to });
   }
 
   @Post()
@@ -99,8 +103,8 @@ export class BookingsController {
   }
 
   @Post('create-bonus-cards')
-  createBonusCards(@Body() body: { entries: Array<{ id: string; bonus: string }> }) {
-    return this.bookingsService.createBonusCardsFromBookings(body.entries ?? []);
+  createBonusCards(@Body() body: { entries: Array<{ id: string; bonus: string }> }, @CurrentUser() user: AuthUser) {
+    return this.bookingsService.createBonusCardsFromBookings(body.entries ?? [], user);
   }
 
   @Patch(':id')

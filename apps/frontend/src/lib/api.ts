@@ -69,6 +69,31 @@ export async function apiFetch<T>(
   return (await response.json()) as T;
 }
 
+export async function publicApiFetch<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const headers = new Headers(options.headers);
+  headers.set('Content-Type', 'application/json');
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorBody = (await response.json().catch(() => null)) as {
+      message?: string | string[];
+    } | null;
+    const message = Array.isArray(errorBody?.message)
+      ? errorBody.message.join(', ')
+      : errorBody?.message;
+    throw new Error(message ?? `Request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as T;
+}
+
 export async function apiUpload<T>(path: string, file: Blob): Promise<T> {
   const token = getAuthTokenFromCookie();
   if (!token || isSessionIdleExpired()) {

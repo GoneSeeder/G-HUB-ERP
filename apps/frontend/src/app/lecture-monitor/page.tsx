@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useMemo, useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { publicApiFetch } from '@/lib/api';
 
 type MonitorStatus = 'RUNNING' | 'WAITING' | 'AVAILABLE' | 'MAINTENANCE';
 
@@ -24,6 +24,7 @@ type ApiSession = {
     speakerName?: string;
   };
   speakerName: string;
+  speaker2Name?: string;
   attendeeCount: number;
   status: 'arriving' | 'lecturing';
   startedAt: string | null;
@@ -104,8 +105,8 @@ function LectureMonitor() {
 
   const loadData = async () => {
     const [roomData, sessionData] = await Promise.all([
-      apiFetch<unknown>('/api/lecture-rooms'),
-      apiFetch<unknown>('/api/lecture-sessions'),
+      publicApiFetch<unknown>('/api/public/lecture-rooms'),
+      publicApiFetch<unknown>('/api/public/lecture-sessions'),
     ]);
     setRooms(sortMonitorRooms(mapMonitorRooms(toApiArray<ApiRoom>(roomData), toApiArray<ApiSession>(sessionData))));
     setLastUpdated(Date.now());
@@ -116,7 +117,7 @@ function LectureMonitor() {
     loadData().catch((err) => setError(err instanceof Error ? err.message : 'Unable to load lecture monitor'));
     const poll = window.setInterval(() => {
       loadData().catch(() => undefined);
-    }, 5000);
+    }, 2000);
     return () => window.clearInterval(poll);
   }, []);
 
@@ -148,9 +149,9 @@ function LectureMonitor() {
   };
 
   return (
-    <main className="min-h-screen select-none overflow-hidden bg-[#030713] font-[Kanit] text-slate-100">
+    <main className="h-screen select-none overflow-hidden bg-[#030713] font-[Kanit] text-slate-100">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_18%_10%,rgba(29,78,216,0.14),transparent_30%),radial-gradient(circle_at_88%_8%,rgba(99,102,241,0.12),transparent_24%),linear-gradient(180deg,#071022_0%,#020611_100%)]" />
-      <div className="relative flex min-h-screen flex-col">
+      <div className="relative flex h-screen flex-col overflow-hidden">
         <MonitorHeader now={now} lastUpdated={lastUpdated} onRefresh={loadData} onFullscreen={toggleFullscreen} />
         <section className="mx-auto w-full max-w-[1720px] px-6 pb-1 pt-5">
           <div className="grid gap-4 xl:grid-cols-5">
@@ -167,7 +168,7 @@ function LectureMonitor() {
           {error ? <span className="text-xs text-rose-300">{error}</span> : null}
         </section>
 
-        <section className="mx-auto w-full max-w-[1720px] flex-1 px-6 pb-24">
+        <section className="mx-auto min-h-0 w-full max-w-[1720px] flex-1 overflow-hidden px-6 pb-20">
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
             {pageRooms.map((room) => (
               <RoomCard key={room.id} room={room} now={now} onOpen={() => setSelectedRoomId(room.id)} />
@@ -213,7 +214,7 @@ function mapMonitorRooms(rooms: ApiRoom[], sessions: ApiSession[]) {
       capacity: room.capacity,
       status,
       partyCode: session?.partyCode,
-      speaker: session?.speakerName || session?.speaker?.speakerName,
+      speaker: [session?.speakerName || session?.speaker?.speakerName, session?.speaker2Name].filter(Boolean).join(' / '),
       attendeeCount: session?.attendeeCount || 0,
       scheduledAt: session ? formatOptionalClockTime(session.createdAt) : undefined,
       startedAt: session?.startedAt ? validTimestamp(session.startedAt) : undefined,

@@ -7,11 +7,16 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isAuthRoute = pathname.startsWith('/login');
+  const isPublicDisplayRoute =
+    pathname === '/lecture-monitor' ||
+    pathname.startsWith('/lecture-monitor/') ||
+    pathname === '/information/lecture-room/display' ||
+    pathname.startsWith('/information/lecture-room/display/');
   const isProtectedRoute =
-    pathname.startsWith('/hub') ||
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/information') ||
-    pathname.startsWith('/lecture-monitor');
+    !isPublicDisplayRoute &&
+    (pathname.startsWith('/hub') ||
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/information'));
 
   if (!token && isProtectedRoute) {
     return NextResponse.redirect(new URL('/login', request.url));

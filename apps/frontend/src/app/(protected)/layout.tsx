@@ -18,6 +18,19 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const isPublicDisplayRoute =
+    pathname === '/information/lecture-room/display' ||
+    pathname.startsWith('/information/lecture-room/display/');
+
+  if (isPublicDisplayRoute) {
+    return <div className="h-screen w-screen overflow-hidden bg-slate-950">{children}</div>;
+  }
+
+  return <AuthenticatedLayout>{children}</AuthenticatedLayout>;
+}
+
+function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const router = useRouter();
   const [canSeeAdmin, setCanSeeAdmin] = useState(false);
 

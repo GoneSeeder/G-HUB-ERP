@@ -1,0 +1,1 @@
+ALTER TABLE "BonusCard" ADD COLUMN "recorderTime" TEXT NOT NULL DEFAULT '';

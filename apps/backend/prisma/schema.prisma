@@ -103,6 +103,7 @@ model BonusCard {
   tourIn           String   @default("")
   tourOut          String   @default("")
   recorder         String   @default("")
+  recorderTime     String   @default("")
   comment          String   @default("")
   imageUrl         String?
   nameListCode     String   @default("")
@@ -380,6 +381,9 @@ model LectureSession {
   speakerId     String
   speakerCode   String
   speakerName   String
+  speaker2Id    String?
+  speaker2Code  String   @default("")
+  speaker2Name  String   @default("")
   attendeeCount Int       @default(0)
   status        String    @default("arriving") // "arriving" | "lecturing"
   startedAt     DateTime?
@@ -401,6 +405,9 @@ model LectureHistory {
   speakerId       String
   speakerCode     String
   speakerName     String
+  speaker2Id      String?
+  speaker2Code    String   @default("")
+  speaker2Name    String   @default("")
   attendeeCount   Int      @default(0)
   startedAt       DateTime
   endedAt         DateTime
