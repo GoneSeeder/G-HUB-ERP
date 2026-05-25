@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeftIcon } from '@/components/ui/icons';
+import { useDialog } from '@/components/ui/dialog-provider';
 import { apiFetch } from '@/lib/api';
 
 type LectureRoom = {
@@ -42,6 +43,7 @@ function formatTimer(seconds: number) {
 }
 
 export default function LectureRoomDisplayPage() {
+  const { notify, requestConfirmation } = useDialog();
   const params = useParams();
   const router = useRouter();
   const roomCode = String(params?.roomCode || '');
@@ -84,17 +86,17 @@ export default function LectureRoomDisplayPage() {
       await apiFetch(`/api/lecture-rooms/display/${roomCode}/start`, { method: 'POST' });
       await loadState();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'ไม่สามารถเริ่มการบรรยายได้');
+      notify(err instanceof Error ? err.message : 'ไม่สามารถเริ่มการบรรยายได้', 'error');
     }
   };
 
   const endLecture = async () => {
-    if (!window.confirm('ยืนยันสิ้นสุดการบรรยายรอบนี้หรือไม่?')) return;
+    if (!(await requestConfirmation('ยืนยันสิ้นสุดการบรรยายรอบนี้หรือไม่?'))) return;
     try {
       await apiFetch(`/api/lecture-rooms/display/${roomCode}/end`, { method: 'POST' });
       await loadState();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'ไม่สามารถสิ้นสุดการบรรยายได้');
+      notify(err instanceof Error ? err.message : 'ไม่สามารถสิ้นสุดการบรรยายได้', 'error');
     }
   };
 

@@ -48,6 +48,14 @@ export class UpdateBonusCardDto {
 
   @IsOptional()
   @IsString()
+  tourLeaderName?: string;
+
+  @IsOptional()
+  @IsString()
+  tourLeaderPassport?: string;
+
+  @IsOptional()
+  @IsString()
   partyCode?: string;
 
   @IsOptional()

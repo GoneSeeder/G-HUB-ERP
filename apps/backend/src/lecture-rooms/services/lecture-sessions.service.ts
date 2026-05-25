@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AssignSessionDto } from '../dto/session.dto';
+import { AssignSessionDto, UpdateLectureHistoryDto } from '../dto/session.dto';
 import { LectureRoomGateway } from '../lecture-room.gateway';
 
 @Injectable()
@@ -53,6 +53,9 @@ export class LectureSessionsService {
     });
     if (!room) {
       throw new NotFoundException('ไม่พบข้อมูลห้องบรรยายที่ระบุ');
+    }
+    if (room.status === 'inactive') {
+      throw new BadRequestException('This room is closed for maintenance');
     }
     if (room.activeSession) {
       throw new ConflictException('ห้องบรรยายนี้กำลังมีกิจกรรมอื่นดำเนินอยู่');
@@ -281,5 +284,32 @@ export class LectureSessionsService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  async updateHistory(id: string, dto: UpdateLectureHistoryDto) {
+    const existing = await this.prisma.lectureHistory.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Lecture history item not found');
+    }
+    return this.prisma.lectureHistory.update({
+      where: { id },
+      data: {
+        ...(dto.partyCode !== undefined ? { partyCode: dto.partyCode.trim() } : {}),
+        ...(dto.roomCode !== undefined ? { roomCode: dto.roomCode.trim() } : {}),
+        ...(dto.roomName !== undefined ? { roomName: dto.roomName.trim() } : {}),
+        ...(dto.speakerCode !== undefined ? { speakerCode: dto.speakerCode.trim() } : {}),
+        ...(dto.speakerName !== undefined ? { speakerName: dto.speakerName.trim() } : {}),
+        ...(dto.attendeeCount !== undefined ? { attendeeCount: dto.attendeeCount } : {}),
+      },
+    });
+  }
+
+  async removeHistory(id: string) {
+    const existing = await this.prisma.lectureHistory.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException('Lecture history item not found');
+    }
+    await this.prisma.lectureHistory.delete({ where: { id } });
+    return { message: 'Lecture history item deleted' };
   }
 }

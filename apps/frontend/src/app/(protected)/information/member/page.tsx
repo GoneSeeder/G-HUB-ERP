@@ -1,8 +1,11 @@
 'use client';
 
-import { ChangeEvent, FormEvent, KeyboardEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon, UploadIcon } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
+import { LoadingState } from '@/components/ui/loading-state';
+import { useDialog } from '@/components/ui/dialog-provider';
 import { apiFetch, apiUpload } from '@/lib/api';
 import { preventEnterSubmit } from '@/lib/form-behavior';
 
@@ -147,7 +150,7 @@ const columns = [
   'Phone',
   'เลขบัตรประชาชน',
   'เลข Passport',
-  'รหัสมัคคุเทศน์',
+  'รหัสมัคคุเทศก์',
 ];
 
 const agentColumns = [
@@ -246,10 +249,13 @@ function createEmptyAgentForm(): AgentForm {
 }
 
 export default function MemberPage() {
+  const { requestConfirmation } = useDialog();
   const [activeTab, setActiveTab] = useState<'guides' | 'agents'>('guides');
+  const [memberEnterAnimationDone, setMemberEnterAnimationDone] = useState(false);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [members, setMembers] = useState<MemberItem[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -257,6 +263,7 @@ export default function MemberPage() {
   const [error, setError] = useState<string | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
   const [form, setForm] = useState<MemberForm>(() => createEmptyForm());
   const [currentUserName, setCurrentUserName] = useState('');
 
@@ -277,7 +284,13 @@ export default function MemberPage() {
     loadMembers();
   }, [page, search]);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMemberEnterAnimationDone(true), 800);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const loadMembers = () => {
+    setMembersLoading(true);
     const params = new URLSearchParams({
       page: String(page),
     });
@@ -299,23 +312,34 @@ export default function MemberPage() {
       })
       .catch((loadError) => {
         setError(loadError instanceof Error ? loadError.message : 'Failed to load members.');
+      })
+      .finally(() => {
+        setMembersLoading(false);
       });
   };
 
   const selectedMember = members.find((member) => member.id === selectedId) ?? null;
 
+  const switchMemberTab = (tab: 'guides' | 'agents') => {
+    setMemberEnterAnimationDone(true);
+    setActiveTab(tab);
+  };
+
   const openCreate = async () => {
     setEditingMember(null);
     const nextForm = createEmptyForm(currentUserName);
-    try {
-      const next = await apiFetch<NextGuideCodeResponse>('/api/members/next-guide-code');
-      nextForm.guideCode = next.guideCode;
-    } catch {
-      nextForm.guideCode = generateGuideCode(1);
-    }
     setForm(nextForm);
     setModalError(null);
+    setModalLoading(true);
     setModalOpen(true);
+    try {
+      const next = await apiFetch<NextGuideCodeResponse>('/api/members/next-guide-code');
+      setForm((current) => ({ ...current, guideCode: next.guideCode }));
+    } catch {
+      setForm((current) => ({ ...current, guideCode: generateGuideCode(1) }));
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   const openEdit = () => {
@@ -334,7 +358,10 @@ export default function MemberPage() {
       setError('Please select a member to delete.');
       return;
     }
-    const confirmed = window.confirm(`Delete member "${selectedMember.guideCode}"?`);
+    const confirmed = await requestConfirmation({
+      message: `Delete member "${selectedMember.guideCode}"?`,
+      variant: 'danger',
+    });
     if (!confirmed) {
       return;
     }
@@ -377,6 +404,7 @@ export default function MemberPage() {
     <PageShell className="h-full !max-w-[1216px] gap-4 overflow-hidden">
       {activeTab === 'guides' ? (
         <PageHeader
+        enterAnimation={!memberEnterAnimationDone}
         eyebrow="Master Data · Members"
         title="Members"
         description="Guide information and member profile management."
@@ -396,8 +424,8 @@ export default function MemberPage() {
         />
       ) : null}
       {activeTab === 'guides' ? (
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-          <MemberTabs activeTab={activeTab} onChange={setActiveTab} />
+        <div className={`${memberEnterAnimationDone ? '' : 'erp-controls-enter '}flex shrink-0 flex-wrap items-center justify-between gap-3`}>
+          <MemberTabs activeTab={activeTab} onChange={switchMemberTab} />
           <div className="flex min-w-[360px] flex-1 items-center justify-end gap-3">
             <div className="relative w-full max-w-[520px]">
               <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
@@ -424,7 +452,7 @@ export default function MemberPage() {
         </div>
       ) : null}
 
-      <DataPanel className="flex min-h-0 flex-1 flex-col">
+      <DataPanel enterAnimation={!memberEnterAnimationDone} className="flex min-h-0 flex-1 flex-col">
         <div className="shrink-0 border-b border-slate-200 px-4 py-2 text-sm text-slate-400">
           Showing {members.length} of {total} items
         </div>
@@ -444,7 +472,13 @@ export default function MemberPage() {
               </tr>
             </thead>
             <tbody>
-              {members.length > 0 ? (
+              {membersLoading ? (
+                <tr>
+                  <td colSpan={columns.length + 1} className="px-4 py-8">
+                    <LoadingState label="Loading members..." className="min-h-[220px]" />
+                  </td>
+                </tr>
+              ) : members.length > 0 ? (
                 members.map((member) => {
                   const checked = selectedId === member.id;
 
@@ -528,11 +562,12 @@ export default function MemberPage() {
           }}
           onSubmit={onSubmit}
           saveError={modalError}
+          loading={modalLoading}
         />
       ) : null}
         </div>
       ) : (
-        <AgentManagement onSwitchToGuides={() => setActiveTab('guides')} />
+        <AgentManagement animateEnter={!memberEnterAnimationDone} onSwitchToGuides={() => switchMemberTab('guides')} />
       )}
     </PageShell>
   );
@@ -573,11 +608,13 @@ function MemberTabs({
   );
 }
 
-function AgentManagement({ onSwitchToGuides }: { onSwitchToGuides: () => void }) {
+function AgentManagement({ animateEnter, onSwitchToGuides }: { animateEnter: boolean; onSwitchToGuides: () => void }) {
+  const { requestConfirmation } = useDialog();
   const [search, setSearch] = useState('');
   const [activeStatus, setActiveStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [page, setPage] = useState(1);
   const [agents, setAgents] = useState<AgentItem[]>([]);
+  const [agentsLoading, setAgentsLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -597,6 +634,7 @@ function AgentManagement({ onSwitchToGuides }: { onSwitchToGuides: () => void })
   }, [page, search, activeStatus]);
 
   const loadAgents = () => {
+    setAgentsLoading(true);
     const params = new URLSearchParams({ page: String(page) });
     if (search.trim()) params.set('search', search.trim());
     if (activeStatus !== 'all') params.set('active', activeStatus);
@@ -613,6 +651,9 @@ function AgentManagement({ onSwitchToGuides }: { onSwitchToGuides: () => void })
       })
       .catch((loadError) => {
         setError(loadError instanceof Error ? loadError.message : 'Failed to load agents.');
+      })
+      .finally(() => {
+        setAgentsLoading(false);
       });
   };
 
@@ -641,7 +682,12 @@ function AgentManagement({ onSwitchToGuides }: { onSwitchToGuides: () => void })
       setError('Please select an agent to delete.');
       return;
     }
-    if (!window.confirm(`Delete agent "${selectedAgent.agentCode}"?`)) {
+    if (
+      !(await requestConfirmation({
+        message: `Delete agent "${selectedAgent.agentCode}"?`,
+        variant: 'danger',
+      }))
+    ) {
       return;
     }
     try {
@@ -727,7 +773,8 @@ function AgentManagement({ onSwitchToGuides }: { onSwitchToGuides: () => void })
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
       <PageHeader
-        eyebrow="Master Data ยท Members"
+        enterAnimation={animateEnter}
+        eyebrow="Master Data · Members"
         title="Members"
         description="Guide information and member profile management."
         actions={
@@ -745,7 +792,7 @@ function AgentManagement({ onSwitchToGuides }: { onSwitchToGuides: () => void })
         }
       />
 
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+      <div className={`${animateEnter ? 'erp-controls-enter ' : ''}flex shrink-0 flex-wrap items-center justify-between gap-3`}>
         <MemberTabs activeTab="agents" onChange={(tab) => {
           if (tab === 'guides') {
             onSwitchToGuides();
@@ -770,7 +817,7 @@ function AgentManagement({ onSwitchToGuides }: { onSwitchToGuides: () => void })
               setActiveStatus(event.target.value as 'all' | 'active' | 'inactive');
               setPage(1);
             }}
-            className="form-input h-10 w-36 rounded-md text-sm"
+            className="form-input h-10 !w-32 rounded-md text-sm"
             aria-label="Filter active status"
           >
             <option value="all">All status</option>
@@ -787,7 +834,7 @@ function AgentManagement({ onSwitchToGuides }: { onSwitchToGuides: () => void })
         </div>
       ) : null}
 
-      <DataPanel className="flex min-h-0 flex-1 flex-col">
+      <DataPanel enterAnimation={animateEnter} className="flex min-h-0 flex-1 flex-col">
         <div className="shrink-0 border-b border-slate-200 px-4 py-2 text-sm text-slate-400">
           Showing {agents.length} of {total} items
         </div>
@@ -804,7 +851,13 @@ function AgentManagement({ onSwitchToGuides }: { onSwitchToGuides: () => void })
               </tr>
             </thead>
             <tbody>
-              {agents.length > 0 ? (
+              {agentsLoading ? (
+                <tr>
+                  <td colSpan={agentColumns.length + 1} className="px-4 py-8">
+                    <LoadingState label="Loading agents..." className="min-h-[220px]" />
+                  </td>
+                </tr>
+              ) : agents.length > 0 ? (
                 agents.map((agent) => {
                   const checked = selectedId === agent.id;
                   return (
@@ -904,6 +957,7 @@ function MemberModal({
   onClose,
   onSubmit,
   saveError,
+  loading,
 }: {
   title: string;
   form: MemberForm;
@@ -911,9 +965,11 @@ function MemberModal({
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>, overrideForm?: MemberForm) => Promise<void>;
   saveError: string | null;
+  loading?: boolean;
 }) {
   const [lookupStatus, setLookupStatus] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
 
   const fullNameTh = useMemo(
     () => [form.titleTh, form.firstNameTh, form.lastNameTh].filter(Boolean).join(' '),
@@ -923,6 +979,11 @@ function MemberModal({
     () => [form.titleEn, form.firstNameEn, form.lastNameEn].filter(Boolean).join(' '),
     [form.titleEn, form.firstNameEn, form.lastNameEn],
   );
+  const imageSrc = form.imageUrl && !imageLoadFailed ? getImageSrc(form.imageUrl) : '';
+
+  useEffect(() => {
+    setImageLoadFailed(false);
+  }, [form.imageUrl]);
 
   const setField = (key: keyof MemberForm, value: string) => {
     const nextForm = {
@@ -1043,8 +1104,13 @@ function MemberModal({
       <form
         onSubmit={handleSubmit}
         onKeyDown={preventEnterSubmit}
-        className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
+        className="relative max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur"
       >
+        {loading ? (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
+            <LoadingState label="Preparing member form..." className="min-h-0" />
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <div>
             <h2 className="text-[24px] font-semibold leading-tight text-slate-950">{title}</h2>
@@ -1070,10 +1136,15 @@ function MemberModal({
           <aside className="space-y-4">
             <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
               <div className="flex h-52 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white text-sm text-slate-400">
-                {form.imageUrl ? (
-                  <img src={getImageSrc(form.imageUrl)} alt="" className="h-full w-full object-cover" />
+                {imageSrc ? (
+                  <img
+                    src={imageSrc}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    onError={() => setImageLoadFailed(true)}
+                  />
                 ) : (
-                  <span>No image data</span>
+                  <span>{form.imageUrl ? 'Image unavailable' : 'No image data'}</span>
                 )}
               </div>
               <p className="mt-3 text-xs leading-5 text-slate-500">
@@ -1534,26 +1605,126 @@ function SelectField({
   required?: boolean;
 }) {
   return (
-    <label className="space-y-2">
+    <CustomDropdown
+      label={label}
+      value={value}
+      options={options.map((option) => (typeof option === 'string' ? { value: option, label: option } : option))}
+      onChange={onChange}
+      required={required}
+    />
+  );
+}
+
+function CustomDropdown({
+  label,
+  value,
+  options,
+  onChange,
+  required = false,
+  placeholder = 'Please select',
+}: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLLabelElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuRect, setMenuRect] = useState({ left: 0, top: 0, width: 0 });
+  const selected = options.find((option) => option.value === value);
+
+  const updateMenuRect = () => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMenuRect({
+      left: rect.left,
+      top: rect.bottom + 4,
+      width: rect.width,
+    });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    updateMenuRect();
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (!wrapperRef.current?.contains(target) && !menuRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
+    const updateOnViewportChange = () => updateMenuRect();
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    window.addEventListener('resize', updateOnViewportChange);
+    window.addEventListener('scroll', updateOnViewportChange, true);
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick);
+      window.removeEventListener('resize', updateOnViewportChange);
+      window.removeEventListener('scroll', updateOnViewportChange, true);
+    };
+  }, [open]);
+
+  return (
+    <label ref={wrapperRef} className="relative block space-y-2">
       <span className="text-sm font-semibold text-slate-700">
         {label}
         {required ? <span className="ml-1 text-red-500">*</span> : null}
       </span>
-      <select
-        required={required}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="form-input rounded-md"
+      <button
+        ref={buttonRef}
+        type="button"
+        className="form-input flex w-full items-center justify-between rounded-md border-[#9bc0ff] bg-white px-3 text-left shadow-[0_0_0_1px_rgba(96,165,250,0.16)] transition hover:border-[#6aa5ff] focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.16)]"
+        onClick={() => {
+          updateMenuRect();
+          setOpen((current) => !current);
+        }}
       >
-        {options.map((option) => {
-          const normalized = typeof option === 'string' ? { value: option, label: option } : option;
-          return (
-          <option key={normalized.value} value={normalized.value}>
-            {normalized.label}
-          </option>
-          );
-        })}
-      </select>
+        <span className={selected ? 'truncate text-slate-950' : 'truncate text-slate-400'}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <span className="ml-2 shrink-0 text-[10px] text-slate-400" aria-hidden="true">
+          โ–พ
+        </span>
+      </button>
+      {open
+        ? createPortal(
+        <div
+          ref={menuRef}
+          style={{ left: menuRect.left, top: menuRect.top, width: menuRect.width }}
+          className="fixed z-[9999] overflow-hidden rounded-md border border-slate-200 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
+        >
+          <div className="max-h-[220px] overflow-y-auto py-1 [scrollbar-color:#8b929c_transparent] [scrollbar-width:auto]">
+            {options.length ? (
+              options.map((option) => {
+                const isSelected = option.value === value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`flex h-9 w-full items-center gap-1 px-3 text-left text-[13px] text-slate-950 hover:bg-[#eaf2ff] ${
+                      isSelected ? 'bg-[#eaf2ff]' : 'bg-white'
+                    }`}
+                    onClick={() => {
+                      onChange(option.value);
+                      setOpen(false);
+                    }}
+                  >
+                    {option.value ? <span className="shrink-0 font-bold">{option.value}</span> : null}
+                    {option.label !== option.value ? <span className="truncate">{option.value ? `- ${option.label}` : option.label}</span> : null}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="px-3 py-3 text-sm text-slate-400">No results</div>
+            )}
+          </div>
+        </div>,
+        document.body,
+      )
+        : null}
     </label>
   );
 }

@@ -16,7 +16,9 @@ import { mkdirSync } from 'fs';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { Request } from 'express';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireAppAccess } from '../auth/decorators/app-access.decorator';
+import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { AppAccessGuard } from '../auth/guards/app-access.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { BonusCardsService } from './bonus-cards.service';
@@ -46,8 +48,8 @@ export class BonusCardsController {
   }
 
   @Post()
-  create(@Body() body: CreateBonusCardDto) {
-    return this.bonusCardsService.create(body);
+  create(@Body() body: CreateBonusCardDto, @CurrentUser() user: AuthUser) {
+    return this.bonusCardsService.create(body, this.recorderName(user));
   }
 
   @Post('images')
@@ -76,8 +78,8 @@ export class BonusCardsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: UpdateBonusCardDto) {
-    return this.bonusCardsService.update(id, body);
+  update(@Param('id') id: string, @Body() body: UpdateBonusCardDto, @CurrentUser() user: AuthUser) {
+    return this.bonusCardsService.update(id, body, this.recorderName(user));
   }
 
   @Delete(':id')
@@ -92,5 +94,9 @@ export class BonusCardsController {
       request.on('end', () => resolve(Buffer.concat(chunks)));
       request.on('error', reject);
     });
+  }
+
+  private recorderName(user: AuthUser) {
+    return user.name || user.username || '';
   }
 }

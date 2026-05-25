@@ -24,8 +24,36 @@ export class NameListsController {
   constructor(private readonly nameListsService: NameListsService) {}
 
   @Get()
-  findAll(@Query('search') search?: string) {
-    return this.nameListsService.findAll({ search });
+  findAll(
+    @Query('search') search?: string,
+    @Query('partyCode') partyCode?: string,
+    @Query('agentCode') agentCode?: string,
+    @Query('passport') passport?: string,
+    @Query('busCode') busCode?: string,
+    @Query('arriveDate') arriveDate?: string,
+    @Query('excludeLinked') excludeLinked?: string,
+    @Query('currentBonusCardId') currentBonusCardId?: string,
+  ) {
+    return this.nameListsService.findAll({
+      search,
+      partyCode,
+      agentCode,
+      passport,
+      busCode,
+      arriveDate,
+      excludeLinked: excludeLinked === 'true',
+      currentBonusCardId,
+    });
+  }
+
+  @Get('next-code')
+  nextCode(@Query('date') date?: string) {
+    return this.nameListsService.nextCode(date);
+  }
+
+  @Get('meta/next-code')
+  nextCodeMeta(@Query('date') date?: string) {
+    return this.nameListsService.nextCode(date);
   }
 
   @Get(':id')

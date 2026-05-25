@@ -15,6 +15,7 @@ export class LectureRoomsService {
   async findOne(id: string) {
     const room = await this.prisma.lectureRoom.findUnique({
       where: { id },
+      include: { activeSession: true },
     });
     if (!room) {
       throw new NotFoundException('ไม่พบข้อมูลห้องบรรยายที่ระบุ');
@@ -40,13 +41,17 @@ export class LectureRoomsService {
   }
 
   async update(id: string, dto: UpdateRoomDto) {
-    await this.ensureExists(id);
+    const room = await this.ensureExists(id);
+    if (dto.status === 'inactive' && room.activeSession) {
+      throw new BadRequestException('Cannot set a room with an active lecture session to maintenance');
+    }
 
     return this.prisma.lectureRoom.update({
       where: { id },
       data: {
         ...(dto.roomName !== undefined ? { roomName: dto.roomName.trim() } : {}),
         ...(dto.capacity !== undefined ? { capacity: dto.capacity } : {}),
+        ...(dto.status !== undefined ? { status: dto.status } : {}),
       },
     });
   }
@@ -62,9 +67,11 @@ export class LectureRoomsService {
   private async ensureExists(id: string) {
     const room = await this.prisma.lectureRoom.findUnique({
       where: { id },
+      include: { activeSession: true },
     });
     if (!room) {
       throw new NotFoundException('ไม่พบข้อมูลห้องบรรยายที่ระบุ');
     }
+    return room;
   }
 }

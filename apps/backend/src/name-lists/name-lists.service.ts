@@ -14,6 +14,13 @@ import { UpdateNameListDto } from './dto/update-name-list.dto';
 
 type NameListFilters = {
   search?: string;
+  partyCode?: string;
+  agentCode?: string;
+  passport?: string;
+  busCode?: string;
+  arriveDate?: string;
+  excludeLinked?: boolean;
+  currentBonusCardId?: string;
 };
 
 type ColumnMap = Partial<Record<keyof NameListItemDto | 'englishName' | 'englishSurname' | 'englishGiven' | 'chineseName' | 'remark', number>>;
@@ -42,22 +49,54 @@ export class NameListsService {
 
   async findAll(filters: NameListFilters = {}) {
     const contains = filters.search?.trim();
+    const andFilters: Prisma.NameListWhereInput[] = [];
+    if (contains) {
+      andFilters.push({
+        OR: [
+          { code: { contains, mode: 'insensitive' } },
+          { partyCode: { contains, mode: 'insensitive' } },
+          { agentCode: { contains, mode: 'insensitive' } },
+          { agentName: { contains, mode: 'insensitive' } },
+          { guideCode: { contains, mode: 'insensitive' } },
+          { guideName: { contains, mode: 'insensitive' } },
+          { nationCode: { contains, mode: 'insensitive' } },
+          { nationName: { contains, mode: 'insensitive' } },
+          { sourceFile: { contains, mode: 'insensitive' } },
+          { busCode: { contains, mode: 'insensitive' } },
+          { items: { some: { passportNo: { contains, mode: 'insensitive' } } } },
+        ],
+      });
+    }
+    if (filters.partyCode?.trim()) {
+      andFilters.push({ partyCode: { contains: filters.partyCode.trim(), mode: 'insensitive' } });
+    }
+    if (filters.agentCode?.trim()) {
+      andFilters.push({ agentCode: { contains: filters.agentCode.trim(), mode: 'insensitive' } });
+    }
+    if (filters.passport?.trim()) {
+      andFilters.push({ items: { some: { passportNo: { contains: filters.passport.trim(), mode: 'insensitive' } } } });
+    }
+    if (filters.busCode?.trim()) {
+      andFilters.push({ busCode: { contains: filters.busCode.trim(), mode: 'insensitive' } });
+    }
+    if (filters.arriveDate?.trim()) {
+      andFilters.push({ arriveDate: this.toDateOrNull(filters.arriveDate.trim()) });
+    }
+    if (filters.excludeLinked) {
+      const linkedRows = await this.prisma.bonusCard.findMany({
+        where: {
+          nameListCode: { not: '' },
+          ...(filters.currentBonusCardId ? { id: { not: filters.currentBonusCardId } } : {}),
+        },
+        select: { nameListCode: true },
+      });
+      const linkedCodes = [...new Set(linkedRows.map((row) => row.nameListCode).filter(Boolean))];
+      if (linkedCodes.length > 0) {
+        andFilters.push({ code: { notIn: linkedCodes } });
+      }
+    }
     const rows = await this.prisma.nameList.findMany({
-      where: contains
-        ? {
-            OR: [
-              { code: { contains, mode: 'insensitive' } },
-              { partyCode: { contains, mode: 'insensitive' } },
-              { agentCode: { contains, mode: 'insensitive' } },
-              { agentName: { contains, mode: 'insensitive' } },
-              { guideCode: { contains, mode: 'insensitive' } },
-              { guideName: { contains, mode: 'insensitive' } },
-              { nationCode: { contains, mode: 'insensitive' } },
-              { nationName: { contains, mode: 'insensitive' } },
-              { sourceFile: { contains, mode: 'insensitive' } },
-            ],
-          }
-        : undefined,
+      where: andFilters.length ? { AND: andFilters } : undefined,
       include: {
         items: {
           orderBy: [{ itemNo: 'asc' }, { createdAt: 'asc' }],
@@ -83,6 +122,27 @@ export class NameListsService {
       throw new NotFoundException(`Name list "${id}" not found`);
     }
     return this.toResponse(row);
+  }
+
+  async nextCode(date = this.todayText()) {
+    const year = date.slice(2, 4);
+    const month = date.slice(5, 7);
+    const prefix = `GEI-N-L${year}${month}`;
+    const rows = await this.prisma.nameList.findMany({
+      where: { code: { startsWith: prefix } },
+      select: { code: true },
+    });
+    const used = new Set(
+      rows
+        .map((row) => Number(row.code.slice(prefix.length)))
+        .filter((value) => Number.isInteger(value) && value >= 1 && value <= 9999),
+    );
+    for (let index = 1; index <= 9999; index += 1) {
+      if (!used.has(index)) {
+        return { code: `${prefix}${String(index).padStart(4, '0')}` };
+      }
+    }
+    throw new BadRequestException(`Name list code sequence for ${year}/${month} is full`);
   }
 
   async create(dto: CreateNameListDto) {
@@ -242,6 +302,8 @@ export class NameListsService {
       isLeader: item.isLeader ?? false,
       agentCode: item.agentCode ?? '',
       code: item.code ?? '',
+      guideCode: item.guideCode ?? '',
+      guideName: item.guideName ?? '',
       arriveDate: this.toDateOrNull(item.arriveDate),
       passportNo: item.passportNo ?? '',
       firstName: item.firstName ?? '',
@@ -375,6 +437,12 @@ export class NameListsService {
   }
 
   private headerScore(header: string) {
+    if (/(?:\u5e8f\u53f7|\u7f16\u53f7|no|item)/.test(header)) return 2;
+    if (/(?:\u62a4\u7167|\u8b77\u7167|passport)/.test(header)) return 3;
+    if (/(?:\u82f1\u6587|\u4e2d\u6587|\u59d3\u540d|name)/.test(header)) return 2;
+    if (/(?:\u51fa\u751f|birth)/.test(header)) return 2;
+    if (/(?:\u6027[\u522b\u5225]|gender|sex)/.test(header)) return 1;
+    if (/(?:\u5e74\u9f84|\u5e74\u9f61|age)/.test(header)) return 1;
     if (!header) return 0;
     if (/序号|no|item/.test(header)) return 2;
     if (/护照|passport/.test(header)) return 3;
@@ -415,6 +483,24 @@ export class NameListsService {
     map.passportNo = find(/护照号|passport/);
     map.province = find(/签发地|province/);
     map.remark = find(/备注|remark|note/);
+
+    map.itemNo ??= find(/(?:\u5e8f\u53f7|\u7f16\u53f7)|^no\.?$|^item$/);
+    map.chineseName ??= find(/(?:\u4e2d\u6587.*\u59d3\u540d|\u5ba2\u6237.*\u59d3\u540d|\u59d3\u540d)/);
+    map.englishSurname ??= find(/(?:\u62a4\u7167)?\u82f1\u6587.*(?:\u59d3|surname)|surname|last/);
+    map.englishGiven ??= find(/(?:\u62a4\u7167)?\u82f1\u6587.*(?:\u540d|given|first)|given|first/);
+    if (map.englishSurname !== undefined && map.englishGiven === map.englishSurname) {
+      map.englishGiven = undefined;
+    }
+    map.englishName ??= map.englishSurname === undefined
+      ? find(/(?:\u62a4\u7167)?\u82f1\u6587.*\u59d3?\u540d|english.*name|name/)
+      : undefined;
+    map.birthDate ??= find(/(?:\u51fa\u751f.*(?:\u65e5\u671f|\u5e74|\u6708)|birth)/);
+    map.age ??= find(/(?:\u5e74\u9f84|\u5e74\u9f61|age)/);
+    map.gender ??= find(/(?:\u6027[\u522b\u5225]|gender|sex)/);
+    map.location ??= find(/(?:\u51fa\u751f\u5730|birth.*place)/);
+    map.passportNo ??= find(/(?:\u62a4\u7167.*(?:\u53f7\u7801|\u53f7)|\u8b77\u7167.*(?:\u865f\u78bc|\u865f)|passport)/);
+    map.province ??= find(/(?:\u7b7e\u53d1\u5730|\u7c3d\u767c\u5730|province)/);
+    map.remark ??= find(/(?:\u5907\u6ce8|\u5099\u8a3b|remark|note)/);
 
     return Object.fromEntries(
       Object.entries(map).filter(([, value]) => value !== undefined),
@@ -569,6 +655,8 @@ export class NameListsService {
   }
 
   private normalizeGender(value: string) {
+    if (/^\u7537$/.test(value.trim())) return 'M';
+    if (/^\u5973$/.test(value.trim())) return 'F';
     if (/^m$|男|male/i.test(value)) return 'M';
     if (/^f$|女|female/i.test(value)) return 'F';
     return value.trim();
@@ -607,9 +695,25 @@ export class NameListsService {
     if (dateOnly) {
       return `${dateOnly[1]}-${dateOnly[2].padStart(2, '0')}-${dateOnly[3].padStart(2, '0')}`;
     }
+    const dateTime = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+\d{1,2}:\d{2}(?::\d{2})?/);
+    if (dateTime) {
+      return `${dateTime[1]}-${dateTime[2].padStart(2, '0')}-${dateTime[3].padStart(2, '0')}`;
+    }
     const thaiStyle = text.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
     if (thaiStyle) {
       return `${thaiStyle[3]}-${thaiStyle[2].padStart(2, '0')}-${thaiStyle[1].padStart(2, '0')}`;
+    }
+    const shortSlashDate = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+    if (shortSlashDate) {
+      const first = Number(shortSlashDate[1]);
+      const second = Number(shortSlashDate[2]);
+      const year = Number(shortSlashDate[3]);
+      const fullYear = year >= 30 ? 1900 + year : 2000 + year;
+      const month = first > 12 ? second : first;
+      const day = first > 12 ? first : second;
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        return `${fullYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
     }
     return '';
   }

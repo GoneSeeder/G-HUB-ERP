@@ -1,7 +1,9 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
+  CalendarIcon,
   CheckIcon,
   EditIcon,
   PlusIcon,
@@ -12,6 +14,7 @@ import {
   XIcon,
 } from '@/components/ui/icons';
 import { PageHeader, PageShell } from '@/components/ui/page-shell';
+import { useDialog } from '@/components/ui/dialog-provider';
 import { apiFetch } from '@/lib/api';
 import { preventEnterSubmit } from '@/lib/form-behavior';
 
@@ -21,6 +24,8 @@ type NameListItem = {
   isLeader: boolean;
   agentCode: string;
   code: string;
+  guideCode: string;
+  guideName: string;
   arriveDate: string;
   passportNo: string;
   firstName: string;
@@ -84,6 +89,20 @@ type ImportResult = {
   nameList: NameList;
 };
 
+type NextNameListCodeResponse = {
+  code: string;
+};
+
+type GuideLookup = {
+  guideCode: string;
+  fullName: string;
+  fullNameTh: string;
+  firstNameEn?: string;
+  lastNameEn?: string;
+  firstNameTh?: string;
+  lastNameTh?: string;
+};
+
 const importColumnOptions = [
   { key: 'itemNo', label: 'ลำดับ' },
   { key: 'chineseName', label: 'ชื่อจีน' },
@@ -108,6 +127,8 @@ const emptyItem = (itemNo: number): NameListItem => ({
   isLeader: false,
   agentCode: '',
   code: '',
+  guideCode: '',
+  guideName: '',
   arriveDate: '',
   passportNo: '',
   firstName: '',
@@ -159,6 +180,7 @@ const itemColumns: Array<{ key: keyof NameListItem; label: string; width: string
 ];
 
 export default function NameListPage() {
+  const { requestConfirmation } = useDialog();
   const [rows, setRows] = useState<NameList[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -184,7 +206,6 @@ export default function NameListPage() {
         row.guideName,
         row.nationCode,
         row.nationName,
-        row.sourceFile,
       ]
         .join(' ')
         .toLowerCase()
@@ -209,7 +230,15 @@ export default function NameListPage() {
   }, []);
 
   const deleteSelected = async () => {
-    if (!selected || !window.confirm(`Delete name list "${selected.code}"?`)) return;
+    if (
+      !selected ||
+      !(await requestConfirmation({
+        message: `Delete name list "${selected.code}"?`,
+        variant: 'danger',
+      }))
+    ) {
+      return;
+    }
     await apiFetch(`/api/name-lists/${selected.id}`, { method: 'DELETE' });
     setMessage('Name list deleted.');
     setSelectedId(null);
@@ -246,13 +275,13 @@ export default function NameListPage() {
         }
       />
 
-      <div className="erp-slide-left shrink-0 rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
+      <div className="erp-controls-enter shrink-0 rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
         <div className="relative">
           <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search code, party code, agent, guide, nation, source file..."
+            placeholder="Search code, party code, agent, guide, nation..."
             className="form-input rounded-md pl-11"
           />
         </div>
@@ -261,7 +290,7 @@ export default function NameListPage() {
       </div>
 
       <div className="grid min-h-0 flex-1 gap-3 overflow-hidden xl:grid-cols-[240px_minmax(0,1fr)] 2xl:grid-cols-[250px_minmax(0,1fr)]">
-        <aside className="erp-slide-right min-h-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
+        <aside className="erp-content-enter min-h-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.06)]">
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
             <div>
               <h2 className="text-base font-semibold text-slate-950">Manifests</h2>
@@ -339,7 +368,6 @@ export default function NameListPage() {
               <DetailField label="Guide" value={selected ? `${selected.guideCode || '-'} ${selected.guideName || ''}` : ''} />
               <DetailField label="Agent" value={selected ? `${selected.agentCode || '-'} ${selected.agentName || ''}` : ''} wide />
               <DetailField label="Country / Province" value={selected ? `${selected.country || '-'} ${selected.province || ''}` : ''} />
-              <DetailField label="Source File" value={selected?.sourceFile} />
             </div>
           </section>
 
@@ -456,7 +484,12 @@ function DataPanel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="min-h-0 overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_14px_38px_rgba(15,23,42,0.06)]">
+    <motion.section
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.15 }}
+      className="min-h-0 overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-[0_14px_38px_rgba(15,23,42,0.06)]"
+    >
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <div>
           <h2 className="text-base font-semibold text-slate-950">{title}</h2>
@@ -464,7 +497,7 @@ function DataPanel({
         </div>
       </div>
       <div className="h-[calc(100%-3.75rem)] overflow-auto">{children}</div>
-    </section>
+    </motion.section>
   );
 }
 
@@ -489,10 +522,7 @@ function ImportNameListModal({
 
   useEffect(() => {
     apiFetch<AgentOption[]>('/api/agents/options')
-      .then((data) => {
-        setAgents(data);
-        setAgentCode((current) => current || data[0]?.agentCode || '');
-      })
+      .then((data) => setAgents(data))
       .catch((loadError) => {
         setLocalError(loadError instanceof Error ? loadError.message : 'Load agents failed.');
       });
@@ -579,8 +609,8 @@ function ImportNameListModal({
             <div className="grid gap-3 lg:grid-cols-[minmax(260px,1.5fr)_minmax(160px,1fr)_minmax(220px,1.2fr)_160px]">
               <label>
                 <span className="text-xs font-semibold text-slate-700">Excel File</span>
-                <span className="mt-1 flex h-10 cursor-pointer items-center gap-2 rounded-md border border-sky-200 bg-white px-2.5 text-sm text-slate-700 transition hover:border-[#1478ff]">
-                  <span className="shrink-0 rounded border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                <span className="mt-1 flex h-8 cursor-pointer items-center gap-2 rounded-md border border-sky-200 bg-white px-2.5 text-sm text-slate-700 transition hover:border-[#1478ff]">
+                  <span className="shrink-0 rounded border border-slate-200 bg-slate-50 px-2.5 py-[2.5px] text-xs font-semibold text-slate-700">
                     Choose File
                   </span>
                   <span className="min-w-0 flex-1 truncate text-slate-500">
@@ -785,7 +815,7 @@ function AgentCombobox({
 
   return (
     <label className="relative">
-      <span className="text-xs font-semibold text-slate-700">Agent</span>
+      <span className="text-xs font-semibold text-slate-700">Agent Code</span>
       <div className="relative mt-1">
         <input
           value={query}
@@ -851,9 +881,91 @@ function NameListModal({
   onError: (message: string | null) => void;
 }) {
   const [form, setForm] = useState<FormState>(() => (initial ? { ...initial } : emptyForm()));
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiFetch<AgentOption[]>('/api/agents/options')
+      .then((data) => setAgents(data))
+      .catch(() => setAgents([]));
+  }, []);
+
+  useEffect(() => {
+    if (mode !== 'add') return;
+    const applyGeneratedCode = (code: string) => {
+      setForm((current) => ({
+        ...current,
+        code,
+        partyCode: code,
+      }));
+      setLocalError(null);
+    };
+    const fallbackNextCode = async () => {
+      const data = await apiFetch<NameList[]>('/api/name-lists');
+      applyGeneratedCode(nextNameListCodeFromRows(data));
+    };
+    apiFetch<NextNameListCodeResponse>('/api/name-lists/meta/next-code')
+      .then((data) => {
+        applyGeneratedCode(data.code);
+      })
+      .catch(() => {
+        void fallbackNextCode().catch((loadError) => {
+          setLocalError(loadError instanceof Error ? loadError.message : 'Generate name list code failed.');
+        });
+      });
+  }, [mode]);
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const guideDisplayName = (guide: GuideLookup) => {
+    const fullName = guide.fullName?.trim();
+    if (fullName) return fullName;
+    const englishName = [guide.firstNameEn, guide.lastNameEn].map((value) => value?.trim()).filter(Boolean).join(' ');
+    const thaiName = [guide.firstNameTh, guide.lastNameTh].map((value) => value?.trim()).filter(Boolean).join(' ');
+    if (englishName && thaiName) return `${englishName} (${thaiName})`;
+    return englishName || thaiName || guide.fullNameTh || guide.guideCode;
+  };
+
+  const mapGuide = async (code: string, index?: number) => {
+    const normalizedCode = code.trim();
+    if (!normalizedCode) {
+      if (index === undefined) {
+        setForm((current) => ({ ...current, guideCode: '', guideName: '' }));
+      } else {
+        setItem(index, 'guideCode', '');
+        setItem(index, 'guideName', '');
+      }
+      return;
+    }
+    try {
+      const result = await apiFetch<{ items: GuideLookup[] }>(`/api/members?page=1&search=${encodeURIComponent(normalizedCode)}`);
+      const guide = result.items.find((item) => item.guideCode.toLowerCase() === normalizedCode.toLowerCase());
+      const guideName = guide ? guideDisplayName(guide) : '';
+      if (index === undefined) {
+        setForm((current) => ({ ...current, guideCode: normalizedCode, guideName }));
+      } else {
+        setItem(index, 'guideCode', normalizedCode);
+        setItem(index, 'guideName', guideName);
+      }
+    } catch {
+      if (index === undefined) {
+        setForm((current) => ({ ...current, guideCode: normalizedCode }));
+      } else {
+        setItem(index, 'guideCode', normalizedCode);
+      }
+    }
+  };
+
+  const setAgentCode = (agentCode: string) => {
+    const selectedAgent = agents.find((agent) => agent.agentCode === agentCode);
+    setForm((current) => ({
+      ...current,
+      agentCode,
+      agentName: selectedAgent?.name ?? '',
+      items: current.items.map((item) => ({ ...item, agentCode })),
+    }));
   };
 
   const setItem = <K extends keyof NameListItem>(
@@ -870,9 +982,24 @@ function NameListModal({
   };
 
   const addItem = () => {
+    if (!form.agentCode.trim()) {
+      setLocalError('Please select Agent Code before adding item.');
+      return;
+    }
+    setLocalError(null);
     setForm((current) => ({
       ...current,
-      items: [...current.items, emptyItem(current.items.length + 1)],
+      items: [
+        ...current.items,
+        {
+          ...emptyItem(current.items.length + 1),
+          agentCode: current.agentCode,
+          code: current.partyCode,
+          arriveDate: current.arriveDate,
+          guideCode: current.guideCode,
+          guideName: current.guideName,
+        },
+      ],
       pax: current.items.length + 1,
     }));
   };
@@ -891,10 +1018,14 @@ function NameListModal({
     onError(null);
     const body = JSON.stringify({
       ...form,
-      pax: Number(form.pax) || form.items.length,
+      pax: form.items.length,
+      sourceFile: undefined,
       items: form.items.map((item, index) => ({
         ...item,
+        agentCode: form.agentCode,
+        code: form.partyCode,
         itemNo: Number(item.itemNo) || index + 1,
+        birthDate: completeDateInput(item.birthDate),
         age: item.age === null || item.age === undefined ? undefined : Number(item.age),
       })),
     });
@@ -935,21 +1066,21 @@ function NameListModal({
             <h3 className="text-xs font-semibold uppercase text-slate-500">Namelist Main</h3>
             <div className="mt-2 grid gap-x-2.5 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-6">
               <Field label="Code" value={form.code} onChange={(value) => setField('code', value)} required />
-              <Field label="Party Code" value={form.partyCode} onChange={(value) => setField('partyCode', value)} />
+              <Field label="Party Code" value={form.partyCode} onChange={(value) => setField('partyCode', value)} readOnly={mode === 'add'} />
               <Field label="Arrive Date" type="date" value={form.arriveDate} onChange={(value) => setField('arriveDate', value)} />
               <Field label="Depart Date" type="date" value={form.departDate} onChange={(value) => setField('departDate', value)} />
-              <Field label="Agent Code" value={form.agentCode} onChange={(value) => setField('agentCode', value)} />
-              <Field label="Pax" type="number" value={String(form.pax)} onChange={(value) => setField('pax', value === '' ? '' : Number(value))} />
-              <Field label="Agent Name" value={form.agentName} onChange={(value) => setField('agentName', value)} wide />
-              <Field label="Guide Code" value={form.guideCode} onChange={(value) => setField('guideCode', value)} />
-              <Field label="Guide Name" value={form.guideName} onChange={(value) => setField('guideName', value)} wide />
               <Field label="Bus Code" value={form.busCode} onChange={(value) => setField('busCode', value)} />
+              <Field label="Pax" type="number" value={String(form.items.length)} onChange={() => undefined} readOnly />
+              <AgentCombobox agents={agents} value={form.agentCode} onChange={setAgentCode} />
+              <Field label="Agent Name" value={form.agentName} onChange={(value) => setField('agentName', value)} wide readOnly />
+              <Field label="Guide Code" value={form.guideCode} onChange={(value) => setField('guideCode', value)} onBlur={() => mapGuide(form.guideCode)} onEnter={() => mapGuide(form.guideCode)} />
+              <Field label="Guide Name" value={form.guideName} onChange={(value) => setField('guideName', value)} wide readOnly />
               <Field label="Nation" value={form.nationCode} onChange={(value) => setField('nationCode', value)} />
               <Field label="Nation Name" value={form.nationName} onChange={(value) => setField('nationName', value)} />
               <Field label="Country" value={form.country} onChange={(value) => setField('country', value)} />
               <Field label="Province" value={form.province} onChange={(value) => setField('province', value)} />
-              <Field label="Source File" value={form.sourceFile} onChange={(value) => setField('sourceFile', value)} wide />
             </div>
+            {localError ? <p className="mt-2 text-sm font-semibold text-red-700">{localError}</p> : null}
           </section>
 
           <section className="min-h-0 overflow-hidden rounded-[8px] border border-slate-200">
@@ -960,25 +1091,29 @@ function NameListModal({
               </button>
             </div>
             <div className="h-[calc(100%-3.5rem)] overflow-auto">
-              <table className="w-full min-w-[1180px] border-collapse text-[13px]">
+              <table className="w-full table-fixed border-collapse text-[12px]">
                 <thead className="sticky top-0 z-10 bg-white">
                   <tr>
-                    <th className="w-20 border-b border-slate-200 px-2 py-1.5 text-left text-[11px] font-semibold uppercase text-slate-400">No.</th>
-                    <th className="w-16 border-b border-slate-200 px-2 py-1.5 text-left text-[11px] font-semibold uppercase text-slate-400">Leader</th>
-                    <th className="border-b border-slate-200 px-2 py-1.5 text-left text-[11px] font-semibold uppercase text-slate-400">Passport</th>
-                    <th className="border-b border-slate-200 px-2 py-1.5 text-left text-[11px] font-semibold uppercase text-slate-400">First Name</th>
-                    <th className="border-b border-slate-200 px-2 py-1.5 text-left text-[11px] font-semibold uppercase text-slate-400">Last Name</th>
-                    <th className="border-b border-slate-200 px-2 py-1.5 text-left text-[11px] font-semibold uppercase text-slate-400">Birth Date</th>
-                    <th className="border-b border-slate-200 px-2 py-1.5 text-left text-[11px] font-semibold uppercase text-slate-400">Gender</th>
-                    <th className="border-b border-slate-200 px-2 py-1.5 text-left text-[11px] font-semibold uppercase text-slate-400">Age</th>
-                    <th className="border-b border-slate-200 px-2 py-1.5 text-left text-[11px] font-semibold uppercase text-slate-400">Province</th>
-                    <th className="border-b border-slate-200 px-2 py-1.5" />
+                    <th className="w-[3.2%] border-b border-slate-200 px-1 py-1.5 text-left text-[10px] font-semibold uppercase text-slate-400">No.</th>
+                    <th className="w-[3.4%] border-b border-slate-200 px-1 py-1.5 text-center text-[10px] font-semibold uppercase text-slate-400">Leader</th>
+                    <th className="w-[6.2%] border-b border-slate-200 px-1 py-1.5 text-left text-[10px] font-semibold uppercase text-slate-400">รหัส Agent</th>
+                    <th className="w-[9.8%] border-b border-slate-200 px-1 py-1.5 text-left text-[10px] font-semibold uppercase text-slate-400">รหัส</th>
+                    <th className="w-[6.2%] border-b border-slate-200 px-1 py-1.5 text-left text-[10px] font-semibold uppercase text-slate-400">Guide Code</th>
+                    <th className="w-[11.5%] border-b border-slate-200 px-1 py-1.5 text-left text-[10px] font-semibold uppercase text-slate-400">Guide Name</th>
+                    <th className="w-[9.3%] border-b border-slate-200 px-1 py-1.5 text-left text-[10px] font-semibold uppercase text-slate-400">Passport</th>
+                    <th className="w-[10.4%] border-b border-slate-200 px-1 py-1.5 text-left text-[10px] font-semibold uppercase text-slate-400">First Name</th>
+                    <th className="w-[10.4%] border-b border-slate-200 px-1 py-1.5 text-left text-[10px] font-semibold uppercase text-slate-400">Last Name</th>
+                    <th className="w-[8.2%] border-b border-slate-200 px-1 py-1.5 text-left text-[10px] font-semibold uppercase text-slate-400">Birth Date</th>
+                    <th className="w-[4.6%] border-b border-slate-200 px-1 py-1.5 text-left text-[10px] font-semibold uppercase text-slate-400">Gender</th>
+                    <th className="w-[3.5%] border-b border-slate-200 px-1 py-1.5 text-left text-[10px] font-semibold uppercase text-slate-400">Age</th>
+                    <th className="w-[8.1%] border-b border-slate-200 px-1 py-1.5 text-left text-[10px] font-semibold uppercase text-slate-400">Province</th>
+                    <th className="w-[3.2%] border-b border-slate-200 px-1 py-1.5 text-center text-[10px] font-semibold uppercase text-slate-400">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {form.items.map((item, index) => (
                     <tr key={index}>
-                      <td className="border-b border-slate-100 px-1.5 py-1.5">
+                      <td className="border-b border-slate-100 px-1 py-1">
                         <input
                           type="number"
                           value={item.itemNo || ''}
@@ -986,16 +1121,20 @@ function NameListModal({
                             const nextValue = event.target.value;
                             setItem(index, 'itemNo', nextValue === '' ? '' : Number(nextValue));
                           }}
-                          className="form-input no-number-spinner h-8 rounded-md px-2 text-xs"
+                          className="form-input no-number-spinner h-8 rounded-md px-1.5 text-xs"
                         />
                       </td>
-                      <td className="border-b border-slate-100 px-1.5 py-1.5 text-center">
+                      <td className="border-b border-slate-100 px-1 py-1 text-center">
                         <input
                           type="checkbox"
                           checked={item.isLeader}
                           onChange={(event) => setItem(index, 'isLeader', event.target.checked)}
                         />
                       </td>
+                      <ReadonlyCell value={item.agentCode} />
+                      <ReadonlyCell value={item.code} />
+                      <EditableCell value={item.guideCode} onChange={(value) => setItem(index, 'guideCode', value)} onBlur={() => mapGuide(item.guideCode, index)} onEnter={() => mapGuide(item.guideCode, index)} />
+                      <ReadonlyCell value={item.guideName} />
                       <EditableCell value={item.passportNo} onChange={(value) => setItem(index, 'passportNo', value)} />
                       <EditableCell value={item.firstName} onChange={(value) => setItem(index, 'firstName', value)} />
                       <EditableCell value={item.lastName} onChange={(value) => setItem(index, 'lastName', value)} />
@@ -1008,16 +1147,22 @@ function NameListModal({
                         compactNumber
                       />
                       <EditableCell value={item.province} onChange={(value) => setItem(index, 'province', value)} />
-                      <td className="border-b border-slate-100 px-1.5 py-1.5 text-right">
-                        <button type="button" className="toolbar-btn-danger min-h-8 px-2.5 text-xs" onClick={() => removeItem(index)}>
-                          <TrashIcon className="erp-action-icon" /> Remove
+                      <td className="border-b border-slate-100 px-1 py-1 text-center">
+                        <button
+                          type="button"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                          aria-label="Remove passenger"
+                          title="Remove"
+                          onClick={() => removeItem(index)}
+                        >
+                          <TrashIcon className="h-4 w-4" />
                         </button>
                       </td>
                     </tr>
                   ))}
                   {form.items.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="px-4 py-8 text-center text-sm text-slate-400">
+                      <td colSpan={14} className="px-4 py-8 text-center text-sm text-slate-400">
                         No passenger item. Add item manually or import Excel later.
                       </td>
                     </tr>
@@ -1048,6 +1193,9 @@ function Field({
   type = 'text',
   required = false,
   wide = false,
+  readOnly = false,
+  onBlur,
+  onEnter,
 }: {
   label: string;
   value: string;
@@ -1055,6 +1203,9 @@ function Field({
   type?: string;
   required?: boolean;
   wide?: boolean;
+  readOnly?: boolean;
+  onBlur?: () => void;
+  onEnter?: () => void;
 }) {
   const pickerRef = useRef<HTMLInputElement>(null);
   const isDate = type === 'date';
@@ -1086,18 +1237,23 @@ function Field({
           type={isDate ? 'text' : type}
           value={isDate ? dateInputValue(value) : type === 'number' && value === '0' ? '' : value}
           placeholder={isDate ? '--/--/----' : undefined}
-          onChange={(event) => onChange(isDate ? parseDateInput(event.target.value) : event.target.value)}
+          onChange={(event) => onChange(isDate ? formatDateTyping(event.target.value) : event.target.value)}
+          readOnly={readOnly}
           onBlur={(event) => {
             if (isDate) {
               completeDate(event.target.value);
             }
+            onBlur?.();
           }}
           onKeyDown={(event) => {
-            if (isDate && event.key === 'Enter') {
-              completeDate(event.currentTarget.value);
+            if (event.key === 'Enter') {
+              if (isDate) {
+                completeDate(event.currentTarget.value);
+              }
+              onEnter?.();
             }
           }}
-          className={`form-input h-8 rounded-md px-2.5 text-xs ${isDate ? 'pr-8' : ''}`}
+          className={`form-input h-8 rounded-md px-2.5 text-xs ${isDate ? 'pr-8' : ''} ${readOnly ? 'cursor-default bg-slate-100 text-slate-500 focus:border-slate-200 focus:ring-0' : ''}`}
         />
         {isDate ? (
           <>
@@ -1108,7 +1264,7 @@ function Field({
               onMouseDown={(event) => event.preventDefault()}
               onClick={openPicker}
             >
-              v
+              <CalendarIcon className="h-3.5 w-3.5" />
             </button>
             <input
               ref={pickerRef}
@@ -1129,30 +1285,65 @@ function Field({
 function EditableCell({
   value,
   onChange,
+  onBlur,
+  onEnter,
   type = 'text',
   compactNumber = false,
 }: {
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
+  onEnter?: () => void;
   type?: string;
   compactNumber?: boolean;
 }) {
   return (
-    <td className="border-b border-slate-100 px-1.5 py-1.5">
+    <td className="border-b border-slate-100 px-1 py-1">
       <input
         type={type === 'date' ? 'text' : type}
         value={type === 'date' ? dateInputValue(value) : type === 'number' && value === '0' ? '' : value}
         placeholder={type === 'date' ? '--/--/----' : undefined}
-        onChange={(event) => onChange(type === 'date' ? parseDateInput(event.target.value) : event.target.value)}
+        onChange={(event) => onChange(type === 'date' ? formatDateTyping(event.target.value) : event.target.value)}
         onBlur={(event) => {
           if (type === 'date') {
             onChange(completeDateInput(event.target.value));
           }
+          onBlur?.();
         }}
-        className={`form-input h-8 rounded-md px-2.5 text-xs ${compactNumber ? 'no-number-spinner' : ''}`}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            onEnter?.();
+          }
+        }}
+        className={`form-input h-8 rounded-md px-1.5 text-xs ${compactNumber ? 'no-number-spinner' : ''}`}
       />
     </td>
   );
+}
+
+function ReadonlyCell({ value }: { value: string }) {
+  return (
+    <td className="border-b border-slate-100 px-1 py-1">
+      <input value={value} readOnly className="form-input h-8 cursor-default rounded-md bg-slate-100 px-1.5 text-xs text-slate-500 focus:border-slate-200 focus:ring-0" />
+    </td>
+  );
+}
+
+function nextNameListCodeFromRows(rows: NameList[]) {
+  const now = new Date();
+  const year = String(now.getFullYear()).slice(2);
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const prefix = `GEI-N-L${year}${month}`;
+  const used = new Set(
+    rows
+      .map((row) => Number(row.code.startsWith(prefix) ? row.code.slice(prefix.length) : ''))
+      .filter((value) => Number.isInteger(value) && value >= 1 && value <= 9999),
+  );
+  for (let index = 1; index <= 9999; index += 1) {
+    if (!used.has(index)) return `${prefix}${String(index).padStart(4, '0')}`;
+  }
+  return `${prefix}9999`;
 }
 
 function formatItemValue(item: NameListItem, key: keyof NameListItem) {
@@ -1183,6 +1374,13 @@ function parseDateInput(value: string) {
   const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!match) return trimmed;
   return `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
+}
+
+function formatDateTyping(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
 function completeDateInput(value: string) {

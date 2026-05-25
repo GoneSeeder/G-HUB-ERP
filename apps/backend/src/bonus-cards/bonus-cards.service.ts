@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBonusCardDto } from './dto/create-bonus-card.dto';
@@ -36,25 +36,36 @@ export class BonusCardsService {
     return rows.map((row) => this.toResponse(row));
   }
 
-  async create(dto: CreateBonusCardDto) {
+  async create(dto: CreateBonusCardDto, recorder = '') {
+    await this.ensureNameListAvailable(dto.nameListCode, null);
     const row = await this.prisma.bonusCard.create({
-      data: this.toCreateData(dto),
+      data: this.toCreateData(dto, recorder),
     });
     return this.toResponse(row);
   }
 
-  async update(id: string, dto: UpdateBonusCardDto) {
+  async update(id: string, dto: UpdateBonusCardDto, recorder = '') {
     await this.ensureExists(id);
+    await this.ensureNameListAvailable(dto.nameListCode, id);
     const row = await this.prisma.bonusCard.update({
       where: { id },
-      data: this.toUpdateData(dto),
+      data: this.toUpdateData(dto, recorder),
     });
     return this.toResponse(row);
   }
 
   async remove(id: string) {
-    await this.ensureExists(id);
-    await this.prisma.bonusCard.delete({ where: { id } });
+    const row = await this.ensureExists(id);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.bonusCard.delete({ where: { id } });
+      await tx.booking.updateMany({
+        where: {
+          dateBookJw: row.workDate,
+          bonusCode: row.bonus,
+        },
+        data: { upload: false },
+      });
+    });
     return { message: 'Bonus card deleted successfully' };
   }
 
@@ -63,9 +74,32 @@ export class BonusCardsService {
     if (!row) {
       throw new NotFoundException(`Bonus card "${id}" not found`);
     }
+    return row;
   }
 
-  private toCreateData(dto: CreateBonusCardDto): Prisma.BonusCardCreateInput {
+  private async ensureNameListAvailable(nameListCode: string | undefined, currentBonusCardId: string | null) {
+    const code = nameListCode?.trim();
+    if (!code) return;
+    const nameList = await this.prisma.nameList.findUnique({
+      where: { code },
+      select: { id: true },
+    });
+    if (!nameList) {
+      throw new NotFoundException(`Name list "${code}" not found`);
+    }
+    const linkedBonus = await this.prisma.bonusCard.findFirst({
+      where: {
+        nameListCode: code,
+        ...(currentBonusCardId ? { id: { not: currentBonusCardId } } : {}),
+      },
+      select: { bonus: true },
+    });
+    if (linkedBonus) {
+      throw new ConflictException(`Name list "${code}" is already linked to bonus "${linkedBonus.bonus}"`);
+    }
+  }
+
+  private toCreateData(dto: CreateBonusCardDto, recorder = ''): Prisma.BonusCardCreateInput {
     return {
       workDate: this.toDate(dto.workDate),
       bonus: dto.bonus,
@@ -77,6 +111,8 @@ export class BonusCardsService {
       guideName: dto.guideName,
       memberCode: dto.memberCode ?? '',
       supervisorCode: dto.supervisorCode ?? '',
+      tourLeaderName: dto.tourLeaderName ?? '',
+      tourLeaderPassport: dto.tourLeaderPassport ?? '',
       partyCode: dto.partyCode,
       nation: dto.nation,
       province: dto.province ?? '',
@@ -92,6 +128,7 @@ export class BonusCardsService {
       busType: dto.busType ?? '',
       tourIn: dto.tourIn ?? '',
       tourOut: dto.tourOut ?? '',
+      recorder,
       comment: dto.comment ?? '',
       imageUrl: dto.imageUrl,
       nameListCode: dto.nameListCode ?? '',
@@ -102,7 +139,7 @@ export class BonusCardsService {
     };
   }
 
-  private toUpdateData(dto: UpdateBonusCardDto): Prisma.BonusCardUpdateInput {
+  private toUpdateData(dto: UpdateBonusCardDto, recorder = ''): Prisma.BonusCardUpdateInput {
     return {
       ...(dto.workDate ? { workDate: this.toDate(dto.workDate) } : {}),
       ...(dto.bonus !== undefined ? { bonus: dto.bonus } : {}),
@@ -114,6 +151,8 @@ export class BonusCardsService {
       ...(dto.guideName !== undefined ? { guideName: dto.guideName } : {}),
       ...(dto.memberCode !== undefined ? { memberCode: dto.memberCode } : {}),
       ...(dto.supervisorCode !== undefined ? { supervisorCode: dto.supervisorCode } : {}),
+      ...(dto.tourLeaderName !== undefined ? { tourLeaderName: dto.tourLeaderName } : {}),
+      ...(dto.tourLeaderPassport !== undefined ? { tourLeaderPassport: dto.tourLeaderPassport } : {}),
       ...(dto.partyCode !== undefined ? { partyCode: dto.partyCode } : {}),
       ...(dto.nation !== undefined ? { nation: dto.nation } : {}),
       ...(dto.province !== undefined ? { province: dto.province } : {}),
@@ -129,6 +168,7 @@ export class BonusCardsService {
       ...(dto.busType !== undefined ? { busType: dto.busType } : {}),
       ...(dto.tourIn !== undefined ? { tourIn: dto.tourIn } : {}),
       ...(dto.tourOut !== undefined ? { tourOut: dto.tourOut } : {}),
+      ...(recorder ? { recorder } : {}),
       ...(dto.comment !== undefined ? { comment: dto.comment } : {}),
       ...(dto.imageUrl !== undefined ? { imageUrl: dto.imageUrl } : {}),
       ...(dto.nameListCode !== undefined ? { nameListCode: dto.nameListCode } : {}),
@@ -155,6 +195,8 @@ export class BonusCardsService {
     guideName: string;
     memberCode: string;
     supervisorCode: string;
+    tourLeaderName: string;
+    tourLeaderPassport: string;
     partyCode: string;
     nation: string;
     province: string;
@@ -170,6 +212,7 @@ export class BonusCardsService {
     busType: string;
     tourIn: string;
     tourOut: string;
+    recorder: string;
     comment: string;
     imageUrl: string | null;
     nameListCode: string;
@@ -178,13 +221,19 @@ export class BonusCardsService {
     narratorPax: number;
     narrators: Prisma.JsonValue;
   }) {
+    const guide = row.guide.trim();
     return {
       ...row,
       workDate: row.workDate.toISOString().slice(0, 10),
+      guideName: this.isValidLookupCode(guide) ? row.guideName : '',
       imageUrl: row.imageUrl ?? '',
       extraGuides: this.normalizeGuides(row.extraGuides),
       narrators: this.normalizeNarrators(row.narrators),
     };
+  }
+
+  private isValidLookupCode(value: string) {
+    return !['', '-', 'NO', 'NONE', 'NULL', 'N/A'].includes(value.trim().toUpperCase());
   }
 
   private sanitizeGuides(value: CreateBonusCardDto['extraGuides']): Prisma.InputJsonValue {

@@ -140,6 +140,10 @@ export class CreateBookingDto {
   @IsString()
   partyCodeRef?: string;
 
+  @IsOptional()
+  @IsString()
+  bonusCode?: string;
+
   @IsBoolean()
   status!: boolean;
 

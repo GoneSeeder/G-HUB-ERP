@@ -24,6 +24,14 @@ export class NameListItemDto {
 
   @IsOptional()
   @IsString()
+  guideCode?: string;
+
+  @IsOptional()
+  @IsString()
+  guideName?: string;
+
+  @IsOptional()
+  @IsString()
   arriveDate?: string;
 
   @IsOptional()

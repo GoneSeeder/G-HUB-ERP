@@ -6,6 +6,8 @@ import { UpdateBookingDto } from './dto/update-booking.dto';
 
 type BookingFilters = {
   date?: string;
+  from?: string;
+  to?: string;
   agent?: string;
   nation?: string;
   status?: string;
@@ -19,6 +21,11 @@ type ImportBookingFilesDto = {
   detailFileName?: string;
   detailFileBase64?: string;
   clientImportedAt?: string;
+};
+
+type BonusUploadEntry = {
+  id: string;
+  bonus: string;
 };
 
 type ParsedWorkbook = Array<Array<string | number>>;
@@ -100,6 +107,28 @@ export class BookingsService {
         OR: [{ docDate: date }, { arriveDate: date }, { departDate: date }],
       });
     }
+    if (filters.from || filters.to) {
+      const dateRange: Prisma.DateTimeFilter = {};
+      const nullableDateRange: Prisma.DateTimeNullableFilter = {};
+      if (filters.from) {
+        const from = this.toDate(filters.from);
+        dateRange.gte = from;
+        nullableDateRange.gte = from;
+      }
+      if (filters.to) {
+        const to = this.toDate(filters.to);
+        dateRange.lte = to;
+        nullableDateRange.lte = to;
+      }
+      and.push({
+        OR: [
+          { docDate: dateRange },
+          { arriveDate: nullableDateRange },
+          { departDate: nullableDateRange },
+          { dateBookJw: nullableDateRange },
+        ],
+      });
+    }
     if (filters.agent) {
       and.push({
         OR: [
@@ -142,7 +171,13 @@ export class BookingsService {
     const rows = await this.prisma.booking.findMany({
       where,
       include: { references: { orderBy: { createdAt: 'asc' } } },
-      orderBy: [{ docDate: 'desc' }, { docTime: 'asc' }, { agentName: 'asc' }],
+      orderBy: [
+        { docDate: 'desc' },
+        { docTime: 'asc' },
+        { docNo: 'asc' },
+        { createdAt: 'asc' },
+        { id: 'asc' },
+      ],
     });
     return rows.map((row) => this.toResponse(row));
   }
@@ -466,7 +501,26 @@ export class BookingsService {
     };
   }
 
-  async createBonusCardsFromBookings(ids: string[]) {
+  async findBonusSourceRows(date: string) {
+    if (!date) {
+      throw new BadRequestException('Book date is required');
+    }
+    const bookDate = this.toDate(date);
+    const rows = await this.prisma.booking.findMany({
+      where: {
+        dateBookJw: bookDate,
+        nation: { in: ['CN', 'TW'] },
+      },
+      include: { references: { orderBy: { createdAt: 'asc' } } },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+
+    return rows
+      .sort((left, right) => this.compareBonusSourceRows(left, right))
+      .map((row) => this.toResponse(row));
+  }
+
+  async generateBonusCodes(ids: string[]) {
     const uniqueIds = [...new Set(ids)].filter(Boolean);
     if (uniqueIds.length === 0) {
       throw new BadRequestException('Please select booking rows first');
@@ -474,53 +528,205 @@ export class BookingsService {
 
     const rows = await this.prisma.booking.findMany({
       where: { id: { in: uniqueIds } },
-      orderBy: [{ arriveDate: 'asc' }, { agentName: 'asc' }, { partyCode: 'asc' }],
     });
-    const nextBonusByDate = new Map<string, number>();
-    let created = 0;
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    const counters = { CN: 0, TW: 800 };
+    const usedByDate = new Map<string, Set<string>>();
+    const generated: Array<{ id: string; bonus: string }> = [];
 
-    for (const row of rows) {
-      const workDate = row.arriveDate ?? row.docDate;
-      const workDateKey = this.dateToInput(workDate) ?? this.dateKey(row.docDate);
-      let nextBonus = nextBonusByDate.get(workDateKey);
-      if (nextBonus === undefined) {
-        nextBonus = await this.nextBonusNumber(workDateKey);
+    await this.prisma.$transaction(async (tx) => {
+      for (const id of uniqueIds) {
+        const row = rowById.get(id);
+        if (!row) {
+          throw new BadRequestException(`Booking "${id}" not found`);
+        }
+        this.assertCanGenerateBonus(row);
+        const workDate = row.dateBookJw;
+        if (!workDate) {
+          throw new BadRequestException(`Booking "${row.partyCode}" has no book date`);
+        }
+
+        const existingBonusCode = (row.bonusCode ?? '').trim();
+        if (existingBonusCode) {
+          generated.push({ id: row.id, bonus: existingBonusCode });
+          continue;
+        }
+
+        const dateKey = this.dateKey(workDate);
+        if (!usedByDate.has(dateKey)) {
+          const [existingBonusCards, existingBookings] = await Promise.all([
+            tx.bonusCard.findMany({
+              where: { workDate },
+              select: { bonus: true },
+            }),
+            tx.booking.findMany({
+              where: { dateBookJw: workDate, bonusCode: { not: '' } },
+              select: { bonusCode: true },
+            }),
+          ]);
+          usedByDate.set(
+            dateKey,
+            new Set([
+              ...existingBonusCards.map((item) => item.bonus),
+              ...existingBookings.map((item) => item.bonusCode),
+            ]),
+          );
+        }
+        const used = usedByDate.get(dateKey)!;
+        let bonus = this.nextGeiBonusCode(row.nation, counters);
+        while (used.has(bonus) || generated.some((item) => item.bonus === bonus)) {
+          bonus = this.nextGeiBonusCode(row.nation, counters);
+        }
+        this.assertBonusCodeWithinGeiLimit(row.nation, bonus);
+        used.add(bonus);
+        await tx.booking.update({
+          where: { id: row.id },
+          data: { bonusCode: bonus },
+        });
+        generated.push({ id: row.id, bonus });
       }
-
-      await this.prisma.bonusCard.create({
-        data: {
-          workDate,
-          bonus: String(nextBonus),
-          bonusName: row.guideName || row.partyCode,
-          agentCode: row.agentCode,
-          agentName: row.agentName,
-          guide: row.guideCode,
-          guideName: row.guideName,
-          partyCode: row.partyCode,
-          nation: row.nation,
-          adult: row.pax,
-          child: 0,
-          tourLeader: 0,
-          carCode: row.carCode,
-          shop: row.shop,
-          busType: 'BUSOA',
-          comment: row.bookRemark,
-        },
-      });
-      await this.prisma.booking.update({
-        where: { id: row.id },
-        data: { upload: true },
-      });
-
-      nextBonusByDate.set(workDateKey, nextBonus + 1);
-      created += 1;
-    }
+    });
 
     return {
       requested: uniqueIds.length,
-      created,
-      skipped: Math.max(0, uniqueIds.length - created),
+      rows: generated,
     };
+  }
+
+  async createBonusCardsFromBookings(entries: BonusUploadEntry[]) {
+    const normalizedEntries = entries
+      .map((entry) => ({ id: entry.id, bonus: String(entry.bonus ?? '').trim() }))
+      .filter((entry) => entry.id);
+    if (normalizedEntries.length === 0) {
+      throw new BadRequestException('Please select booking rows first');
+    }
+    const ids = normalizedEntries.map((entry) => entry.id);
+    const rows = await this.prisma.booking.findMany({ where: { id: { in: ids } } });
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    let created = 0;
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const entry of normalizedEntries) {
+        const row = rowById.get(entry.id);
+        if (!row) {
+          throw new BadRequestException(`Booking "${entry.id}" not found`);
+        }
+        this.assertCanGenerateBonus(row);
+        const workDate = row.dateBookJw;
+        if (!workDate) {
+          throw new BadRequestException(`Booking "${row.partyCode}" has no book date`);
+        }
+        const existingBonusCode = (row.bonusCode ?? '').trim();
+        const bonus = existingBonusCode || entry.bonus;
+        if (!bonus) {
+          throw new BadRequestException('Please generate bonus code before upload');
+        }
+        if (existingBonusCode && entry.bonus && existingBonusCode !== entry.bonus) {
+          throw new BadRequestException(`Booking "${row.partyCode}" already has bonus code "${existingBonusCode}"`);
+        }
+        const exists = await tx.bonusCard.findFirst({
+          where: { workDate, bonus },
+          select: { id: true },
+        });
+        if (exists) {
+          throw new BadRequestException(`Bonus card "${bonus}" already exists`);
+        }
+        const bonusName = [row.agentName, row.guideName ? `[${row.guideName}]` : '']
+          .filter(Boolean)
+          .join(' ');
+        const guideCode = (row.guideCode ?? '').trim();
+        const guideName = (row.guideName ?? '').trim();
+        const bonusGuide = guideCode || guideName;
+        await tx.bonusCard.create({
+          data: {
+            workDate,
+            bonus,
+            bonusName: bonusName.slice(0, 150),
+            agentCode: row.agentCode,
+            agentName: row.agentName,
+            guide: bonusGuide,
+            guideName: bonusGuide ? guideName : '',
+            partyCode: row.partyCode,
+            nation: row.nation,
+            adult: row.pax,
+            child: 0,
+            tourLeader: 0,
+            carCode: row.carCode,
+            shop: '1',
+            busType: '',
+            tourIn: row.timeBookJw,
+            comment: row.bookRemark,
+          },
+        });
+        await tx.booking.update({
+          where: { id: row.id },
+          data: { upload: true, bonusCode: bonus },
+        });
+        created += 1;
+      }
+    });
+
+    return {
+      requested: normalizedEntries.length,
+      created,
+      skipped: Math.max(0, normalizedEntries.length - created),
+    };
+  }
+
+  private compareBonusSourceRows(
+    left: Prisma.BookingGetPayload<{ include: { references: true } }>,
+    right: Prisma.BookingGetPayload<{ include: { references: true } }>,
+  ) {
+    const leftBonus = this.numericBonusCode(left.bonusCode);
+    const rightBonus = this.numericBonusCode(right.bonusCode);
+    if (leftBonus !== null || rightBonus !== null) {
+      if (leftBonus === null) return 1;
+      if (rightBonus === null) return -1;
+      if (leftBonus !== rightBonus) return leftBonus - rightBonus;
+      return left.bonusCode.localeCompare(right.bonusCode);
+    }
+    return left.createdAt.getTime() - right.createdAt.getTime() || left.id.localeCompare(right.id);
+  }
+
+  private numericBonusCode(value: string) {
+    const cleaned = value.trim();
+    if (!cleaned) return null;
+    const numeric = Number(cleaned);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+
+  private assertCanGenerateBonus(row: { status: boolean; upload: boolean; nation: string; partyCode: string }) {
+    if (!row.status) {
+      throw new BadRequestException(`Booking "${row.partyCode}" is not complete`);
+    }
+    if (row.upload) {
+      throw new BadRequestException(`Booking "${row.partyCode}" is already uploaded`);
+    }
+    if (!row.nation.trim()) {
+      throw new BadRequestException(`Booking "${row.partyCode}" has no nation code`);
+    }
+    if (!['CN', 'TW'].includes(row.nation)) {
+      throw new BadRequestException(`Booking "${row.partyCode}" nation "${row.nation}" is not supported for GEI bonus`);
+    }
+  }
+
+  private nextGeiBonusCode(nation: string, counters: { CN: number; TW: number }) {
+    if (nation === 'CN') {
+      counters.CN += 1;
+      return `8${String(counters.CN).padStart(3, '0')}`;
+    }
+    counters.TW += 1;
+    return `8${counters.TW}`;
+  }
+
+  private assertBonusCodeWithinGeiLimit(nation: string, bonus: string) {
+    const code = Number(bonus);
+    if (nation === 'CN' && code > 8399) {
+      throw new BadRequestException(`CN bonus code "${bonus}" is over limit`);
+    }
+    if (nation === 'TW' && code > 8899) {
+      throw new BadRequestException(`TW bonus code "${bonus}" is over limit`);
+    }
   }
 
   private findDuplicateKeys(keys: string[]) {
@@ -529,17 +735,18 @@ export class BookingsService {
     return [...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key);
   }
 
+  private duplicateRowKey(row: Array<string | number>, columnCount: number) {
+    const values = Array.from({ length: columnCount }, (_, index) => this.cellText(row[index]));
+    return values.some(Boolean) ? JSON.stringify(values) : '';
+  }
+
   private previewMainRows(
     rows: ParsedWorkbook,
     agentMatchers: AgentMatcher[],
     agentCodeRefMatchers: Map<string, AgentCodeRefMatcher>,
   ) {
     const dataRows = rows.slice(1);
-    const keyFactory = (row: Array<string | number>) => {
-      const faxNo = this.cellText(row[11]);
-      const partyCode = this.cellText(row[4]) || this.cellText(row[13]);
-      return faxNo || partyCode ? `${faxNo}|${partyCode}` : '';
-    };
+    const keyFactory = (row: Array<string | number>) => this.duplicateRowKey(row, 16);
     const duplicateKeys = this.findDuplicateKeys(dataRows.map(keyFactory).filter(Boolean));
     const duplicateSet = new Set(duplicateKeys);
 
@@ -579,11 +786,7 @@ export class BookingsService {
 
   private previewDetailRows(rows: ParsedWorkbook) {
     const dataRows = rows.slice(1);
-    const keyFactory = (row: Array<string | number>) => {
-      const faxNo = this.cellText(row[1]);
-      const code = this.cellText(row[3]);
-      return faxNo || code ? `${faxNo}|${code}` : '';
-    };
+    const keyFactory = (row: Array<string | number>) => this.duplicateRowKey(row, 7);
     const duplicateKeys = this.findDuplicateKeys(dataRows.map(keyFactory).filter(Boolean));
     const duplicateSet = new Set(duplicateKeys);
 
@@ -639,14 +842,6 @@ export class BookingsService {
         },
       ]),
     );
-  }
-
-  private async nextBonusNumber(workDate: string) {
-    const rows = await this.prisma.bonusCard.findMany({
-      where: { workDate: this.toDate(workDate) },
-      select: { bonus: true },
-    });
-    return Math.max(0, ...rows.map((row) => Number(row.bonus)).filter(Number.isFinite)) + 1;
   }
 
   private matchAgent(agentName: string, matchers: AgentMatcher[]) {
@@ -864,6 +1059,7 @@ export class BookingsService {
       faxNo: dto.faxNo ?? '',
       agentCodeRef: dto.agentCodeRef ?? '',
       partyCodeRef: dto.partyCodeRef ?? '',
+      bonusCode: dto.bonusCode?.trim() ?? '',
       status: dto.status,
       upload: dto.upload,
       references: {
@@ -899,6 +1095,7 @@ export class BookingsService {
       ...(dto.faxNo !== undefined ? { faxNo: dto.faxNo } : {}),
       ...(dto.agentCodeRef !== undefined ? { agentCodeRef: dto.agentCodeRef } : {}),
       ...(dto.partyCodeRef !== undefined ? { partyCodeRef: dto.partyCodeRef } : {}),
+      ...(dto.bonusCode !== undefined ? { bonusCode: dto.bonusCode.trim() } : {}),
       ...(dto.status !== undefined ? { status: dto.status } : {}),
       ...(dto.upload !== undefined ? { upload: dto.upload } : {}),
     };

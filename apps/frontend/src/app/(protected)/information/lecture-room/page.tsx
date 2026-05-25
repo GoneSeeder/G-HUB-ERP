@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRightIcon,
   EditIcon,
@@ -12,9 +12,10 @@ import {
   XIcon,
 } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
+import { useDialog } from '@/components/ui/dialog-provider';
 import { apiFetch } from '@/lib/api';
 
-type RoomStatus = 'available' | 'arriving' | 'lecturing';
+type RoomStatus = 'available' | 'arriving' | 'lecturing' | 'inactive';
 type SpeakerStatus = 'available' | 'lecturing' | 'inactive';
 type TabKey = 'dashboard' | 'assignment' | 'rooms' | 'speakers' | 'history';
 
@@ -23,6 +24,7 @@ type LectureRoom = {
   roomCode: string;
   roomName: string;
   capacity: number;
+  status?: 'available' | 'inactive';
   activeSession?: LectureSession | null;
 };
 
@@ -47,6 +49,10 @@ type LectureSession = {
   status: 'arriving' | 'lecturing';
   startedAt: string | null;
   createdAt: string;
+};
+
+type MeResponse = {
+  roles: string[];
 };
 
 type LectureHistory = {
@@ -90,7 +96,13 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: 'history', label: 'ประวัติ' },
 ];
 
-const todayInput = () => new Date().toISOString().slice(0, 10);
+const todayInput = () => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 function isoToDisplayDate(value: string) {
   if (!value) return '';
@@ -156,7 +168,7 @@ function StatusPill({ status }: { status: RoomStatus | SpeakerStatus }) {
     },
     inactive: {
       label: 'ปิดใช้งาน',
-      className: 'border-slate-200 bg-slate-100 text-slate-500',
+      className: 'border-rose-200 bg-rose-50 text-rose-700',
     },
   };
   return (
@@ -224,11 +236,143 @@ function SearchField({
   );
 }
 
+function CalendarDateField({
+  label,
+  value,
+  displayValue,
+  onDisplayChange,
+  onIsoChange,
+  onCommit,
+}: {
+  label: string;
+  value: string;
+  displayValue: string;
+  onDisplayChange: (value: string) => void;
+  onIsoChange: (value: string) => void;
+  onCommit: () => void;
+}) {
+  const pickerRef = useRef<HTMLInputElement>(null);
+  return (
+    <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
+      {label}
+      <span className="relative inline-flex h-10 w-40 items-center rounded-lg border border-slate-200 bg-white focus-within:border-[#1167e8]">
+        <input
+          value={displayValue}
+          onChange={(event) => onDisplayChange(event.target.value)}
+          onBlur={onCommit}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              onCommit();
+            }
+          }}
+          placeholder="--/--/----"
+          className="h-full w-full rounded-lg bg-transparent px-3 pr-10 text-sm outline-none"
+        />
+        <button
+          type="button"
+          className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-lg text-slate-400 transition hover:bg-blue-50 hover:text-[#1167e8]"
+          onClick={() => {
+            const input = pickerRef.current;
+            if (!input) return;
+            const picker = input as HTMLInputElement & { showPicker?: () => void };
+            if (typeof picker.showPicker === 'function') {
+              picker.showPicker();
+            } else {
+              input.click();
+            }
+          }}
+          aria-label="Open date picker"
+        >
+          <CalendarIcon />
+        </button>
+        <input
+          ref={pickerRef}
+          type="date"
+          value={value}
+          onChange={(event) => {
+            onIsoChange(event.target.value);
+            onDisplayChange(isoToDisplayDate(event.target.value));
+          }}
+          className="pointer-events-none absolute right-0 top-0 h-0 w-0 opacity-0"
+          tabIndex={-1}
+        />
+      </span>
+    </label>
+  );
+}
+
+function CalendarIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className={`${className} fill-none stroke-current`}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M8 2v4M16 2v4M3 10h18" />
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+    </svg>
+  );
+}
+
+function MonitorBoardIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className={`${className} fill-none stroke-current`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M8 21h8M12 16v5" />
+      <path d="M7 9h4M7 12h2M14 9h3M14 12h3" />
+    </svg>
+  );
+}
+
+function RoomIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 20V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14" />
+      <path d="M4 20h16M10 12h.01" />
+    </svg>
+  );
+}
+
+function SpeakerIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
+  );
+}
+
+function LectureIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 5h16v11H4z" />
+      <path d="M8 21h8M12 16v5M8 9h8M8 12h5" />
+    </svg>
+  );
+}
+
+function PeopleMetricIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 11a3 3 0 1 0-2.83-4" />
+      <path d="M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+      <path d="M2 20a6 6 0 0 1 12 0" />
+      <path d="M14 14.5A5.5 5.5 0 0 1 22 20" />
+    </svg>
+  );
+}
+
 function MetricCard({
+  icon,
   label,
   value,
   tone = 'blue',
 }: {
+  icon: ReactNode;
   label: string;
   value: ReactNode;
   tone?: 'blue' | 'emerald' | 'amber' | 'slate';
@@ -242,7 +386,7 @@ function MetricCard({
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <div className={cn('mb-3 inline-flex h-8 w-8 items-center justify-center rounded-lg', tones[tone])}>
-        <span className="h-2 w-2 rounded-full bg-current" />
+        {icon}
       </div>
       <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-slate-950">{value}</p>
@@ -276,6 +420,7 @@ function ModalShell({
 }
 
 export default function LectureRoomPage() {
+  const { requestConfirmation } = useDialog();
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
   const [now, setNow] = useState(Date.now());
   const [rooms, setRooms] = useState<LectureRoom[]>([]);
@@ -291,13 +436,23 @@ export default function LectureRoomPage() {
   const [roomModal, setRoomModal] = useState<{ mode: 'add' | 'edit'; room?: LectureRoom } | null>(null);
   const [speakerModal, setSpeakerModal] = useState<{ mode: 'add' | 'edit'; speaker?: Speaker } | null>(null);
   const [assignModal, setAssignModal] = useState<{ card: BonusCard } | null>(null);
-  const [roomForm, setRoomForm] = useState({ roomCode: '', roomName: '', capacity: 30 });
+  const [roomForm, setRoomForm] = useState({
+    roomCode: '',
+    roomName: '',
+    capacity: 30,
+    status: 'available' as 'available' | 'inactive',
+  });
   const [speakerForm, setSpeakerForm] = useState({
     speakerCode: '',
     speakerName: '',
     status: 'available' as SpeakerStatus,
   });
   const [assignForm, setAssignForm] = useState({ roomId: '', speakerId: '' });
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [historyEditEnabled, setHistoryEditEnabled] = useState(false);
+  const [selectedHistoryIds, setSelectedHistoryIds] = useState<string[]>([]);
+  const [historyEditItem, setHistoryEditItem] = useState<LectureHistory | null>(null);
+  const [historyEditForm, setHistoryEditForm] = useState({ partyCode: '', roomCode: '', roomName: '', speakerCode: '', speakerName: '', attendeeCount: 0 });
   const [error, setError] = useState('');
 
   const loadRooms = async () => setRooms(await apiFetch<LectureRoom[]>('/api/lecture-rooms'));
@@ -318,6 +473,9 @@ export default function LectureRoomPage() {
 
   useEffect(() => {
     refreshAll().catch((err) => setError(err instanceof Error ? err.message : 'Failed to load lecture room data'));
+    apiFetch<MeResponse>('/api/auth/me')
+      .then((me) => setIsAdmin(me.roles.includes('admin')))
+      .catch(() => setIsAdmin(false));
     const poll = window.setInterval(() => {
       Promise.all([loadRooms(), loadSpeakers(), loadSessions()]).catch(() => undefined);
     }, 5000);
@@ -391,12 +549,17 @@ export default function LectureRoomPage() {
   }, [speakers, speakerSearch]);
 
   const openRoomAdd = () => {
-    setRoomForm({ roomCode: '', roomName: '', capacity: 30 });
+    setRoomForm({ roomCode: '', roomName: '', capacity: 30, status: 'available' });
     setRoomModal({ mode: 'add' });
   };
 
   const openRoomEdit = (room: LectureRoom) => {
-    setRoomForm({ roomCode: room.roomCode, roomName: room.roomName, capacity: room.capacity });
+    setRoomForm({
+      roomCode: room.roomCode,
+      roomName: room.roomName,
+      capacity: room.capacity,
+      status: room.status || 'available',
+    });
     setRoomModal({ mode: 'edit', room });
   };
 
@@ -409,7 +572,7 @@ export default function LectureRoomPage() {
     setSpeakerForm({
       speakerCode: speaker.speakerCode,
       speakerName: speaker.speakerName,
-      status: speaker.status,
+      status: speaker.status === 'lecturing' ? 'available' : speaker.status,
     });
     setSpeakerModal({ mode: 'edit', speaker });
   };
@@ -421,6 +584,7 @@ export default function LectureRoomPage() {
       roomCode: roomForm.roomCode.trim(),
       roomName: roomForm.roomName.trim(),
       capacity: Number(roomForm.capacity),
+      status: roomForm.status,
     });
     if (roomModal?.mode === 'edit' && roomModal.room) {
       await apiFetch(`/api/lecture-rooms/${roomModal.room.id}`, { method: 'PATCH', body });
@@ -449,13 +613,13 @@ export default function LectureRoomPage() {
   };
 
   const removeRoom = async (room: LectureRoom) => {
-    if (!window.confirm(`ลบห้อง ${room.roomName} (${room.roomCode}) หรือไม่?`)) return;
+    if (!(await requestConfirmation({ message: `ลบห้อง ${room.roomName} (${room.roomCode}) หรือไม่?`, variant: 'danger' }))) return;
     await apiFetch(`/api/lecture-rooms/${room.id}`, { method: 'DELETE' });
     await loadRooms();
   };
 
   const removeSpeaker = async (speaker: Speaker) => {
-    if (!window.confirm(`ลบอาจารย์พากย์ ${speaker.speakerName} (${speaker.speakerCode}) หรือไม่?`)) return;
+    if (!(await requestConfirmation({ message: `ลบอาจารย์พากย์ ${speaker.speakerName} (${speaker.speakerCode}) หรือไม่?`, variant: 'danger' }))) return;
     await apiFetch(`/api/speakers/${speaker.id}`, { method: 'DELETE' });
     await loadSpeakers();
   };
@@ -493,9 +657,50 @@ export default function LectureRoomPage() {
   };
 
   const clearSession = async (session: LectureSession) => {
-    if (!window.confirm(`เคลียร์ session ห้อง ${session.roomName} หรือไม่?`)) return;
+    if (!(await requestConfirmation({ message: `เคลียร์ session ห้อง ${session.roomName} หรือไม่?`, variant: 'danger' }))) return;
     await apiFetch(`/api/lecture-sessions/${session.id}`, { method: 'DELETE' });
     await Promise.all([loadRooms(), loadSessions(), loadSpeakers()]);
+  };
+
+  const toggleHistorySelection = (id: string) => {
+    setSelectedHistoryIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
+
+  const editSelectedHistory = async () => {
+    const selectedId = selectedHistoryIds[0];
+    const item = historyItems.find((history) => history.id === selectedId);
+    if (!item) return;
+    setHistoryEditItem(item);
+    setHistoryEditForm({
+      partyCode: item.partyCode,
+      roomCode: item.roomCode,
+      roomName: item.roomName,
+      speakerCode: item.speakerCode,
+      speakerName: item.speakerName,
+      attendeeCount: item.attendeeCount,
+    });
+  };
+
+  const saveHistoryEdit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!historyEditItem) return;
+    await apiFetch(`/api/lecture-sessions/history/${historyEditItem.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        ...historyEditForm,
+        attendeeCount: Number(historyEditForm.attendeeCount),
+      }),
+    });
+    setHistoryEditItem(null);
+    await loadHistory();
+  };
+
+  const deleteSelectedHistory = async () => {
+    if (selectedHistoryIds.length === 0) return;
+    if (!(await requestConfirmation({ message: `Delete ${selectedHistoryIds.length} history item(s)?`, variant: 'danger' }))) return;
+    await Promise.all(selectedHistoryIds.map((id) => apiFetch(`/api/lecture-sessions/history/${id}`, { method: 'DELETE' })));
+    setSelectedHistoryIds([]);
+    await loadHistory();
   };
 
   return (
@@ -504,9 +709,15 @@ export default function LectureRoomPage() {
         eyebrow="Information · Lecture Room"
         title="ห้องบรรยาย"
         description="จัดการห้องบรรยาย อาจารย์พากย์ และตารางการฟังบรรยาย"
+        actions={
+          <Link href="/lecture-monitor" className="toolbar-btn-primary h-9 px-4">
+            <MonitorBoardIcon className="erp-action-icon" />
+            TV Live Board Monitor
+          </Link>
+        }
       />
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200">
+      <div className="erp-controls-enter flex flex-wrap items-center gap-2 border-b border-slate-200">
         {tabs.map((tab) => (
           <button
             key={tab.key}
@@ -531,10 +742,10 @@ export default function LectureRoomPage() {
       {activeTab === 'dashboard' ? (
         <div className="space-y-4">
           <div className="grid gap-3 md:grid-cols-4">
-            <MetricCard label="ห้องทั้งหมด" value={dashboardStats.rooms} tone="blue" />
-            <MetricCard label="อาจารย์พากย์" value={dashboardStats.speakers} tone="emerald" />
-            <MetricCard label="กำลังบรรยาย" value={dashboardStats.sessions} tone="amber" />
-            <MetricCard label="คนเข้าฟังรวม" value={dashboardStats.attendees} tone="slate" />
+            <MetricCard icon={<RoomIcon />} label="ห้องทั้งหมด" value={dashboardStats.rooms} tone="blue" />
+            <MetricCard icon={<SpeakerIcon />} label="อาจารย์พากย์" value={dashboardStats.speakers} tone="emerald" />
+            <MetricCard icon={<LectureIcon />} label="กำลังบรรยาย" value={dashboardStats.sessions} tone="amber" />
+            <MetricCard icon={<PeopleMetricIcon />} label="คนเข้าฟังรวม" value={dashboardStats.attendees} tone="slate" />
           </div>
 
           <div className="flex items-center justify-between">
@@ -548,7 +759,7 @@ export default function LectureRoomPage() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {roomCards.map((room) => {
               const session = room.activeSession;
-              const status: RoomStatus = session ? session.status : 'available';
+              const status: RoomStatus = session ? session.status : room.status === 'inactive' ? 'inactive' : 'available';
               return (
                 <DataPanel key={room.id} className="group p-4 transition-colors duration-200 hover:border-[#1167e8]/40">
                   <div className="flex items-start justify-between gap-3">
@@ -608,23 +819,15 @@ export default function LectureRoomPage() {
 
       {activeTab === 'assignment' ? (
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-600">
-              วันที่
-              <input
-                value={assignmentDateText}
-                onChange={(event) => setAssignmentDateText(event.target.value)}
-                onBlur={commitAssignmentDate}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    commitAssignmentDate();
-                  }
-                }}
-                placeholder="--/--/----"
-                className="h-10 w-32 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[#1167e8]"
-              />
-            </label>
+          <div className="erp-controls-enter flex flex-wrap items-center gap-3">
+            <CalendarDateField
+              label=""
+              value={assignmentDate}
+              displayValue={assignmentDateText}
+              onDisplayChange={setAssignmentDateText}
+              onIsoChange={setAssignmentDate}
+              onCommit={commitAssignmentDate}
+            />
             <SearchField
               className="min-w-[280px] flex-1"
               value={assignmentSearch}
@@ -682,7 +885,7 @@ export default function LectureRoomPage() {
 
       {activeTab === 'rooms' ? (
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="erp-controls-enter flex flex-wrap items-center gap-3">
             <SearchField
               className="min-w-[280px] flex-1"
               value={roomSearch}
@@ -714,7 +917,7 @@ export default function LectureRoomPage() {
                     <td className="px-4 py-3 text-slate-700">{room.roomName}</td>
                     <td className="px-4 py-3 text-slate-700">{room.capacity}</td>
                     <td className="px-4 py-3">
-                      <StatusPill status={activeRoomIds.has(room.id) ? 'arriving' : 'available'} />
+                      <StatusPill status={activeRoomIds.has(room.id) ? 'arriving' : room.status === 'inactive' ? 'inactive' : 'available'} />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
@@ -738,7 +941,7 @@ export default function LectureRoomPage() {
 
       {activeTab === 'speakers' ? (
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="erp-controls-enter flex flex-wrap items-center gap-3">
             <SearchField
               className="min-w-[280px] flex-1"
               value={speakerSearch}
@@ -797,11 +1000,32 @@ export default function LectureRoomPage() {
               <h2 className="text-base font-semibold text-slate-950">ประวัติการบรรยาย</h2>
               <p className="text-xs font-light text-slate-500">{historyItems.length} records</p>
             </div>
+            {isAdmin ? (
+              <div className="flex items-center gap-2">
+                <IconButton onClick={() => setHistoryEditEnabled((value) => !value)}>
+                  <EditIcon className="h-4 w-4" />
+                  {historyEditEnabled ? 'ปิดการแก้ไข' : 'เปิดการแก้ไข'}
+                </IconButton>
+                {historyEditEnabled ? (
+                  <>
+                    <IconButton disabled={selectedHistoryIds.length !== 1} onClick={editSelectedHistory}>
+                      <EditIcon className="h-4 w-4" />
+                      Edit
+                    </IconButton>
+                    <IconButton variant="danger" disabled={selectedHistoryIds.length === 0} onClick={deleteSelectedHistory}>
+                      <TrashIcon className="h-4 w-4" />
+                      Delete
+                    </IconButton>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[920px] text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
+                  {historyEditEnabled ? <th className="w-12 px-4 py-3 font-medium"></th> : null}
                   <th className="px-4 py-3 font-medium">Party Code</th>
                   <th className="px-4 py-3 font-medium">ห้อง</th>
                   <th className="px-4 py-3 font-medium">อาจารย์</th>
@@ -813,7 +1037,27 @@ export default function LectureRoomPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {historyItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50">
+                  <tr
+                    key={item.id}
+                    className={cn(
+                      'hover:bg-slate-50',
+                      selectedHistoryIds.includes(item.id) && 'bg-blue-50 hover:bg-blue-50',
+                    )}
+                    onClick={() => {
+                      if (historyEditEnabled) toggleHistorySelection(item.id);
+                    }}
+                  >
+                    {historyEditEnabled ? (
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedHistoryIds.includes(item.id)}
+                          onChange={() => toggleHistorySelection(item.id)}
+                          onClick={(event) => event.stopPropagation()}
+                          className="h-4 w-4 rounded border-slate-300"
+                        />
+                      </td>
+                    ) : null}
                     <td className="px-4 py-3 font-medium text-slate-950">{item.partyCode}</td>
                     <td className="px-4 py-3 text-slate-700">
                       {item.roomCode} · {item.roomName}
@@ -865,6 +1109,21 @@ export default function LectureRoomPage() {
                   required
                 />
               </label>
+              {roomModal.mode === 'edit' ? (
+                <label className="grid gap-1 text-sm font-medium text-slate-700">
+                  สถานะ
+                  <select
+                    value={roomForm.status}
+                    onChange={(event) =>
+                      setRoomForm((prev) => ({ ...prev, status: event.target.value as 'available' | 'inactive' }))
+                    }
+                    className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
+                  >
+                    <option value="available">ว่าง</option>
+                    <option value="inactive">ปิดปรับปรุง</option>
+                  </select>
+                </label>
+              ) : null}
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
               <IconButton onClick={() => setRoomModal(null)}>
@@ -912,13 +1171,80 @@ export default function LectureRoomPage() {
                   className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
                 >
                   <option value="available">ว่าง</option>
-                  <option value="lecturing">กำลังบรรยาย</option>
                   <option value="inactive">ปิดใช้งาน</option>
                 </select>
               </label>
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
               <IconButton onClick={() => setSpeakerModal(null)}>
+                <XIcon className="h-4 w-4" />
+                Cancel
+              </IconButton>
+              <button className="h-9 rounded-lg border border-[#1167e8] bg-[#1167e8] px-4 text-sm font-medium text-white hover:bg-[#0f5fd6]">
+                Save
+              </button>
+            </div>
+          </form>
+        </ModalShell>
+      ) : null}
+
+      {historyEditItem ? (
+        <ModalShell title="แก้ไขประวัติ" onClose={() => setHistoryEditItem(null)}>
+          <form onSubmit={saveHistoryEdit}>
+            <div className="grid gap-4 p-5 md:grid-cols-2">
+              <label className="grid gap-1 text-sm font-medium text-slate-700">
+                Party Code
+                <input
+                  value={historyEditForm.partyCode}
+                  onChange={(event) => setHistoryEditForm((prev) => ({ ...prev, partyCode: event.target.value }))}
+                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium text-slate-700">
+                Room Code
+                <input
+                  value={historyEditForm.roomCode}
+                  onChange={(event) => setHistoryEditForm((prev) => ({ ...prev, roomCode: event.target.value }))}
+                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium text-slate-700">
+                Room Name
+                <input
+                  value={historyEditForm.roomName}
+                  onChange={(event) => setHistoryEditForm((prev) => ({ ...prev, roomName: event.target.value }))}
+                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium text-slate-700">
+                Speaker Code
+                <input
+                  value={historyEditForm.speakerCode}
+                  onChange={(event) => setHistoryEditForm((prev) => ({ ...prev, speakerCode: event.target.value }))}
+                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium text-slate-700">
+                Speaker Name
+                <input
+                  value={historyEditForm.speakerName}
+                  onChange={(event) => setHistoryEditForm((prev) => ({ ...prev, speakerName: event.target.value }))}
+                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium text-slate-700">
+                Attendee Count
+                <input
+                  type="number"
+                  min={0}
+                  value={historyEditForm.attendeeCount}
+                  onChange={(event) => setHistoryEditForm((prev) => ({ ...prev, attendeeCount: Number(event.target.value) }))}
+                  className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
+                />
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
+              <IconButton onClick={() => setHistoryEditItem(null)}>
                 <XIcon className="h-4 w-4" />
                 Cancel
               </IconButton>
@@ -961,7 +1287,7 @@ export default function LectureRoomPage() {
                   >
                     <option value="">เลือกห้อง</option>
                     {rooms
-                      .filter((room) => !activeRoomIds.has(room.id))
+                      .filter((room) => !activeRoomIds.has(room.id) && room.status !== 'inactive')
                       .map((room) => (
                         <option key={room.id} value={room.id}>
                           {room.roomCode} - {room.roomName}

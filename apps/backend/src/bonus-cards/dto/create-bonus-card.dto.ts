@@ -62,6 +62,14 @@ export class CreateBonusCardDto {
   @IsString()
   supervisorCode?: string;
 
+  @IsOptional()
+  @IsString()
+  tourLeaderName?: string;
+
+  @IsOptional()
+  @IsString()
+  tourLeaderPassport?: string;
+
   @IsString()
   partyCode!: string;
 

@@ -12,6 +12,7 @@ type AppCardProps = {
   icon: ReactNode;
   disabled?: boolean;
   className?: string;
+  onClick?: () => void;
 };
 
 export function AppCard({
@@ -22,6 +23,7 @@ export function AppCard({
   icon,
   disabled,
   className,
+  onClick,
 }: AppCardProps) {
   const content = (
     <>
@@ -69,12 +71,24 @@ export function AppCard({
     className,
   );
 
-  if (disabled || !href) {
+  if (disabled) {
     return (
       <div className={cardClass} aria-disabled="true" title="Coming soon">
         {content}
       </div>
     );
+  }
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={cn(cardClass, 'w-full text-left')}>
+        {content}
+      </button>
+    );
+  }
+
+  if (!href) {
+    return <div className={cardClass}>{content}</div>;
   }
 
   return (

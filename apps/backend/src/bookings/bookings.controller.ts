@@ -65,6 +65,16 @@ export class BookingsController {
     return this.bookingsService.findAgentMatchings({ search });
   }
 
+  @Get('bonus-source')
+  findBonusSourceRows(@Query('date') date: string) {
+    return this.bookingsService.findBonusSourceRows(date);
+  }
+
+  @Post('generate-bonus-codes')
+  generateBonusCodes(@Body() body: { ids: string[] }) {
+    return this.bookingsService.generateBonusCodes(body.ids);
+  }
+
   @Post('agent-matchings')
   createAgentMatching(@Body() body: { agentCodeRef: string; agentNameRef?: string; agentId?: string; agentCode?: string }) {
     return this.bookingsService.createAgentMatching(body);
@@ -89,8 +99,8 @@ export class BookingsController {
   }
 
   @Post('create-bonus-cards')
-  createBonusCards(@Body() body: { ids: string[] }) {
-    return this.bookingsService.createBonusCardsFromBookings(body.ids);
+  createBonusCards(@Body() body: { entries: Array<{ id: string; bonus: string }> }) {
+    return this.bookingsService.createBonusCardsFromBookings(body.entries ?? []);
   }
 
   @Patch(':id')

@@ -13,18 +13,25 @@ export class AuthService {
 
   async login(username: string, password: string) {
     const authRecord = await this.usersService.findByUsernameForAuth(username);
-    if (!authRecord || !authRecord.isActive) {
-      throw new UnauthorizedException('Invalid credentials');
+
+    if (!authRecord) {
+      throw new UnauthorizedException('ไม่พบบัญชีผู้ใช้นี้');
+    }
+
+    if (!authRecord.isActive) {
+      throw new UnauthorizedException('บัญชีนี้ถูกปิดการใช้งาน');
     }
 
     const passwordMatches = await compare(password, authRecord.passwordHash);
+
     if (!passwordMatches) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('รหัสผ่านไม่ถูกต้อง');
     }
 
     const authUser = await this.usersService.findAuthContextById(authRecord.id);
+
     if (!authUser) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('ไม่สามารถโหลดข้อมูลผู้ใช้งานได้');
     }
 
     return {
@@ -37,9 +44,11 @@ export class AuthService {
 
   async me(userId: string): Promise<AuthUser> {
     const authUser = await this.usersService.findAuthContextById(userId);
+
     if (!authUser) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException('ไม่พบข้อมูลผู้ใช้งาน');
     }
+
     return authUser;
   }
 }

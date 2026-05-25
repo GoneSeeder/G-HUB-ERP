@@ -1,9 +1,11 @@
 'use client';
 
 import { FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
+  CalendarIcon,
   EditIcon,
   LinkIcon,
   PlusIcon,
@@ -15,6 +17,8 @@ import {
   XIcon,
 } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
+import { LoadingState } from '@/components/ui/loading-state';
+import { useDialog } from '@/components/ui/dialog-provider';
 import { apiFetch } from '@/lib/api';
 import { preventEnterSubmit } from '@/lib/form-behavior';
 
@@ -31,6 +35,7 @@ type BookingReference = {
 
 type Booking = {
   id: string;
+  createdAt?: string;
   docDate: string;
   docTime: string;
   docNo: string;
@@ -55,6 +60,7 @@ type Booking = {
   faxNo: string;
   agentCodeRef: string;
   partyCodeRef: string;
+  bonusCode: string;
   status: boolean;
   upload: boolean;
   references: BookingReference[];
@@ -81,6 +87,22 @@ type AgentMatching = {
 
 type BonusPreviewRow = Booking & {
   previewBonus: string;
+};
+
+type BonusCodeResponse = {
+  requested: number;
+  rows: Array<{ id: string; bonus: string }>;
+};
+
+type BonusUploadResponse = {
+  requested: number;
+  created: number;
+  skipped: number;
+};
+
+type BookingUploadRefreshDetail = {
+  workDate?: string;
+  bonusCode?: string;
 };
 
 type ImportPreviewSection = {
@@ -124,6 +146,7 @@ const emptyBooking: Booking = {
   faxNo: '',
   agentCodeRef: '',
   partyCodeRef: '',
+  bonusCode: '',
   status: false,
   upload: false,
   references: [],
@@ -153,9 +176,10 @@ const tableColumns: Array<{ key: keyof Booking; label: string; className?: strin
 ];
 
 export default function InformationBookingPage() {
+  const { requestConfirmation } = useDialog();
   const [rows, setRows] = useState<Booking[]>([]);
   const [filters, setFilters] = useState({
-    date: today,
+    date: '',
     agent: '',
     nation: '',
     status: 'all',
@@ -203,6 +227,41 @@ export default function InformationBookingPage() {
   }, [filters.date, filters.agent, filters.nation, filters.status, filters.upload, filters.search]);
 
   useEffect(() => {
+    const refreshBookingUploadStatus = (detail?: BookingUploadRefreshDetail) => {
+      if (detail?.workDate && detail?.bonusCode) {
+        setRows((current) =>
+          current.map((row) =>
+            row.dateBookJw === detail.workDate && row.bonusCode === detail.bonusCode
+              ? { ...row, upload: false }
+              : row,
+          ),
+        );
+      }
+      void loadRows();
+    };
+
+    const onBookingUploadStatusChanged = (event: Event) => {
+      refreshBookingUploadStatus((event as CustomEvent<BookingUploadRefreshDetail>).detail);
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== 'g-hub:booking-upload-status-changed' || !event.newValue) return;
+      try {
+        refreshBookingUploadStatus(JSON.parse(event.newValue) as BookingUploadRefreshDetail);
+      } catch {
+        refreshBookingUploadStatus();
+      }
+    };
+
+    window.addEventListener('g-hub:booking-upload-status-changed', onBookingUploadStatusChanged);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('g-hub:booking-upload-status-changed', onBookingUploadStatusChanged);
+      window.removeEventListener('storage', onStorage);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.date, filters.agent, filters.nation, filters.status, filters.upload, filters.search]);
+
+  useEffect(() => {
     const bodyOverflow = document.body.style.overflow;
     const htmlOverflow = document.documentElement.style.overflow;
 
@@ -235,6 +294,10 @@ export default function InformationBookingPage() {
 
   const saveForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (formMode === 'edit' && form.upload) {
+      setBookingSaveState('idle');
+      return;
+    }
     setBookingSaveState('saving');
     const body = JSON.stringify({
       ...form,
@@ -243,8 +306,9 @@ export default function InformationBookingPage() {
     try {
       if (formMode === 'edit') {
         const saved = await apiFetch<Booking>(`/api/bookings/${form.id}`, { method: 'PATCH', body });
-        setForm({ ...saved, references: saved.references ?? [] });
-        await loadRows();
+        const savedRow = { ...saved, references: saved.references ?? [] };
+        setForm(savedRow);
+        setRows((current) => current.map((row) => (row.id === savedRow.id ? savedRow : row)));
         setBookingSaveState('saved');
         return;
       }
@@ -260,7 +324,13 @@ export default function InformationBookingPage() {
   };
 
   const deleteSelected = async () => {
-    if (selectedIds.length === 0 || !window.confirm(`Delete ${selectedIds.length} selected booking(s)?`)) {
+    if (
+      selectedIds.length === 0 ||
+      !(await requestConfirmation({
+        message: `Delete ${selectedIds.length} selected booking(s)?`,
+        variant: 'danger',
+      }))
+    ) {
       return;
     }
     await Promise.all(selectedIds.map((id) => apiFetch(`/api/bookings/${id}`, { method: 'DELETE' })));
@@ -300,8 +370,8 @@ export default function InformationBookingPage() {
         }
       />
 
-      <DataPanel className="erp-slide-left shrink-0 px-3 py-2.5">
-        <div className="flex flex-wrap items-end gap-2">
+      {/* <DataPanel className="erp-controls-enter shrink-0 px-3 py-2.5"> */}
+        <div className="erp-controls-enter flex flex-nowrap items-end gap-2 max-xl:flex-wrap">
           <div className="w-[150px]"><FilterDateInput label="Date" value={filters.date} onChange={(date) => setFilters({ ...filters, date })} /></div>
           <div className="w-[145px]"><FilterInput label="Agent" value={filters.agent} onChange={(agent) => setFilters({ ...filters, agent })} /></div>
           <div className="w-[112px]"><FilterInput label="Nation" value={filters.nation} onChange={(nation) => setFilters({ ...filters, nation })} /></div>
@@ -329,7 +399,7 @@ export default function InformationBookingPage() {
             onChange={(upload) => setFilters({ ...filters, upload })}
           />
           </div>
-          <div className="min-w-[260px] flex-1">
+          <div className="min-w-0 flex-1">
           <FilterInput
             label="Search"
             value={filters.search}
@@ -337,12 +407,9 @@ export default function InformationBookingPage() {
             onChange={(search) => setFilters({ ...filters, search })}
           />
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-right">
-            <p className="text-[10px] font-medium uppercase text-slate-400">Records</p>
-            <p className="text-sm font-medium text-slate-900">{rows.length}</p>
-          </div>
+          <span className="flex h-9 shrink-0 items-center whitespace-nowrap text-sm font-light text-slate-500">{rows.length} Records</span>
         </div>
-      </DataPanel>
+      {/* </DataPanel> */}
 
       {error ? (
         <div className="rounded-md border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
@@ -355,7 +422,7 @@ export default function InformationBookingPage() {
         </div>
       ) : null}
 
-      <DataPanel className="erp-slide-right flex min-h-0 flex-1 flex-col">
+      <DataPanel className="erp-content-enter flex min-h-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-3 py-2 text-sm text-slate-500">
           <span>
             Showing {rows.length} bookings
@@ -391,10 +458,10 @@ export default function InformationBookingPage() {
                     {column.label}
                   </th>
                 ))}
-                <th className="w-[5.4%] border-b border-slate-200 px-1.5 py-2 text-left text-[9px] font-semibold uppercase text-slate-400">
+                <th className="w-[5.4%] border-b border-slate-200 px-1.5 py-2 text-center text-[9px] font-semibold uppercase text-slate-400">
                   Status
                 </th>
-                <th className="w-[5%] border-b border-slate-200 px-1.5 py-2 text-left text-[9px] font-semibold uppercase text-slate-400">
+                <th className="w-[5%] border-b border-slate-200 px-1.5 py-2 text-center text-[9px] font-semibold uppercase text-slate-400">
                   Upload
                 </th>
               </tr>
@@ -402,8 +469,8 @@ export default function InformationBookingPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={tableColumns.length + 3} className="px-4 py-14 text-center text-sm text-slate-400">
-                    Loading bookings...
+                  <td colSpan={tableColumns.length + 3} className="px-4 py-8">
+                    <LoadingState label="Loading bookings..." className="min-h-[220px]" />
                   </td>
                 </tr>
               ) : null}
@@ -434,11 +501,11 @@ export default function InformationBookingPage() {
                         {formatBookingValue(row, column.key)}
                       </td>
                     ))}
-                    <td className="truncate border-b border-slate-100 px-2 py-2">
-                      <StatusPill active={row.status} activeText="Complete" inactiveText="Incomplete" />
+                    <td className="border-b border-slate-100 px-1.5 py-2 text-center align-middle leading-none">
+                      <StatusMark value={row.status} trueTone="complete" />
                     </td>
-                    <td className="truncate border-b border-slate-100 px-2 py-2">
-                      <StatusPill active={row.upload} activeText="Uploaded" inactiveText="Not Up" />
+                    <td className="border-b border-slate-100 px-1.5 py-2 text-center align-middle leading-none">
+                      <StatusMark value={row.upload} trueTone="upload" />
                     </td>
                   </tr>
                 ))}
@@ -485,7 +552,13 @@ export default function InformationBookingPage() {
       ) : null}
       {createBonusOpen ? (
         <CreateBonusModal
-          initialDate={filters.date || today}
+          initialDate={toDateInput(new Date())}
+          onUploaded={async (uploadedIds) => {
+            setRows((current) =>
+              current.map((row) => (uploadedIds.includes(row.id) ? { ...row, upload: true } : row)),
+            );
+            await loadRows();
+          }}
           onClose={() => setCreateBonusOpen(false)}
         />
       ) : null}
@@ -533,6 +606,7 @@ function BookingModal({
   const previousRow = currentIndex > 0 ? rows[currentIndex - 1] : null;
   const nextRow = currentIndex >= 0 && currentIndex < rows.length - 1 ? rows[currentIndex + 1] : null;
   const positionLabel = mode === 'edit' && rows.length > 0 ? `${Math.max(currentIndex + 1, 1)}/${rows.length}` : '';
+  const saveDisabled = saveState === 'saving' || (mode === 'edit' && form.upload);
 
   return (
     <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -654,12 +728,13 @@ function BookingModal({
           <div className="flex gap-3">
           <button
             type="submit"
-            disabled={saveState === 'saving'}
+            disabled={saveDisabled}
             className={
               saveState === 'saved'
                 ? 'inline-flex min-h-9 items-center justify-center gap-2 rounded-[10px] border border-emerald-500 bg-emerald-600 px-5 text-sm font-medium leading-none text-white transition hover:bg-emerald-600 disabled:opacity-70'
-                : 'toolbar-btn-primary px-5'
+                : 'toolbar-btn-primary px-5 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none'
             }
+            title={mode === 'edit' && form.upload ? 'This booking has already been uploaded.' : undefined}
           >
             <SaveIcon className="erp-action-icon" /> {saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? 'Save complete' : 'Save'}
           </button>
@@ -672,41 +747,128 @@ function BookingModal({
 
 function CreateBonusModal({
   initialDate,
+  onUploaded,
   onClose,
 }: {
   initialDate: string;
+  onUploaded?: (uploadedIds: string[]) => void | Promise<void>;
   onClose: () => void;
 }) {
-  const [bookDate, setBookDate] = useState(initialDate);
+  const [bookDate, setBookDate] = useState(initialDate || toDateInput(new Date()));
   const [rows, setRows] = useState<Booking[]>([]);
   const [previewRows, setPreviewRows] = useState<BonusPreviewRow[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loadingRows, setLoadingRows] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState('');
 
-  const displayRows = previewRows.length ? previewRows : rows.map((row) => ({ ...row, previewBonus: '' }));
+  const displayRows = sortCreateBonusRows(previewRows.length ? previewRows : rows.map((row) => ({ ...row, previewBonus: '' })));
   const selectedRows = displayRows.filter((row) => selectedIds.includes(row.id));
   const allRowsSelected = displayRows.length > 0 && displayRows.every((row) => selectedIds.includes(row.id));
-  const canUpload = selectedRows.length > 0 && selectedRows.every((row) => Boolean(row.previewBonus));
+  const canGenerate = selectedRows.length > 0 && selectedRows.every(canGenerateBonus);
+  const canUpload = selectedRows.length > 0 && selectedRows.every((row) => canGenerateBonus(row) && Boolean(row.bonusCode || row.previewBonus));
 
-  const genBonus = () => {
-    if (selectedIds.length === 0) return;
-    setPreviewRows(
-      displayRows.map((row) => ({
-        ...row,
-        previewBonus: selectedIds.includes(row.id) ? String(8001 + selectedIds.indexOf(row.id)) : row.previewBonus,
-      })),
-    );
+  const loadRowsForDate = async () => {
+    setLoadingRows(true);
+    setLoadError(null);
+    setActionMessage('');
+    try {
+      const params = new URLSearchParams();
+      if (bookDate) params.set('date', bookDate);
+      const data = await apiFetch<Booking[]>(`/api/bookings/bonus-source?${params.toString()}`);
+      const sortedRows = sortCreateBonusRows(data.map((row) => ({ ...row, previewBonus: '' })));
+      setRows(sortedRows);
+      setPreviewRows(sortedRows);
+      setSelectedIds([]);
+    } catch (error) {
+      setRows([]);
+      setPreviewRows([]);
+      setSelectedIds([]);
+      setLoadError(error instanceof Error ? error.message : 'Failed to load booking rows.');
+    } finally {
+      setLoadingRows(false);
+    }
+  };
+
+  const genBonus = async () => {
+    if (!canGenerate) return;
+    setLoadingRows(true);
+    setLoadError(null);
+    setActionMessage('');
+    try {
+      const result = await apiFetch<BonusCodeResponse>('/api/bookings/generate-bonus-codes', {
+        method: 'POST',
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      const bonusById = new Map(result.rows.map((row) => [row.id, row.bonus]));
+      setPreviewRows(
+        sortCreateBonusRows(
+          displayRows.map((row) => ({
+            ...row,
+            bonusCode: bonusById.get(row.id) ?? row.bonusCode,
+            previewBonus: bonusById.get(row.id) ?? row.previewBonus,
+          })),
+        ),
+      );
+      setActionMessage(`Generated ${result.rows.length} bonus codes.`);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Generate bonus failed.');
+    } finally {
+      setLoadingRows(false);
+    }
   };
 
   const clearBonus = () => {
     if (selectedIds.length === 0) return;
     setPreviewRows(
-      displayRows.map((row) => ({
-        ...row,
-        previewBonus: selectedIds.includes(row.id) ? '' : row.previewBonus,
-      })),
+      sortCreateBonusRows(
+        displayRows.map((row) => ({
+          ...row,
+          previewBonus: selectedIds.includes(row.id) ? '' : row.previewBonus,
+        })),
+      ),
     );
+  };
+
+  const uploadBonus = async () => {
+    if (!canUpload) return;
+    setLoadingRows(true);
+    setLoadError(null);
+    setActionMessage('');
+    const uploadedIds = selectedRows.map((row) => row.id);
+    try {
+      const result = await apiFetch<BonusUploadResponse>('/api/bookings/create-bonus-cards', {
+        method: 'POST',
+        body: JSON.stringify({
+          entries: selectedRows.map((row) => ({ id: row.id, bonus: row.bonusCode || row.previewBonus })),
+        }),
+      });
+      setRows((current) =>
+        sortCreateBonusRows(current.map((row) => (uploadedIds.includes(row.id) ? { ...row, upload: true } : row))),
+      );
+      setPreviewRows((current) =>
+        sortCreateBonusRows(
+          current.map((row) =>
+            uploadedIds.includes(row.id)
+              ? {
+                  ...row,
+                  upload: true,
+                  bonusCode: row.bonusCode || row.previewBonus,
+                  previewBonus: row.bonusCode || row.previewBonus,
+                }
+              : row,
+          ),
+        ),
+      );
+      setSelectedIds((current) => current.filter((id) => !uploadedIds.includes(id)));
+      await onUploaded?.(uploadedIds);
+      await loadRowsForDate();
+      setActionMessage(`Uploaded ${result.created} rows to Bonus.`);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Upload to bonus failed.');
+    } finally {
+      setLoadingRows(false);
+    }
   };
 
   const toggleRowSelection = (id: string) => {
@@ -720,16 +882,18 @@ function CreateBonusModal({
   useEffect(() => {
     let cancelled = false;
 
-    const loadRowsForDate = async () => {
+    const loadRows = async () => {
       setLoadingRows(true);
       setLoadError(null);
+      setActionMessage('');
       try {
         const params = new URLSearchParams();
         if (bookDate) params.set('date', bookDate);
-        const data = await apiFetch<Booking[]>(`/api/bookings?${params.toString()}`);
+        const data = await apiFetch<Booking[]>(`/api/bookings/bonus-source?${params.toString()}`);
         if (cancelled) return;
-        setRows(data);
-        setPreviewRows(data.map((row) => ({ ...row, previewBonus: '' })));
+        const sortedRows = sortCreateBonusRows(data.map((row) => ({ ...row, previewBonus: '' })));
+        setRows(sortedRows);
+        setPreviewRows(sortedRows);
         setSelectedIds([]);
       } catch (error) {
         if (cancelled) return;
@@ -742,7 +906,7 @@ function CreateBonusModal({
       }
     };
 
-    void loadRowsForDate();
+    void loadRows();
 
     return () => {
       cancelled = true;
@@ -766,19 +930,24 @@ function CreateBonusModal({
           <div className="w-[170px]">
             <FilterDateInput label="Book Date" value={bookDate} onChange={setBookDate} />
           </div>
-          <button type="button" className="toolbar-btn-primary" disabled={selectedIds.length === 0} onClick={genBonus}>
+          <button type="button" className="toolbar-btn-primary disabled:bg-slate-100 disabled:text-slate-400" disabled={!canGenerate || loadingRows} onClick={() => void genBonus()}>
             <PlusIcon className="erp-action-icon" /> Gen. Bonus Auto
           </button>
           <button type="button" className="toolbar-btn disabled:bg-slate-50 disabled:text-slate-400" disabled={selectedIds.length === 0} onClick={clearBonus}>
             <RefreshIcon className="erp-action-icon" /> Clear Bonus Code
           </button>
-          <button type="button" className="toolbar-btn disabled:bg-slate-50 disabled:text-slate-400" disabled={!canUpload} onClick={() => undefined}>
+          <button type="button" className="toolbar-btn disabled:bg-slate-50 disabled:text-slate-400" disabled={!canUpload || loadingRows} onClick={() => void uploadBonus()}>
             <UploadIcon className="erp-action-icon" /> Upload to Bonus
           </button>
           <span className="ml-auto text-sm font-light text-slate-500">
             {loadingRows ? 'Loading...' : `${displayRows.length} rows / ${selectedIds.length} selected`}
           </span>
         </div>
+        {loadError || actionMessage ? (
+          <div className={`border-b px-5 py-2 text-sm font-medium ${loadError ? 'border-red-100 bg-red-50 text-red-700' : 'border-emerald-100 bg-emerald-50 text-emerald-700'}`}>
+            {loadError ?? actionMessage}
+          </div>
+        ) : null}
 
         <div className="min-h-0 flex-1 overflow-auto">
           <table className="w-full min-w-[1320px] border-collapse text-xs">
@@ -818,7 +987,7 @@ function CreateBonusModal({
                         aria-label={`Select ${row.partyCode}`}
                       />
                     </td>
-                    <td className="px-2 py-2 font-medium text-slate-950">{row.previewBonus || '-'}</td>
+                    <td className="px-2 py-2 font-medium text-slate-950">{row.bonusCode || row.previewBonus || '-'}</td>
                     <td className="px-2 py-2">{formatDisplayDate(row.dateBookJw || row.arriveDate || row.docDate)}</td>
                     <td className="px-2 py-2">{row.timeBookJw || row.docTime}</td>
                     <td className="px-2 py-2">{row.agentCode}</td>
@@ -833,8 +1002,8 @@ function CreateBonusModal({
                     <td className="max-w-[230px] truncate px-2 py-2" title={row.bookRemark}>{row.bookRemark}</td>
                     <td className="px-2 py-2">R</td>
                     <td className="px-2 py-2">{row.docNo}</td>
-                    <td className="px-2 py-2"><StatusMark value={row.status} /></td>
-                    <td className="px-2 py-2"><StatusMark value={row.upload} /></td>
+                    <td className="px-2 py-2 text-center"><StatusMark value={row.status} trueTone="complete" /></td>
+                    <td className="px-2 py-2 text-center"><StatusMark value={row.upload} trueTone="upload" /></td>
                   </tr>
                 ))
               ) : (
@@ -852,19 +1021,52 @@ function CreateBonusModal({
   );
 }
 
-function StatusMark({ value }: { value: boolean }) {
-  return value ? (
-    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-50 text-sm font-bold leading-none text-emerald-700">
-      ✓
-    </span>
-  ) : (
-    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-50 text-base font-bold leading-none text-red-600">
-      ×
+function canGenerateBonus(row: Booking) {
+  return row.status && !row.upload && row.nation.trim() !== '';
+}
+
+function sortCreateBonusRows<T extends Booking & { previewBonus?: string }>(rows: T[]) {
+  return rows
+    .map((row, index) => ({ row, index }))
+    .sort((left, right) => {
+      const leftBonusText = left.row.bonusCode || left.row.previewBonus || '';
+      const rightBonusText = right.row.bonusCode || right.row.previewBonus || '';
+      const leftBonus = numericBonusCode(leftBonusText);
+      const rightBonus = numericBonusCode(rightBonusText);
+
+      if (leftBonus !== null || rightBonus !== null) {
+        if (leftBonus === null) return 1;
+        if (rightBonus === null) return -1;
+        if (leftBonus !== rightBonus) return leftBonus - rightBonus;
+        return leftBonusText.localeCompare(rightBonusText) || left.index - right.index;
+      }
+
+      return left.index - right.index;
+    })
+    .map(({ row }) => row);
+}
+
+function numericBonusCode(value: string) {
+  const cleaned = value.trim();
+  if (!cleaned) return null;
+  const numeric = Number(cleaned);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function StatusMark({ value, trueTone }: { value: boolean; trueTone: 'complete' | 'upload' }) {
+  const colorClass = value ? (trueTone === 'upload' ? 'text-[#3b82f6]' : 'text-[#22c55e]') : 'text-[#ff5b5f]';
+  return (
+    <span className={`mx-auto flex h-4 w-4 items-center justify-center ${colorClass}`} aria-label={value ? 'Yes' : 'No'}>
+      <svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="8" cy="8" r="6.25" />
+        {value ? <path d="m5.2 8.1 1.8 1.8 3.9-4" /> : <path d="m5.9 5.9 4.2 4.2M10.1 5.9 5.9 10.1" />}
+      </svg>
     </span>
   );
 }
 
 function AgentMatchingModal({ onClose }: { onClose: () => void }) {
+  const { requestConfirmation } = useDialog();
   const [rows, setRows] = useState<AgentMatching[]>([]);
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [search, setSearch] = useState('');
@@ -954,7 +1156,13 @@ function AgentMatchingModal({ onClose }: { onClose: () => void }) {
   };
 
   const remove = async () => {
-    if (!selected || !window.confirm(`Delete mapping "${selected.agentCodeRef}"?`)) {
+    if (
+      !selected ||
+      !(await requestConfirmation({
+        message: `Delete mapping "${selected.agentCodeRef}"?`,
+        variant: 'danger',
+      }))
+    ) {
       return;
     }
     await apiFetch(`/api/bookings/agent-matchings/${selected.id}`, { method: 'DELETE' });
@@ -1223,7 +1431,6 @@ function ImportModal({
         }),
       });
       setPreview(result);
-      setActivePreview('main');
     } catch (previewError) {
       setError(previewError instanceof Error ? previewError.message : 'Preview failed.');
     } finally {
@@ -1441,16 +1648,15 @@ function SelectField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="space-y-1">
-      <span className="text-xs font-semibold text-slate-700">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="form-input h-8 rounded-md text-sm">
-        {options.map(([optionValue, optionLabel]) => (
-          <option key={optionValue} value={optionValue}>
-            {optionLabel}
-          </option>
-        ))}
-      </select>
-    </label>
+    <CustomDropdown
+      label={label}
+      value={value}
+      options={options.map(([optionValue, optionLabel]) => ({ value: optionValue, label: optionLabel }))}
+      onChange={onChange}
+      inputClassName="h-8 text-sm"
+      labelClassName="text-xs font-semibold text-slate-700"
+      placeholder="Please select"
+    />
   );
 }
 
@@ -1613,8 +1819,7 @@ function FilterDateInput({ label, value, onChange }: { label: string; value: str
           type="text"
           value={displayValue}
           placeholder="--/--/----"
-          onClick={openPicker}
-          onFocus={openPicker}
+          inputMode="numeric"
           onChange={(event) => {
             const nextValue = event.target.value;
             setDisplayValue(nextValue);
@@ -1622,20 +1827,39 @@ function FilterDateInput({ label, value, onChange }: { label: string; value: str
               onChange('');
               return;
             }
-            if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(nextValue.trim())) {
-              onChange(parseDateInput(nextValue));
+            const parsedDate = parseValidDisplayDate(nextValue);
+            if (parsedDate) {
+              onChange(parsedDate);
             }
           }}
           onBlur={(event) => {
-            const completed = completeDateInput(event.target.value);
-            onChange(completed);
-            setDisplayValue(dateInputValue(completed));
+            const nextValue = event.target.value.trim();
+            if (!nextValue) {
+              onChange('');
+              setDisplayValue('');
+              return;
+            }
+            const parsedDate = parseValidDisplayDate(nextValue);
+            if (parsedDate) {
+              onChange(parsedDate);
+              setDisplayValue(dateInputValue(parsedDate));
+              return;
+            }
+            setDisplayValue(dateInputValue(value));
           }}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
-              const completed = completeDateInput(event.currentTarget.value);
-              onChange(completed);
-              setDisplayValue(dateInputValue(completed));
+              const nextValue = event.currentTarget.value.trim();
+              if (!nextValue) {
+                onChange('');
+                setDisplayValue('');
+                return;
+              }
+              const parsedDate = parseValidDisplayDate(nextValue);
+              if (parsedDate) {
+                onChange(parsedDate);
+                setDisplayValue(dateInputValue(parsedDate));
+              }
             }
           }}
           className="form-input rounded-md pr-10"
@@ -1646,9 +1870,7 @@ function FilterDateInput({ label, value, onChange }: { label: string; value: str
           aria-label="Open date picker"
           onClick={openPicker}
         >
-          <span aria-hidden="true" className="text-[15px] leading-none">
-            ▾
-          </span>
+          <CalendarIcon className="h-4 w-4" />
         </button>
         <input
           ref={pickerRef}
@@ -1676,15 +1898,126 @@ function FilterSelect({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="space-y-1">
-      <span className="text-[10px] font-medium uppercase text-slate-500">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="form-input rounded-md">
-        {options.map(([optionValue, labelText]) => (
-          <option key={optionValue} value={optionValue}>
-            {labelText}
-          </option>
-        ))}
-      </select>
+    <CustomDropdown
+      label={label}
+      value={value}
+      options={options.map(([optionValue, labelText]) => ({ value: optionValue, label: labelText }))}
+      onChange={onChange}
+      labelClassName="text-[10px] font-medium uppercase text-slate-500"
+      placeholder="All"
+    />
+  );
+}
+
+function CustomDropdown({
+  label,
+  value,
+  options,
+  onChange,
+  placeholder = 'Please select',
+  labelClassName = 'text-xs font-semibold text-slate-700',
+  inputClassName = '',
+}: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  labelClassName?: string;
+  inputClassName?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLLabelElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuRect, setMenuRect] = useState({ left: 0, top: 0, width: 0 });
+  const selected = options.find((option) => option.value === value);
+
+  const updateMenuRect = () => {
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMenuRect({
+      left: rect.left,
+      top: rect.bottom + 4,
+      width: rect.width,
+    });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    updateMenuRect();
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (!wrapperRef.current?.contains(target) && !menuRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
+    const updateOnViewportChange = () => updateMenuRect();
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    window.addEventListener('resize', updateOnViewportChange);
+    window.addEventListener('scroll', updateOnViewportChange, true);
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick);
+      window.removeEventListener('resize', updateOnViewportChange);
+      window.removeEventListener('scroll', updateOnViewportChange, true);
+    };
+  }, [open]);
+
+  return (
+    <label ref={wrapperRef} className="relative block space-y-1">
+      <span className={labelClassName}>{label}</span>
+      <button
+        ref={buttonRef}
+        type="button"
+        className={`form-input flex w-full items-center justify-between rounded-md border-[#9bc0ff] bg-white px-3 text-left shadow-[0_0_0_1px_rgba(96,165,250,0.16)] transition hover:border-[#6aa5ff] focus:border-[#1478ff] focus:ring-4 focus:ring-[rgba(20,120,255,0.16)] ${inputClassName}`}
+        onClick={() => {
+          updateMenuRect();
+          setOpen((current) => !current);
+        }}
+      >
+        <span className={selected ? 'truncate text-slate-950' : 'truncate text-slate-400'}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <span className="ml-2 shrink-0 text-[10px] text-slate-400" aria-hidden="true">
+          ▾
+        </span>
+      </button>
+      {open
+        ? createPortal(
+        <div
+          ref={menuRef}
+          style={{ left: menuRect.left, top: menuRect.top, width: menuRect.width }}
+          className="fixed z-[9999] overflow-hidden rounded-md border border-slate-200 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.18)]"
+        >
+          <div className="max-h-[220px] overflow-y-auto py-1 [scrollbar-color:#8b929c_transparent] [scrollbar-width:auto]">
+            {options.length ? (
+              options.map((option) => {
+                const isSelected = option.value === value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`flex h-9 w-full items-center gap-1 px-3 text-left text-[13px] text-slate-950 hover:bg-[#eaf2ff] ${
+                      isSelected ? 'bg-[#eaf2ff]' : 'bg-white'
+                    }`}
+                    onClick={() => {
+                      onChange(option.value);
+                      setOpen(false);
+                    }}
+                  >
+                    {option.value ? <span className="shrink-0 font-bold">{option.value}</span> : null}
+                    {option.label !== option.value ? <span className="truncate">{option.value ? `- ${option.label}` : option.label}</span> : null}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="px-3 py-3 text-sm text-slate-400">No results</div>
+            )}
+          </div>
+        </div>,
+        document.body,
+      )
+        : null}
     </label>
   );
 }
@@ -1725,22 +2058,6 @@ function ReferenceField({
   );
 }
 
-function StatusPill({
-  active,
-  activeText,
-  inactiveText,
-}: {
-  active: boolean;
-  activeText: string;
-  inactiveText: string;
-}) {
-  return (
-    <span className={`inline-flex max-w-full truncate rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${active ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-      {active ? activeText : inactiveText}
-    </span>
-  );
-}
-
 function formatBookingValue(row: Booking, key: keyof Booking) {
   const value = row[key];
   if (typeof value === 'string' && key.toLowerCase().includes('date')) {
@@ -1775,6 +2092,24 @@ function parseDateInput(value: string) {
   const day = match[1].padStart(2, '0');
   const month = match[2].padStart(2, '0');
   return `${match[3]}-${month}-${day}`;
+}
+
+function parseValidDisplayDate(value: string) {
+  const match = value.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) {
+    return '';
+  }
+  const [, day, month, year] = match;
+  const date = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getUTCFullYear() !== Number(year) ||
+    date.getUTCMonth() + 1 !== Number(month) ||
+    date.getUTCDate() !== Number(day)
+  ) {
+    return '';
+  }
+  return `${year}-${month}-${day}`;
 }
 
 function completeDateInput(value: string) {

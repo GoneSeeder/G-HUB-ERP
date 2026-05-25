@@ -1,0 +1,1 @@
+ALTER TABLE "BonusCard" ADD COLUMN "recorder" TEXT NOT NULL DEFAULT '';

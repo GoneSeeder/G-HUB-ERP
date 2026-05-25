@@ -85,6 +85,8 @@ model BonusCard {
   guideName        String
   memberCode       String   @default("")
   supervisorCode   String   @default("")
+  tourLeaderName   String   @default("")
+  tourLeaderPassport String @default("")
   partyCode        String
   nation           String   @default("CN")
   province         String   @default("")
@@ -100,6 +102,7 @@ model BonusCard {
   busType          String   @default("")
   tourIn           String   @default("")
   tourOut          String   @default("")
+  recorder         String   @default("")
   comment          String   @default("")
   imageUrl         String?
   nameListCode     String   @default("")
@@ -112,6 +115,21 @@ model BonusCard {
 
   lectureSessions  LectureSession[]
   lectureHistories LectureHistory[]
+}
+
+model ReferenceItem {
+  id         String   @id @default(uuid())
+  type       String
+  code       String
+  name       String
+  secondaryName String @default("")
+  nationCode String   @default("")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([type, code, nationCode])
+  @@index([type])
+  @@index([type, nationCode])
 }
 
 model Member {
@@ -244,6 +262,8 @@ model NameListItem {
   isLeader     Boolean  @default(false)
   agentCode    String   @default("")
   code         String   @default("")
+  guideCode    String   @default("")
+  guideName    String   @default("")
   arriveDate   DateTime?
   passportNo   String   @default("")
   firstName    String   @default("")
@@ -292,6 +312,7 @@ model Booking {
   faxNo        String             @default("")
   agentCodeRef String             @default("")
   partyCodeRef String             @default("")
+  bonusCode    String             @default("")
   status       Boolean            @default(false)
   upload       Boolean            @default(false)
   references   BookingReference[]
@@ -305,6 +326,7 @@ model Booking {
   @@index([nation])
   @@index([status])
   @@index([upload])
+  @@index([bonusCode])
 }
 
 model BookingReference {
@@ -330,6 +352,7 @@ model LectureRoom {
   roomCode  String   @unique
   roomName  String
   capacity  Int
+  status    String   @default("available") // "available" | "inactive"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

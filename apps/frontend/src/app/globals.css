@@ -39,32 +39,32 @@ body {
   }
 }
 
-@keyframes erp-slide-left {
+@keyframes erp-content-up {
   from {
     opacity: 0;
-    transform: translate3d(10px, 4px, 0);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes erp-slide-right {
-  from {
-    opacity: 0;
-    transform: translate3d(-10px, 4px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
   }
 }
 
 @keyframes erp-slide-down {
   from {
     opacity: 0;
-    transform: translateY(-6px);
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes erp-controls-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -73,23 +73,31 @@ body {
 }
 
 .erp-fade-in {
-  animation: erp-fade-up 630ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.erp-slide-left {
-  animation: erp-slide-left 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.erp-slide-right {
-  animation: erp-slide-right 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: erp-content-up 600ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
 }
 
 .erp-slide-down {
+  animation: erp-slide-down 600ms cubic-bezier(0.16, 1, 0.3, 1) 50ms both;
+}
+
+.erp-breadcrumb-enter {
   animation: erp-slide-down 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+.erp-title-enter {
+  animation: erp-slide-down 600ms cubic-bezier(0.16, 1, 0.3, 1) 50ms both;
+}
+
+.erp-controls-enter {
+  animation: erp-controls-up 600ms cubic-bezier(0.16, 1, 0.3, 1) 100ms both;
+}
+
+.erp-content-enter {
+  animation: erp-content-up 600ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+}
+
 .erp-hub-grid > * {
-  animation: erp-fade-up 660ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: erp-content-up 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .erp-hub-grid > *:nth-child(1) {
@@ -110,9 +118,11 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .erp-fade-in,
-  .erp-slide-left,
-  .erp-slide-right,
   .erp-slide-down,
+  .erp-breadcrumb-enter,
+  .erp-title-enter,
+  .erp-controls-enter,
+  .erp-content-enter,
   .erp-hub-grid > *,
   * {
     animation-duration: 1ms !important;
@@ -154,8 +164,9 @@ body {
 }
 
 .toolbar-btn-primary {
-  background: var(--ghub-blue-700);
-  border-color: #1478ff;
+  /* background: var(--ghub-blue-700); */
+  background-color: rgba(0, 110, 255, 1);
+  border-color: #0753e0;
   color: #ffffff;
   box-shadow: none;
 }
@@ -203,7 +214,8 @@ body {
   border-radius: 0.625rem;
   background: #fff;
   padding: 0 0.85rem;
-  color: #e11d48;
+  color: #eb3636;
+  /* color: #EF4343; */
   font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1;
@@ -420,6 +432,118 @@ input[type='number']::-webkit-inner-spin-button {
 }
 
 @media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  html,
+  body,
+  body.report-print {
+    display: block !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.report-print * {
+    animation: none !important;
+    transform: none !important;
+    visibility: hidden;
+  }
+
+  body.report-print .print-area,
+  body.report-print .print-area * {
+    visibility: visible;
+  }
+
+  body.report-print .print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100%;
+    min-width: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    box-sizing: border-box !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  body.report-print .report-panel,
+  body.report-print .report-preview-wrap,
+  body.report-print .report-print-stack {
+    display: block !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
+
+  body.report-print .report-sheet {
+    border: 0 !important;
+    box-shadow: none !important;
+    break-after: page;
+    margin: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    page-break-after: always;
+  }
+
+  body.report-print .report-sheet:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  body.report-print .no-print {
+    display: none !important;
+  }
+
+  body.report-print .report-table {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    table-layout: fixed;
+    font-size: 8.5pt;
+  }
+
+  body.report-print .report-table th,
+  body.report-print .report-table td {
+    padding: 2.2pt 3pt;
+  }
+
+  body.report-print .report-table-bonus th,
+  body.report-print .report-table-bonus td {
+    font-size: 6.7pt;
+    padding: 2.2pt 1.6pt;
+  }
+
+  body.report-print .report-print-bonus {
+    width: 277mm !important;
+    max-width: 277mm !important;
+  }
+
+  body.report-print .report-print-bonus .report-table {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  body.report-print .report-print-bonus .report-doc-header {
+    margin-top: 0 !important;
+    margin-bottom: 4mm !important;
+    font-size: 8.5pt !important;
+  }
+
+  body.report-print .report-print-bonus .report-doc-title {
+    font-size: 13pt !important;
+  }
+
   body.detail-print * {
     visibility: hidden;
   }
@@ -441,4 +565,178 @@ input[type='number']::-webkit-inner-spin-button {
   body.detail-print .no-print {
     display: none;
   }
+}
+
+.report-table th {
+  border: 1px solid #dbe3ee;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.625rem;
+  font-weight: 700;
+  padding: 0.55rem 0.6rem;
+  text-transform: uppercase;
+}
+
+.report-table td {
+  border: 1px solid #e5e7eb;
+  color: #0f172a;
+  padding: 0.55rem 0.6rem;
+  vertical-align: top;
+}
+
+.report-table-bonus {
+  table-layout: fixed;
+  min-width: 0;
+}
+
+.report-table-bonus th,
+.report-table-bonus td {
+  overflow: hidden;
+  padding: 0.42rem 0.42rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-table-bonus th {
+  font-size: 0.58rem;
+}
+
+.report-table-bonus td {
+  font-size: 0.61rem;
+}
+
+.report-table tfoot td {
+  border-top: 2px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.report-table tbody tr:nth-child(even) td {
+  background: #fcfdff;
+}
+
+.report-sheet {
+  overflow: hidden;
+}
+
+.report-doc-header {
+  display: grid;
+  gap: 0.15rem 0.75rem;
+  margin-bottom: 0.75rem;
+  color: #0f172a;
+  font-size: 0.75rem;
+}
+
+.report-doc-header-bonus {
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: end;
+}
+
+.report-doc-header-booking {
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: end;
+}
+
+.report-doc-title {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.report-doc-brand,
+.report-doc-code,
+.report-doc-date,
+.report-doc-meta,
+.report-doc-page {
+  font-weight: 600;
+}
+
+.report-doc-meta,
+.report-doc-page {
+  text-align: right;
+}
+
+.report-doc-date {
+  text-align: center;
+}
+
+.report-bonus-agent {
+  width: 4.6%;
+}
+
+.report-bonus-guide {
+  width: 4.6%;
+}
+
+.report-bonus-no {
+  width: 4.2%;
+}
+
+.report-bonus-detail {
+  width: 14.8%;
+}
+
+.report-bonus-party {
+  width: 10%;
+}
+
+.report-bonus-nation {
+  width: 3.2%;
+}
+
+.report-bonus-count {
+  width: 2.5%;
+}
+
+.report-bonus-time-in {
+  width: 3.8%;
+}
+
+.report-bonus-time-out {
+  width: 3.8%;
+}
+
+.report-bonus-recorder {
+  width: 5%;
+}
+
+.report-bonus-car {
+  width: 5.2%;
+}
+
+.report-bonus-shop {
+  width: 2.8%;
+}
+
+.report-bonus-origin {
+  width: 5.4%;
+}
+
+.report-bonus-car-type {
+  width: 5.2%;
+}
+
+.report-bonus-remark {
+  width: 10.3%;
+}
+
+.report-table-booking th:nth-child(1),
+.report-table-booking td:nth-child(1) {
+  width: 42px;
+}
+
+.report-table-booking th:nth-child(2),
+.report-table-booking td:nth-child(2) {
+  width: 170px;
+}
+
+.report-table-booking th:nth-child(3),
+.report-table-booking td:nth-child(3) {
+  width: 130px;
+}
+
+.report-table-booking th:nth-child(8),
+.report-table-booking td:nth-child(8) {
+  width: 190px;
 }

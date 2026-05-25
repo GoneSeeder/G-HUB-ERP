@@ -1,0 +1,3 @@
+ALTER TABLE "BonusCard"
+ADD COLUMN "tourLeaderName" TEXT NOT NULL DEFAULT '',
+ADD COLUMN "tourLeaderPassport" TEXT NOT NULL DEFAULT '';

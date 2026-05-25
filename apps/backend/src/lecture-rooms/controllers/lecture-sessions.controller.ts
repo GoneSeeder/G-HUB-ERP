@@ -1,8 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { RequireAppAccess } from '../../auth/decorators/app-access.decorator';
 import { AppAccessGuard } from '../../auth/guards/app-access.guard';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { AssignSessionDto } from '../dto/session.dto';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { AssignSessionDto, UpdateLectureHistoryDto } from '../dto/session.dto';
 import { LectureSessionsService } from '../services/lecture-sessions.service';
 
 @Controller('api')
@@ -59,5 +61,19 @@ export class LectureSessionsController {
     const p = page ? parseInt(page, 10) : 1;
     const l = limit ? parseInt(limit, 10) : 50;
     return this.lectureSessionsService.getHistory(p, l);
+  }
+
+  @Patch('lecture-sessions/history/:id')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  updateHistory(@Param('id') id: string, @Body() dto: UpdateLectureHistoryDto) {
+    return this.lectureSessionsService.updateHistory(id, dto);
+  }
+
+  @Delete('lecture-sessions/history/:id')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  removeHistory(@Param('id') id: string) {
+    return this.lectureSessionsService.removeHistory(id);
   }
 }

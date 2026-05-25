@@ -55,10 +55,7 @@ export class AgentsService {
         active: true,
         ...(contains
           ? {
-              OR: [
-                { agentCode: contains },
-                { name: contains },
-              ],
+              OR: [{ agentCode: contains }, { name: contains }],
             }
           : {}),
       },
@@ -251,6 +248,11 @@ export class AgentsService {
       .replace(/\u0000/g, '')
       .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F]/g, '');
 
+    const sqlRows = this.parseAgentSqlImport(text);
+    if (sqlRows.length) {
+      return sqlRows;
+    }
+
     return text
       .split(/\r?\n/)
       .map((line) => line.trim())
@@ -277,20 +279,157 @@ export class AgentsService {
 
     const nullRatio = (oddNulls + evenNulls) / Math.max(sampleLength, 1);
     if (nullRatio > 0.12) {
-      return oddNulls >= evenNulls ? buffer.toString('utf16le') : buffer.swap16().toString('utf16le');
+      return oddNulls >= evenNulls
+        ? buffer.toString('utf16le')
+        : buffer.swap16().toString('utf16le');
     }
 
-    return buffer.toString('utf8');
+    const decoded = [
+      this.decodeWithEncoding(buffer, 'utf-8'),
+      this.decodeWithEncoding(buffer, 'windows-874'),
+      this.decodeWithEncoding(buffer, 'tis-620'),
+    ].filter((value): value is string => Boolean(value));
+
+    return (
+      decoded.sort(
+        (left, right) => this.scoreDecodedText(right) - this.scoreDecodedText(left),
+      )[0] ?? buffer.toString('utf8')
+    );
+  }
+
+  private decodeWithEncoding(buffer: Buffer, encoding: string) {
+    try {
+      return new TextDecoder(encoding, { fatal: encoding === 'utf-8' }).decode(buffer);
+    } catch {
+      return '';
+    }
+  }
+
+  private scoreDecodedText(text: string) {
+    const thaiCharacters = text.match(/[\u0E00-\u0E7F]/g)?.length ?? 0;
+    const replacementCharacters = text.match(/\uFFFD/g)?.length ?? 0;
+    const mojibakeCharacters = text.match(/[เธเน][\u0080-\u00FF]/g)?.length ?? 0;
+    return thaiCharacters - replacementCharacters * 100 - mojibakeCharacters * 5;
+  }
+
+  private parseAgentSqlImport(text: string): Prisma.AgentCreateManyInput[] {
+    return this.parseSqlInsertRows(text, 'Agent')
+      .map((row) => {
+        const agentCode = this.cleanLegacyValue(row.Code ?? '').toUpperCase();
+        return {
+          agentCode,
+          codeCenter: agentCode,
+          name: this.cleanLegacyValue(row.Name ?? ''),
+          address: [row.Address, row.Province]
+            .map((value) => this.cleanLegacyValue(value ?? ''))
+            .filter(Boolean)
+            .join(', '),
+          nation: this.cleanLegacyValue(row.Nation ?? '').toUpperCase(),
+          phone: this.cleanLegacyValue(row.Tel ?? ''),
+          fax: this.cleanLegacyValue(row.Fax ?? ''),
+          contactPerson: this.cleanLegacyValue(row.Person ?? ''),
+          marketing: this.cleanLegacyValue(row.Marketing_Code ?? row.MarketSale ?? ''),
+          agentHO: this.cleanLegacyValue(row.AgentHO ?? ''),
+          typeCenter: this.cleanLegacyValue(row.TourShop ?? ''),
+          agentType: this.cleanLegacyValue(row.Agent_Type ?? '') || 'AGENT',
+          typeGroup: this.cleanLegacyValue(row.TypeGroup ?? ''),
+          navCode: this.cleanLegacyValue(row.NAV_Code ?? row.UniqueID ?? ''),
+          email: this.cleanLegacyValue(row.Email ?? ''),
+          taxId: this.cleanLegacyValue(row.ID_Tax ?? ''),
+          branch: '',
+          bankName: '',
+          bankBranch: '',
+          bankAccount: '',
+          active: this.cleanLegacyValue(row.Active ?? '').toUpperCase() !== 'N',
+        };
+      })
+      .filter((agent) => agent.agentCode && agent.name);
+  }
+
+  private parseSqlInsertRows(text: string, tableName: string) {
+    const rows: Record<string, string | null>[] = [];
+    const insertPattern = new RegExp(
+      `INSERT\\s+INTO\\s+"${tableName}"\\s*\\(([^)]*)\\)\\s*VALUES`,
+      'gi',
+    );
+    let insertMatch: RegExpExecArray | null;
+
+    while ((insertMatch = insertPattern.exec(text))) {
+      const columns = insertMatch[1]
+        .split(',')
+        .map((column) => column.trim().replace(/^"|"$/g, ''));
+      let tuple: (string | null)[] | null = null;
+      let cell = '';
+      let inString = false;
+
+      for (let index = insertPattern.lastIndex; index < text.length; index += 1) {
+        const character = text[index];
+        const nextCharacter = text[index + 1];
+
+        if (!tuple) {
+          if (character === '(') {
+            tuple = [];
+            cell = '';
+          } else if (character === ';') {
+            insertPattern.lastIndex = index + 1;
+            break;
+          }
+          continue;
+        }
+
+        if (inString) {
+          if (character === "'" && nextCharacter === "'") {
+            cell += "'";
+            index += 1;
+          } else if (character === "'") {
+            inString = false;
+          } else {
+            cell += character;
+          }
+          continue;
+        }
+
+        if (character === "'") {
+          inString = true;
+        } else if (character === ',') {
+          tuple.push(this.parseSqlValue(cell));
+          cell = '';
+        } else if (character === ')') {
+          tuple.push(this.parseSqlValue(cell));
+          rows.push(
+            Object.fromEntries(
+              columns.map((column, columnIndex) => [column, tuple?.[columnIndex] ?? null]),
+            ),
+          );
+          tuple = null;
+          cell = '';
+        } else {
+          cell += character;
+        }
+      }
+    }
+
+    return rows;
+  }
+
+  private parseSqlValue(value: string) {
+    const cleaned = value.trim();
+    if (!cleaned || cleaned.toUpperCase() === 'NULL') {
+      return null;
+    }
+    return cleaned;
   }
 
   private parseLegacyLine(line: string): Prisma.AgentCreateManyInput {
     const cells = line.split(',').map((cell) => this.cleanLegacyValue(cell));
     const taxId = cells.find((cell) => /^\d{13}$/.test(cell)) ?? '';
-    const bankAccount = [...cells].reverse().find((cell) => /^\d[\d-]{6,}$/.test(cell) && cell !== taxId) ?? '';
+    const bankAccount =
+      [...cells].reverse().find((cell) => /^\d[\d-]{6,}$/.test(cell) && cell !== taxId) ?? '';
     const activeMatch = line.match(/,AGENT,([YN]),/i);
-    const typeGroup = cells[cells.length - 1]?.startsWith('OT') || cells[cells.length - 1]?.startsWith('CT')
-      ? cells[cells.length - 1]
-      : '';
+    const typeGroup =
+      cells[cells.length - 1]?.startsWith('OT') || cells[cells.length - 1]?.startsWith('CT')
+        ? cells[cells.length - 1]
+        : '';
     const nation = cells.find((cell, index) => index > 10 && /^[A-Z]{2,3}$/.test(cell)) ?? '';
     const contactPerson = cells.find((cell) => cell.includes('คุณ')) ?? '';
     const phone = cells.find((cell) => /^\d{2,3}-?\d{3,4}-?\d{3,4}$/.test(cell)) ?? '';
@@ -321,7 +460,10 @@ export class AgentsService {
   }
 
   private cleanLegacyValue(value: string) {
-    return value.replace(/\u0000/g, '').replace(/[\u0001-\u001F]/g, '').trim();
+    return value
+      .replace(/\u0000/g, '')
+      .replace(/[\u0001-\u001F]/g, '')
+      .trim();
   }
 
   private async ensureExists(id: string) {

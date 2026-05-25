@@ -10,7 +10,8 @@ export function middleware(request: NextRequest) {
   const isProtectedRoute =
     pathname.startsWith('/hub') ||
     pathname.startsWith('/admin') ||
-    pathname.startsWith('/information');
+    pathname.startsWith('/information') ||
+    pathname.startsWith('/lecture-monitor');
 
   if (!token && isProtectedRoute) {
     return NextResponse.redirect(new URL('/login', request.url));
@@ -24,5 +25,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/login', '/hub/:path*', '/admin/:path*', '/information/:path*'],
+  matcher: ['/login', '/hub/:path*', '/admin/:path*', '/information/:path*', '/lecture-monitor', '/lecture-monitor/:path*'],
 };

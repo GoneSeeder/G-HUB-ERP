@@ -16,7 +16,7 @@ export class UpdateSpeakerDto {
   speakerName?: string;
 
   @IsString()
-  @IsIn(['available', 'lecturing', 'inactive'])
+  @IsIn(['available', 'inactive'])
   @IsOptional()
   status?: string;
 }

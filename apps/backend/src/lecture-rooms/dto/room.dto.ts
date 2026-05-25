@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateRoomDto {
   @IsString()
@@ -23,4 +23,9 @@ export class UpdateRoomDto {
   @Min(1)
   @IsOptional()
   capacity?: number;
+
+  @IsString()
+  @IsIn(['available', 'inactive'])
+  @IsOptional()
+  status?: string;
 }

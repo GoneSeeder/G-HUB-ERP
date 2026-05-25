@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
+import { useDialog } from '@/components/ui/dialog-provider';
 import { apiFetch } from '@/lib/api';
 import { preventEnterSubmit } from '@/lib/form-behavior';
 
@@ -51,6 +52,7 @@ const appTree = [
       { code: 'information-bonus-card', label: 'บันทึกข้อมูลโบนัสการ์ด' },
       { code: 'information-booking', label: 'บันทึกการจองเข้าร้าน' },
       { code: 'information-name-list', label: 'Name List' },
+      { code: 'information-lecture-room', label: 'ห้องบรรยาย' },
       { code: 'information-report', label: 'รายงาน' },
     ],
   },
@@ -81,6 +83,7 @@ const emptyForm: UserFormState = {
 };
 
 export default function AdminUsersPage() {
+  const { requestConfirmation } = useDialog();
   const [users, setUsers] = useState<UserItem[]>([]);
   const [apps, setApps] = useState<AppItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -237,7 +240,10 @@ export default function AdminUsersPage() {
   };
 
   const onDeleteUser = async (user: UserItem) => {
-    const confirmed = window.confirm(`Delete user "${user.username}"?`);
+    const confirmed = await requestConfirmation({
+      message: `Delete user "${user.username}"?`,
+      variant: 'danger',
+    });
     if (!confirmed) {
       return;
     }

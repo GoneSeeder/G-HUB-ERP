@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <AssemblyName>BookingInfor</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>True</UseWindowsForms>
+    <TargetFramework>net40</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>12.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="BookingInfor.exe.licenses" />
+    <EmbeddedResource Include="BookingInfor.exe.licenses" LogicalName="BookingInfor.exe.licenses" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="DevExpress.XtraBars.v16.1">
+      <HintPath>..\..\..\AC_START\DevExpress.XtraBars.v16.1.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraEditors.v16.1">
+      <HintPath>..\..\..\AC_START\DevExpress.XtraEditors.v16.1.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraGrid.v16.1">
+      <HintPath>..\..\..\AC_START\DevExpress.XtraGrid.v16.1.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Utils.v16.1">
+      <HintPath>..\..\..\AC_START\DevExpress.Utils.v16.1.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraLayout.v16.1">
+      <HintPath>..\..\..\AC_START\DevExpress.XtraLayout.v16.1.dll</HintPath>
+    </Reference>
+    <Reference Include="CrystalDecisions.Windows.Forms" />
+    <Reference Include="CrystalDecisions.CrystalReports.Engine" />
+    <Reference Include="DevExpress.Data.v16.1">
+      <HintPath>..\..\..\AC_START\DevExpress.Data.v16.1.dll</HintPath>
+    </Reference>
+    <Reference Include="MISTool">
+      <HintPath>..\..\..\AC_START\MISTool.dll</HintPath>
+    </Reference>
+    <Reference Include="MisDataBase">
+      <HintPath>..\..\..\AC_START\MisDataBase.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Images.v16.1">
+      <HintPath>..\..\..\AC_START\DevExpress.Images.v16.1.dll</HintPath>
+    </Reference>
+    <Reference Include="CrystalDecisions.Shared" />
+  </ItemGroup>
+</Project>

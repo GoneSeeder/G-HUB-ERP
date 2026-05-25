@@ -21,3 +21,30 @@ export class AssignSessionDto {
   @Min(0)
   attendeeCount!: number;
 }
+
+export class UpdateLectureHistoryDto {
+  @IsString()
+  @IsOptional()
+  partyCode?: string;
+
+  @IsString()
+  @IsOptional()
+  roomCode?: string;
+
+  @IsString()
+  @IsOptional()
+  roomName?: string;
+
+  @IsString()
+  @IsOptional()
+  speakerCode?: string;
+
+  @IsString()
+  @IsOptional()
+  speakerName?: string;
+
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  attendeeCount?: number;
+}

@@ -18,6 +18,7 @@ const MANAGED_APP_CODES = [
   'information-bonus-card',
   'information-booking',
   'information-name-list',
+  'information-lecture-room',
   'information-report',
   'inventory',
   'inventory-stock',

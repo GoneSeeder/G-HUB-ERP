@@ -1,6 +1,17 @@
 import { clearAuthTokenCookie, getAuthTokenFromCookie, isSessionIdleExpired } from './auth';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
+const LOCAL_API_URL = /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?\/?$/i;
+
+export function getApiBaseUrl() {
+  const configuredUrl = (process.env.NEXT_PUBLIC_API_URL ?? '').trim();
+  if (!configuredUrl || LOCAL_API_URL.test(configuredUrl)) {
+    return '';
+  }
+
+  return configuredUrl.replace(/\/$/, '');
+}
+
+const API_URL = getApiBaseUrl();
 const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in again.';
 
 function redirectToLogin() {

@@ -11,6 +11,7 @@ import {
   UsersIcon,
 } from '@/components/ui/icons';
 import { PageShell } from '@/components/ui/page-shell';
+import { LoadingState } from '@/components/ui/loading-state';
 import { apiFetch } from '@/lib/api';
 import { clearAuthTokenCookie } from '@/lib/auth';
 
@@ -82,6 +83,7 @@ const appHrefByCode: Record<string, string | undefined> = {
   'information-booking': '/information/booking',
   'information-name-list': '/information/name-list',
   'information-lecture-room': '/information/lecture-room',
+  'information-report': '/information/report',
 };
 
 const appMetaByCode: Record<string, HubAppMeta> = {
@@ -114,9 +116,9 @@ const appMetaByCode: Record<string, HubAppMeta> = {
     icon: 'card',
   },
   'information-lecture-room': {
-    eyebrow: 'การจัดการข้อมูล',
-    title: 'ห้องบรรยาย',
-    description: 'จัดการห้องบรรยาย ข้อมูลผู้บรรยาย และรอบการบรรยายประจำวัน',
+    eyebrow: 'Data management',
+    title: 'Lecture Room',
+    description: 'Manage lecture rooms, speaker information, and daily lecture schedules',
     accent: 'bg-rose-50 text-rose-600',
     icon: 'booking',
   },
@@ -158,13 +160,7 @@ export default function HubPage() {
   }, [router]);
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="erp-fade-in rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-500 shadow-sm">
-          Loading hub...
-        </div>
-      </div>
-    );
+    return <LoadingState label="Loading hub..." className="h-full" />;
   }
 
   if (error) {
@@ -240,7 +236,7 @@ export default function HubPage() {
       </header>
 
       {canSeeInformation ? (
-        <section className="erp-slide-right space-y-3">
+        <section className="erp-content-enter space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-baseline gap-2">
               <h2 className="text-sm font-semibold text-slate-950">Information</h2>
@@ -248,9 +244,6 @@ export default function HubPage() {
                 Daily operation modules and master data
               </p>
             </div>
-            <span className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-normal text-slate-500">
-              ERP 2026
-            </span>
           </div>
 
           <div className="erp-hub-grid grid gap-3 md:grid-cols-2">
@@ -272,7 +265,6 @@ export default function HubPage() {
                   description={meta.description}
                   code={app.code.replace('information-', '')}
                   className="opacity-0"
-                  disabled={app.code === 'information-report'}
                   icon={
                     <HubIconBadge accent={meta.accent}>
                       <HubIcon type={meta.icon} />
@@ -290,7 +282,7 @@ export default function HubPage() {
       )}
 
       {canSeeSupplyChain ? (
-        <section className="erp-slide-left space-y-3">
+        <section className="erp-content-enter space-y-3">
           <div className="flex flex-wrap items-baseline gap-2">
             <h2 className="text-sm font-semibold text-slate-950">Supply Chain</h2>
             <p className="text-xs font-light text-slate-500">
@@ -316,7 +308,7 @@ export default function HubPage() {
       ) : null}
 
       {canSeeSales ? (
-      <section className="erp-slide-right space-y-3">
+      <section className="erp-content-enter space-y-3">
         <div className="flex flex-wrap items-baseline gap-2">
           <h2 className="text-sm font-semibold text-slate-950">Sales</h2>
           <p className="text-xs font-light text-slate-500">

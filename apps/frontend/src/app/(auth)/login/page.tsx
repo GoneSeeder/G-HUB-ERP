@@ -3,9 +3,10 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckIcon } from '@/components/ui/icons';
+import { getApiBaseUrl } from '@/lib/api';
 import { setAuthTokenCookie } from '@/lib/auth';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
+const API_URL = getApiBaseUrl();
 
 interface LoginResponse {
   accessToken: string;
