@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class AssignSessionDto {
   @IsString()
@@ -51,4 +51,14 @@ export class UpdateLectureHistoryDto {
   @Min(0)
   @IsOptional()
   attendeeCount?: number;
+}
+
+export class CloseSaleDto {
+  @IsString()
+  @IsNotEmpty()
+  cashierCode!: string;
+
+  @IsNumber()
+  @Min(0)
+  salesAmount!: number;
 }

@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AssignSessionDto, UpdateLectureHistoryDto } from '../dto/session.dto';
+import { AssignSessionDto, CloseSaleDto, UpdateLectureHistoryDto } from '../dto/session.dto';
 import { LectureRoomGateway } from '../lecture-room.gateway';
 
 @Injectable()
@@ -67,6 +67,11 @@ export class LectureSessionsService {
       const bonusCard = await this.prisma.bonusCard.findUnique({
         where: { id: dto.bonusCardId },
       });
+      await this.ensureLectureRegistrationAvailable({
+        bonusCardId: bonusCard?.id,
+        partyCode: bonusCard?.partyCode,
+        bonusCode: bonusCard?.bonus,
+      });
       if (!bonusCard) {
         throw new NotFoundException('ไม่พบข้อมูล Bonus Card ที่ระบุ');
       }
@@ -119,6 +124,10 @@ export class LectureSessionsService {
     }
 
     // 3. ตรวจสอบผู้บรรยาย
+    if (!dto.bonusCardId) {
+      await this.ensureLectureRegistrationAvailable({ partyCode: dto.partyCode });
+    }
+
     const speaker = await this.prisma.speaker.findUnique({
       where: { id: targetSpeakerId },
     });
@@ -218,6 +227,10 @@ export class LectureSessionsService {
   }
 
   async end(roomCode: string) {
+    return this.stopLecture(roomCode);
+  }
+
+  async stopLecture(roomCode: string) {
     const session = await this.prisma.lectureSession.findFirst({
       where: { roomCode },
     });
@@ -227,8 +240,50 @@ export class LectureSessionsService {
     }
 
     const startedAt = session.startedAt || session.createdAt;
+    const lectureEndedAt = new Date();
+    const lectureDurationSeconds = Math.max(0, Math.floor((lectureEndedAt.getTime() - startedAt.getTime()) / 1000));
+
+    const updatedSession = await this.prisma.lectureSession.update({
+      where: { id: session.id },
+      data: {
+        status: 'selling',
+        lectureEndedAt,
+        lectureDurationSeconds,
+      },
+    });
+
+    await this.prisma.speaker.update({
+      where: { id: session.speakerId },
+      data: { status: 'available' },
+    });
+    if (session.speaker2Id) {
+      await this.prisma.speaker.update({
+        where: { id: session.speaker2Id },
+        data: { status: 'available' },
+      });
+    }
+
+    this.gateway.broadcastRoomStatusChange(roomCode, 'selling');
+
+    return updatedSession;
+  }
+
+  async closeSale(roomCode: string, dto: CloseSaleDto) {
+    const session = await this.prisma.lectureSession.findFirst({
+      where: { roomCode },
+    });
+
+    if (!session) {
+      throw new NotFoundException('ไม่พบรอบกิจกรรมในห้องบรรยายนี้');
+    }
+
+    const startedAt = session.startedAt || session.createdAt;
+    const lectureEndedAt = session.lectureEndedAt || new Date();
     const endedAt = new Date();
-    const durationSeconds = Math.max(0, Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000));
+    const lectureDurationSeconds =
+      session.lectureDurationSeconds ||
+      Math.max(0, Math.floor((lectureEndedAt.getTime() - startedAt.getTime()) / 1000));
+    const totalDurationSeconds = Math.max(0, Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000));
 
     // 1. บันทึกลงตารางประวัติกิจกรรม (LectureHistory)
     const history = await this.prisma.lectureHistory.create({
@@ -247,7 +302,12 @@ export class LectureSessionsService {
         attendeeCount: session.attendeeCount,
         startedAt,
         endedAt,
-        durationSeconds,
+        lectureEndedAt,
+        lectureDurationSeconds,
+        totalDurationSeconds,
+        durationSeconds: lectureDurationSeconds,
+        cashierCode: dto.cashierCode.trim(),
+        salesAmount: dto.salesAmount,
       },
     });
 
@@ -271,7 +331,7 @@ export class LectureSessionsService {
     // ส่งสัญญาณ Real-time แจ้งเตือนไปยังหน้า Dashboard
     this.gateway.broadcastRoomStatusChange(roomCode, 'available');
 
-    return { message: 'เสร็จสิ้นการบรรยายและบันทึกประวัติเรียบร้อย', history };
+    return { message: 'ปิดการขายและบันทึกประวัติเรียบร้อย', history };
   }
 
   async adminClear(id: string) {
@@ -354,5 +414,35 @@ export class LectureSessionsService {
     }
     await this.prisma.lectureHistory.delete({ where: { id } });
     return { message: 'Lecture history item deleted' };
+  }
+
+  private async ensureLectureRegistrationAvailable({
+    bonusCardId,
+    partyCode,
+    bonusCode,
+  }: {
+    bonusCardId?: string | null;
+    partyCode?: string | null;
+    bonusCode?: string | null;
+  }) {
+    const normalizedPartyCode = partyCode?.trim();
+    const normalizedBonusCode = bonusCode?.trim();
+    const checks = [
+      ...(bonusCardId ? [{ bonusCardId }] : []),
+      ...(normalizedPartyCode ? [{ partyCode: normalizedPartyCode }] : []),
+      ...(normalizedBonusCode ? [{ bonusCard: { bonus: normalizedBonusCode } }] : []),
+    ];
+    if (checks.length === 0) return;
+
+    const [activeSession, history] = await Promise.all([
+      this.prisma.lectureSession.findFirst({ where: { OR: checks }, select: { id: true } }),
+      this.prisma.lectureHistory.findFirst({ where: { OR: checks }, select: { id: true } }),
+    ]);
+    if (activeSession) {
+      throw new ConflictException('Bonus Card / Party Code นี้ถูกลงทะเบียนห้องพากย์อยู่แล้ว');
+    }
+    if (history) {
+      throw new ConflictException('Bonus Card / Party Code นี้สิ้นสุดกระบวนการและถูกบันทึกในประวัติแล้ว กรุณาลบประวัติก่อนจึงจะลงทะเบียนใหม่ได้');
+    }
   }
 }

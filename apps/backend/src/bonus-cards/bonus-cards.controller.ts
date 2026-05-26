@@ -43,8 +43,9 @@ export class BonusCardsController {
     @Query('workDate') workDate?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('excludeLectureHistory') excludeLectureHistory?: string,
   ) {
-    return this.bonusCardsService.findAll({ workDate, from, to });
+    return this.bonusCardsService.findAll({ workDate, from, to, excludeLectureHistory: excludeLectureHistory === 'true' });
   }
 
   @Post()

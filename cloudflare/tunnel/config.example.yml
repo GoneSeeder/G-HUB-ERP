@@ -1,0 +1,7 @@
+tunnel: g-hub
+credentials-file: C:\Users\User\.cloudflared\<TUNNEL_ID>.json
+
+ingress:
+  - hostname: ghub.example.com
+    service: http://localhost:3000
+  - service: http_status:404

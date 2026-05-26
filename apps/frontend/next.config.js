@@ -22,6 +22,10 @@ const nextConfig = {
         source: '/uploads/:path*',
         destination: `${apiProxyUrl}/uploads/:path*`,
       },
+      {
+        source: '/socket.io/:path*',
+        destination: `${apiProxyUrl}/socket.io/:path*`,
+      },
     ];
   },
 };

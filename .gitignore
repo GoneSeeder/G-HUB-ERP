@@ -34,6 +34,9 @@ yarn-error.log*
 
 # Local tunnel binary
 tools/cloudflared.exe
+cloudflare/tunnel/config.yml
+cloudflare/tunnel/*.json
+.cloudflared/
 
 # Uploaded files
 apps/backend/uploads

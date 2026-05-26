@@ -31,7 +31,7 @@ type ActiveLectureRegistration = {
 export class BonusCardsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filters: { workDate?: string; from?: string; to?: string } = {}) {
+  async findAll(filters: { workDate?: string; from?: string; to?: string; excludeLectureHistory?: boolean } = {}) {
     const where: Prisma.BonusCardWhereInput = {};
     if (filters.from || filters.to) {
       where.workDate = {
@@ -51,8 +51,9 @@ export class BonusCardsService {
       },
       orderBy: [{ workDate: 'desc' }, { bonus: 'asc' }],
     });
-    const recorderNames = await this.recorderNameMap(rows.map((row) => row.recorder));
-    return rows.map((row) => this.toResponse(row, recorderNames));
+    const availableRows = filters.excludeLectureHistory ? await this.excludeCompletedLectureRows(rows) : rows;
+    const recorderNames = await this.recorderNameMap(availableRows.map((row) => row.recorder));
+    return availableRows.map((row) => this.toResponse(row, recorderNames));
   }
 
   async create(dto: CreateBonusCardDto, user: AuthUser) {
@@ -206,6 +207,41 @@ export class BonusCardsService {
 
   private toDate(value: string) {
     return new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
+  }
+
+  private async excludeCompletedLectureRows<T extends { id: string; partyCode: string; bonus: string }>(rows: T[]) {
+    if (rows.length === 0) return rows;
+
+    const ids = rows.map((row) => row.id);
+    const partyCodes = rows.map((row) => row.partyCode.trim()).filter(Boolean);
+    const bonusCodes = rows.map((row) => row.bonus.trim()).filter(Boolean);
+    const histories = await this.prisma.lectureHistory.findMany({
+      where: {
+        OR: [
+          { bonusCardId: { in: ids } },
+          ...(partyCodes.length ? [{ partyCode: { in: partyCodes } }] : []),
+          ...(bonusCodes.length ? [{ bonusCard: { bonus: { in: bonusCodes } } }] : []),
+        ],
+      },
+      select: {
+        bonusCardId: true,
+        partyCode: true,
+        bonusCard: {
+          select: { bonus: true },
+        },
+      },
+    });
+
+    const completedIds = new Set(histories.map((item) => item.bonusCardId).filter(Boolean) as string[]);
+    const completedPartyCodes = new Set(histories.map((item) => item.partyCode.trim()).filter(Boolean));
+    const completedBonusCodes = new Set(histories.map((item) => item.bonusCard?.bonus.trim()).filter(Boolean) as string[]);
+
+    return rows.filter(
+      (row) =>
+        !completedIds.has(row.id) &&
+        !completedPartyCodes.has(row.partyCode.trim()) &&
+        !completedBonusCodes.has(row.bonus.trim()),
+    );
   }
 
   private toResponse(row: {

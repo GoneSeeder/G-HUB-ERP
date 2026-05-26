@@ -255,7 +255,18 @@ function isValidLookupCode(value: string) {
   return !invalidLookupCodes.has(value.trim().toUpperCase());
 }
 
-function tableCellValue(row: BonusCard, key: keyof BonusCard) {
+type VisibleColumnKey = keyof BonusCard | 'expert' | 'room';
+
+function lectureExpertCodes(row: BonusCard) {
+  return [row.lectureRegistration?.speakerCode, row.lectureRegistration?.speaker2Code]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join(' / ');
+}
+
+function tableCellValue(row: BonusCard, key: VisibleColumnKey) {
+  if (key === 'expert') return lectureExpertCodes(row);
+  if (key === 'room') return row.lectureRegistration?.roomCode ?? '';
   const value = row[key];
   if (countColumns.has(key)) {
     if (value === null || value === undefined || value === '') return '0';
@@ -346,7 +357,7 @@ const emptyForm: BonusCard = {
   lectureRegistration: null,
 };
 
-const visibleColumns: Array<{ key: keyof BonusCard; label: string; width: string; align?: 'left' | 'right' | 'center' }> = [
+const visibleColumns: Array<{ key: VisibleColumnKey; label: string; width: string; align?: 'left' | 'right' | 'center' }> = [
   { key: 'bonus', label: 'Bonus', width: '4.8%' },
   { key: 'bonusName', label: 'Bonus Name', width: '8%' },
   { key: 'carCode', label: 'Car no.', width: '5%' },
@@ -354,6 +365,8 @@ const visibleColumns: Array<{ key: keyof BonusCard; label: string; width: string
   { key: 'agentName', label: 'Agent Name', width: '8%' },
   { key: 'guide', label: 'Guide', width: '5%' },
   { key: 'guideName', label: 'Guide Name', width: '7.5%' },
+  { key: 'expert', label: 'Expert', width: '5.5%' },
+  { key: 'room', label: 'Room', width: '4.8%' },
   { key: 'partyCode', label: 'Party Code', width: '7.5%' },
   { key: 'adult', label: 'Adult count', width: '4.8%', align: 'center' },
   { key: 'tourLeader', label: 'Tour leader count', width: '5.8%', align: 'center' },
@@ -688,7 +701,14 @@ export default function BonusCardPage() {
             }}>
               <SearchIcon className="erp-action-icon" /> Show Name List
             </button>
-            <button className="toolbar-btn" onClick={() => window.print()}>
+            <button
+              className="toolbar-btn"
+              disabled={selectedIds.length !== 1}
+              onClick={() => {
+                const selected = rows.find((row) => row.id === selectedIds[0]);
+                if (selected) setPrintRow(selected);
+              }}
+            >
               <PrintIcon className="erp-action-icon" /> Print
             </button>
             <button className="toolbar-btn" onClick={() => setExportOpen(true)}>
@@ -2026,39 +2046,9 @@ function NameListModal({ row, onClose }: { row: BonusCard; onClose: () => void }
 
 function PrintModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
   const pax = row.adult + row.child + row.tourLeader + row.student;
-  const bonusRows: Array<[string, string | number]> = [
-    ['Work date', formatDate(row.workDate)],
-    ['Bonus', row.bonus],
-    ['Bonus name', row.bonusName],
-    ['Party code', row.partyCode],
-    ['Nation', row.nation],
-  ];
-  const agentRows: Array<[string, string | number]> = [
-    ['Agent code', row.agentCode],
-    ['Agent name', row.agentName],
-    ['Company code', row.companyCode],
-    ['Guide', row.guide],
-    ['Guide name', row.guideName],
-    ['Supervisor code', row.supervisorCode],
-    ['Extra guides', formatGuideList(row.extraGuides)],
-    ['Narrators', formatNarratorList(row.narrators)],
-  ];
-  const travelRows: Array<[string, string | number]> = [
-    ['Adult', row.adult],
-    ['Child', row.child],
-    ['Tour leader', row.tourLeader],
-    ['Student', row.student],
-    ['Pax total', pax],
-    ['Car code', row.carCode],
-    ['Shop', row.shop],
-    ['Province / origin', row.province],
-    ['Charter code', row.charterCode],
-    ['Come from', row.comeFrom],
-    ['Bus type', row.busType],
-    ['Tour in', row.tourIn],
-    ['Tour out', row.tourOut],
-  ];
+  const receiptRows = bonusReceiptRows(row, pax);
   useEffect(() => {
+    document.body.classList.add('detail-print');
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
@@ -2066,68 +2056,37 @@ function PrintModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
     };
 
     window.addEventListener('keydown', closeOnEscape);
-    return () => window.removeEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.classList.remove('detail-print');
+      window.removeEventListener('keydown', closeOnEscape);
+    };
   }, [onClose]);
 
   return (
     <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur">
+      <div className="max-h-[92vh] w-full max-w-[420px] overflow-auto rounded-[10px] border border-slate-200/80 bg-white/95 shadow-[0_24px_70px_rgba(15,23,42,0.18)] backdrop-blur">
         <div className="no-print flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <div>
-            <h2 className="text-[24px] font-semibold leading-tight text-slate-950">Bonus Detail</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Review all visible and hidden fields for the selected bonus card.
-            </p>
+            <h2 className="text-[24px] font-semibold leading-tight text-slate-950">Print Bonus</h2>
+            <p className="mt-1 text-sm text-slate-500">Thermal receipt 80 mm preview.</p>
           </div>
-          <button className="toolbar-btn" onClick={onClose}>
-            Close
-          </button>
+          <div className="flex gap-2">
+            <button className="toolbar-btn-primary" onClick={() => printBonusReceipt(row)}>
+              <PrintIcon className="erp-action-icon" /> Print
+            </button>
+            <button className="toolbar-btn" onClick={onClose}>Close</button>
+          </div>
         </div>
-        <div className="grid gap-5 p-5 lg:grid-cols-[220px_1fr]">
-          <aside className="no-print space-y-4">
-            <div className="rounded-[8px] border border-slate-200 bg-slate-50 p-4">
-              <div className="flex h-52 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white text-sm text-slate-400">
-                {row.imageUrl ? (
-                  <img src={getImageSrc(row.imageUrl)} alt="" className="h-full w-full bg-white object-contain" />
-                ) : (
-                  <span>No image</span>
-                )}
+        <div className="flex justify-center bg-slate-100 p-5">
+          <div className="print-area bonus-thermal-receipt bg-white px-[5mm] py-[7mm] text-[#222] shadow-sm">
+            {receiptRows.map(([label, value, side]) => (
+              <div key={label} className="receipt-line">
+                <span className="receipt-label">{label}</span>
+                <span className="receipt-value">{value || '-'}</span>
+                <span className="receipt-side">{side || ''}</span>
               </div>
-            </div>
-
-            <div className="rounded-[8px] border border-sky-100 bg-sky-50/70 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Selected Bonus</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-950">{row.bonus}</p>
-              <p className="mt-2 text-xs leading-5 text-slate-500">{row.guideName || row.bonusName || '-'}</p>
-            </div>
-
-          </aside>
-
-          <div className="print-area space-y-4">
-            <div className="rounded-[8px] border border-slate-200 bg-white p-5">
-              <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase text-blue-700">Bonus Card Detail</p>
-                  <h3 className="mt-1 text-2xl font-semibold text-slate-950">
-                    {row.bonus} {row.bonusName}
-                  </h3>
-                  <p className="text-sm text-slate-500">
-                    {row.agentCode} {row.agentName}
-                  </p>
-                </div>
-                <p className="text-sm font-medium text-slate-500">{formatDate(row.workDate)}</p>
-              </div>
-            </div>
-
-            <BonusDetailSection title="Bonus Information" rows={bonusRows} />
-            <BonusDetailSection title="Agent & Guide" rows={agentRows} />
-            <BonusDetailSection title="Passenger & Travel" rows={travelRows} />
-            <section className="rounded-[8px] border border-slate-200 bg-slate-50/60 p-4">
-              <h3 className="mb-4 text-sm font-semibold text-slate-800">Remark</h3>
-              <div className="rounded-md border border-slate-100 bg-white px-3 py-3">
-                <p className="text-sm font-medium text-slate-800">{row.comment || '-'}</p>
-              </div>
-            </section>
+            ))}
+            <div className="mt-4 text-[10px]">_</div>
           </div>
         </div>
       </div>
@@ -2135,17 +2094,120 @@ function PrintModal({ row, onClose }: { row: BonusCard; onClose: () => void }) {
   );
 }
 
-function BonusDetailSection({ title, rows }: { title: string; rows: Array<[string, string | number]> }) {
-  return (
-    <section className="rounded-[8px] border border-slate-200 bg-slate-50/60 p-4">
-      <h3 className="mb-4 text-sm font-semibold text-slate-800">{title}</h3>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {rows.map(([label, value]) => (
-          <DetailLine key={label} label={label} value={String(value ?? '')} />
-        ))}
-      </div>
-    </section>
-  );
+function bonusReceiptRows(row: BonusCard, pax = row.adult + row.child + row.tourLeader + row.student): Array<[string, string | number, string | number | undefined]> {
+  const nationLabel = [row.nation, countryNameByCode[row.nation?.trim().toUpperCase()]].filter(Boolean).join(' : ');
+  const lecturerText = [row.lectureRegistration?.speakerCode, row.lectureRegistration?.speaker2Code]
+    .map((value) => value?.trim())
+    .filter(Boolean)
+    .join(' / ');
+  return [
+    ['กรุ๊ป', row.bonus, `วันที่ ${formatDate(row.workDate)}`],
+    ['ทัวร์', row.agentName || row.bonusName || '-', ''],
+    ['ไกด์', row.guideName || row.guide || '-', ''],
+    ['จำนวนแขก', `${pax}+1`, `ทะเบียน ${row.carCode || row.charterCode || '-'}`],
+    ['สัญชาติ', nationLabel || '-', ''],
+    ['ตอนรับ', row.tourIn || '-', row.shop || row.charterCode || ''],
+    ['PartyCode', row.partyCode || '-', ''],
+    ...(lecturerText ? [['อาจารย์', lecturerText, ''] as [string, string, string]] : []),
+    ...(row.lectureRegistration?.roomCode ? [['ห้องพากย์', row.lectureRegistration.roomCode, ''] as [string, string, string]] : []),
+    ['กลุ่มขาย', row.narratorGroup || '-', ''],
+    ['คนพากย์', row.narratorPax || '-', ''],
+    ['Remark', row.comment || '-', ''],
+  ];
+}
+
+function printBonusReceipt(row: BonusCard) {
+  const receiptRows = bonusReceiptRows(row);
+  const lines = receiptRows.map(([label, value, side]) => `
+    <div class="receipt-line">
+      <span class="receipt-label">${escapeHtml(label)}</span>
+      <span class="receipt-value">${escapeHtml(value || '-')}</span>
+      <span class="receipt-side">${escapeHtml(side || '')}</span>
+    </div>
+  `).join('');
+  const frame = document.createElement('iframe');
+  frame.style.position = 'fixed';
+  frame.style.right = '0';
+  frame.style.bottom = '0';
+  frame.style.width = '0';
+  frame.style.height = '0';
+  frame.style.border = '0';
+  document.body.appendChild(frame);
+  const doc = frame.contentDocument;
+  if (!doc) return;
+  doc.open();
+  doc.write(`<!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Bonus ${escapeHtml(row.bonus)}</title>
+        <style>
+          @page { size: 80mm auto; margin: 0; }
+          * { box-sizing: border-box; }
+          html, body {
+            width: 80mm;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+          }
+          body {
+            color: #222;
+            font-family: "Courier New", monospace;
+            font-size: 11px;
+            line-height: 1.38;
+          }
+          .receipt {
+            width: 80mm;
+            min-height: 112mm;
+            padding: 7mm 5mm;
+          }
+          .receipt-line {
+            display: grid;
+            grid-template-columns: 16mm 1fr 25mm;
+            column-gap: 2mm;
+            min-height: 5.4mm;
+            align-items: start;
+            page-break-inside: avoid;
+          }
+          .receipt-label {
+            color: #555;
+            font-size: 10px;
+          }
+          .receipt-value {
+            color: #333;
+            font-size: 13px;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+            white-space: pre-wrap;
+          }
+          .receipt-side {
+            color: #333;
+            font-size: 12px;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+            text-align: left;
+            white-space: pre-wrap;
+          }
+          .tail {
+            margin-top: 4mm;
+            font-size: 10px;
+          }
+        </style>
+      </head>
+      <body>
+        <main class="receipt">${lines}<div class="tail">_</div></main>
+      </body>
+    </html>`);
+  doc.close();
+  frame.onload = () => {
+    frame.contentWindow?.focus();
+    frame.contentWindow?.print();
+    window.setTimeout(() => frame.remove(), 500);
+  };
+}
+
+function formatCellValue(value: string | number) {
+  return String(value ?? '');
 }
 
 function DetailLine({ label, value }: { label: string; value: string }) {
@@ -2155,10 +2217,6 @@ function DetailLine({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-sm font-medium text-slate-800">{value || '-'}</p>
     </div>
   );
-}
-
-function formatCellValue(value: string | number) {
-  return String(value ?? '');
 }
 
 function formatGuideList(guides: BonusGuide[]) {

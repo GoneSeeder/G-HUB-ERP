@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { io } from 'socket.io-client';
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRightIcon,
@@ -13,9 +14,9 @@ import {
 } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { useDialog } from '@/components/ui/dialog-provider';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, getRealtimeBaseUrl } from '@/lib/api';
 
-type RoomStatus = 'available' | 'arriving' | 'lecturing' | 'inactive';
+type RoomStatus = 'available' | 'arriving' | 'lecturing' | 'selling' | 'inactive';
 type SpeakerStatus = 'available' | 'lecturing' | 'inactive';
 type TabKey = 'dashboard' | 'assignment' | 'rooms' | 'speakers' | 'history';
 
@@ -49,7 +50,7 @@ type LectureSession = {
   speaker2Code: string;
   speaker2Name: string;
   attendeeCount: number;
-  status: 'arriving' | 'lecturing';
+  status: 'arriving' | 'lecturing' | 'selling';
   startedAt: string | null;
   createdAt: string;
 };
@@ -60,6 +61,11 @@ type MeResponse = {
 
 type LectureHistory = {
   id: string;
+  bonusCardId?: string | null;
+  bonusCard?: {
+    bonus?: string;
+    bonusName?: string;
+  } | null;
   partyCode: string;
   roomCode: string;
   roomName: string;
@@ -70,7 +76,12 @@ type LectureHistory = {
   attendeeCount: number;
   startedAt: string;
   endedAt: string;
+  lectureEndedAt?: string | null;
+  lectureDurationSeconds?: number;
+  totalDurationSeconds?: number;
   durationSeconds: number;
+  cashierCode?: string;
+  salesAmount?: string | number;
   createdAt: string;
 };
 
@@ -138,6 +149,17 @@ function formatDuration(seconds: number) {
   return hours > 0 ? `${pad(hours)}:${pad(minutes)}:${pad(secs)}` : `${pad(minutes)}:${pad(secs)}`;
 }
 
+function formatMoney(value: string | number | null | undefined) {
+  const amount = Number(value ?? 0);
+  if (!Number.isFinite(amount)) return '฿0.00';
+  return new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 function elapsed(startedAt: string | null, now: number) {
   if (!startedAt) return '00:00';
   return formatDuration(Math.floor((now - new Date(startedAt).getTime()) / 1000));
@@ -151,11 +173,77 @@ function formatSessionLecturers(session: LectureSession | null | undefined) {
   ].map((name) => name?.trim()).filter(Boolean).join(' / ') || '-';
 }
 
+function roomDashboardStatus(room: LectureRoom & { activeSession?: LectureSession | null }): RoomStatus {
+  if (room.activeSession) return room.activeSession.status;
+  return room.status === 'inactive' ? 'inactive' : 'available';
+}
+
+const dashboardStatusOrder: RoomStatus[] = ['arriving', 'lecturing', 'selling', 'available', 'inactive'];
+
+function sortDashboardRooms(rooms: Array<LectureRoom & { activeSession?: LectureSession | null }>) {
+  return [...rooms].sort((a, b) => {
+    const statusDiff = dashboardStatusOrder.indexOf(roomDashboardStatus(a)) - dashboardStatusOrder.indexOf(roomDashboardStatus(b));
+    if (statusDiff !== 0) return statusDiff;
+    return a.roomCode.localeCompare(b.roomCode, undefined, { numeric: true, sensitivity: 'base' });
+  });
+}
+
+function dashboardRoomMeta(status: RoomStatus) {
+  const meta: Record<RoomStatus, { border: string; badge: string; dot: string; progress: string; glow: string }> = {
+    arriving: {
+      border: 'border-amber-400/45',
+      badge: 'border-amber-300/35 bg-amber-400/18 text-amber-700',
+      dot: 'bg-amber-400',
+      progress: 'bg-amber-400',
+      glow: 'shadow-[0_0_0_1px_rgba(251,191,36,0.22)]',
+    },
+    lecturing: {
+      border: 'border-red-400/70',
+      badge: 'border-red-300/35 bg-red-500/15 text-red-700',
+      dot: 'bg-red-400',
+      progress: 'bg-red-400',
+      glow: 'shadow-[0_0_0_1px_rgba(248,113,113,0.25)]',
+    },
+    selling: {
+      border: 'border-emerald-400/50',
+      badge: 'border-emerald-300/35 bg-emerald-400/16 text-emerald-700',
+      dot: 'bg-emerald-400',
+      progress: 'bg-emerald-400',
+      glow: 'shadow-[0_0_0_1px_rgba(52,211,153,0.22)]',
+    },
+    available: {
+      border: 'border-slate-200',
+      badge: 'border-sky-300/40 bg-sky-50 text-sky-700',
+      dot: 'bg-sky-400',
+      progress: 'bg-slate-200',
+      glow: 'shadow-[0_10px_24px_rgba(15,23,42,0.045)]',
+    },
+    inactive: {
+      border: 'border-rose-300/70',
+      badge: 'border-rose-300/45 bg-rose-50 text-rose-700',
+      dot: 'bg-rose-400',
+      progress: 'bg-rose-400',
+      glow: 'shadow-[0_0_0_1px_rgba(244,63,94,0.18)]',
+    },
+  };
+  return meta[status];
+}
+
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
 
-function StatusPill({ status }: { status: RoomStatus | SpeakerStatus }) {
+function StatusPill({
+  status,
+  className,
+  dotClassName,
+  pulse,
+}: {
+  status: RoomStatus | SpeakerStatus;
+  className?: string;
+  dotClassName?: string;
+  pulse?: boolean;
+}) {
   const meta: Record<string, { label: string; className: string }> = {
     available: {
       label: 'ว่าง',
@@ -169,6 +257,10 @@ function StatusPill({ status }: { status: RoomStatus | SpeakerStatus }) {
       label: 'กำลังบรรยาย',
       className: 'border-blue-200 bg-blue-50 text-blue-700',
     },
+    selling: {
+      label: 'กำลังขายสินค้า',
+      className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    },
     inactive: {
       label: 'ปิดใช้งาน',
       className: 'border-rose-200 bg-rose-50 text-rose-700',
@@ -177,12 +269,98 @@ function StatusPill({ status }: { status: RoomStatus | SpeakerStatus }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
-        meta[status].className,
+        'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium',
+        className || meta[status].className,
       )}
     >
+      <span className={cn('h-1.5 w-1.5 rounded-full', dotClassName, pulse && 'animate-pulse')} />
       {meta[status].label}
     </span>
+  );
+}
+
+type CustomSelectOption = {
+  value: string;
+  label: string;
+};
+
+function CustomSelect({
+  label,
+  placeholder,
+  value,
+  options,
+  open,
+  allowClear,
+  onOpenChange,
+  onChange,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  options: CustomSelectOption[];
+  open: boolean;
+  required?: boolean;
+  allowClear?: boolean;
+  onOpenChange: (open: boolean) => void;
+  onChange: (value: string) => void;
+}) {
+  const selected = options.find((option) => option.value === value);
+  const display = selected?.label || placeholder;
+
+  return (
+    <div className="relative grid gap-1 text-sm font-medium text-slate-700">
+      <span>{label}</span>
+      <button
+        type="button"
+        onClick={() => onOpenChange(!open)}
+        className={cn(
+          'flex h-10 w-full items-center justify-between gap-2 rounded-lg border px-3 text-left text-sm outline-none transition',
+          open ? 'border-[#1167e8] ring-2 ring-[#1167e8]/10' : 'border-slate-200 hover:border-slate-300',
+          selected ? 'text-slate-950' : 'text-slate-400',
+        )}
+      >
+        <span className="truncate">{display}</span>
+        <span className={cn('text-slate-400 transition-transform', open && 'rotate-180')}>⌄</span>
+      </button>
+      {open ? (
+        <div className="absolute left-0 right-0 top-[68px] z-[80] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_18px_42px_rgba(15,23,42,0.16)]">
+          <div className="max-h-56 overflow-y-auto py-1">
+            {allowClear ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange('');
+                  onOpenChange(false);
+                }}
+                className={cn('flex h-9 w-full items-center px-3 text-left text-sm hover:bg-slate-50', !value ? 'font-semibold text-[#1167e8]' : 'text-slate-500')}
+              >
+                {placeholder}
+              </button>
+            ) : null}
+            {options.length === 0 ? (
+              <div className="px-3 py-3 text-sm text-slate-400">ไม่มีข้อมูลให้เลือก</div>
+            ) : (
+              options.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.value);
+                    onOpenChange(false);
+                  }}
+                  className={cn(
+                    'flex h-9 w-full items-center px-3 text-left text-sm hover:bg-blue-50',
+                    option.value === value ? 'font-semibold text-[#1167e8]' : 'text-slate-700',
+                  )}
+                >
+                  <span className="truncate">{option.label}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -408,7 +586,7 @@ function ModalShell({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4 backdrop-blur-sm">
-      <div className="erp-modal-enter w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="erp-modal-enter w-full max-w-2xl overflow-visible rounded-xl border border-slate-200 bg-white">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
           <IconButton onClick={onClose}>
@@ -451,6 +629,7 @@ export default function LectureRoomPage() {
     status: 'available' as SpeakerStatus,
   });
   const [assignForm, setAssignForm] = useState({ roomId: '', speakerId: '', speaker2Id: '' });
+  const [assignDropdown, setAssignDropdown] = useState<'room' | 'speaker1' | 'speaker2' | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [historyEditEnabled, setHistoryEditEnabled] = useState(false);
   const [selectedHistoryIds, setSelectedHistoryIds] = useState<string[]>([]);
@@ -466,7 +645,7 @@ export default function LectureRoomPage() {
     setHistoryItems(data.items || []);
   };
   const loadBonusCards = async (date = assignmentDate) => {
-    const data = await apiFetch<BonusCard[]>(`/api/bonus-cards?workDate=${date}`);
+    const data = await apiFetch<BonusCard[]>(`/api/bonus-cards?workDate=${date}&excludeLectureHistory=true`);
     setBonusCards(data);
   };
 
@@ -485,10 +664,19 @@ export default function LectureRoomPage() {
     apiFetch<MeResponse>('/api/auth/me')
       .then((me) => setIsAdmin(me.roles.includes('admin')))
       .catch(() => setIsAdmin(false));
+    const socket = io(`${getRealtimeBaseUrl()}/lecture-rooms`, {
+      transports: ['websocket', 'polling'],
+    });
+    socket.on('room_status_changed', () => {
+      refreshAll().catch(() => undefined);
+    });
     const poll = window.setInterval(() => {
-      Promise.all([loadRooms(), loadSpeakers(), loadSessions()]).catch(() => undefined);
+      Promise.all([loadRooms(), loadSpeakers(), loadSessions(), loadHistory(), loadBonusCards()]).catch(() => undefined);
     }, 5000);
-    return () => window.clearInterval(poll);
+    return () => {
+      window.clearInterval(poll);
+      socket.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -518,10 +706,10 @@ export default function LectureRoomPage() {
 
   const roomCards = useMemo(
     () =>
-      rooms.map((room) => ({
+      sortDashboardRooms(rooms.map((room) => ({
         ...room,
         activeSession: sessions.find((session) => session.roomId === room.id) || null,
-      })),
+      }))),
     [rooms, sessions],
   );
 
@@ -529,7 +717,7 @@ export default function LectureRoomPage() {
     () => ({
       rooms: rooms.length,
       speakers: speakers.length,
-      sessions: sessions.length,
+      sessions: sessions.filter((session) => session.status === 'lecturing').length,
       attendees: sessions.reduce((sum, session) => sum + session.attendeeCount, 0),
     }),
     [rooms, speakers, sessions],
@@ -642,6 +830,7 @@ export default function LectureRoomPage() {
       speakerId: '',
       speaker2Id: '',
     });
+    setAssignDropdown(null);
     setAssignModal({ card });
   };
 
@@ -708,7 +897,7 @@ export default function LectureRoomPage() {
     if (!(await requestConfirmation({ message: `Delete ${selectedHistoryIds.length} history item(s)?`, variant: 'danger' }))) return;
     await Promise.all(selectedHistoryIds.map((id) => apiFetch(`/api/lecture-sessions/history/${id}`, { method: 'DELETE' })));
     setSelectedHistoryIds([]);
-    await loadHistory();
+    await Promise.all([loadHistory(), loadBonusCards()]);
   };
 
   return (
@@ -767,14 +956,17 @@ export default function LectureRoomPage() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {roomCards.map((room) => {
               const session = room.activeSession;
-              const status: RoomStatus = session ? session.status : room.status === 'inactive' ? 'inactive' : 'available';
+              const status = roomDashboardStatus(room);
+              const meta = dashboardRoomMeta(status);
+              const usage = room.capacity > 0 ? Math.min(100, Math.round(((session?.attendeeCount || 0) / room.capacity) * 100)) : 0;
               return (
-                <DataPanel key={room.id} className="group p-4 transition-colors duration-200 hover:border-[#1167e8]/40">
+                <article key={room.id} className={cn('group relative overflow-hidden rounded-xl border bg-white p-4 transition-all duration-200 hover:-translate-y-0.5', meta.border, meta.glow)}>
+                  <div className={cn('absolute inset-x-0 top-0 h-0.5', meta.progress)} />
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-lg font-semibold text-slate-950">{room.roomCode}</p>
-                        <StatusPill status={status} />
+                        <StatusPill status={status} className={meta.badge} dotClassName={meta.dot} pulse={status === 'lecturing'} />
                       </div>
                       <p className="mt-1 truncate text-sm font-light text-slate-500">{room.roomName}</p>
                     </div>
@@ -805,8 +997,18 @@ export default function LectureRoomPage() {
                     <div>
                       <p className="text-xs font-medium uppercase text-slate-400">Timer</p>
                       <p className="mt-1 font-mono font-medium text-slate-900">
-                        {session?.status === 'lecturing' ? elapsed(session.startedAt, now) : '--:--'}
+                        {session?.startedAt ? elapsed(session.startedAt, now) : '--:--'}
                       </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-1.5">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className={cn('h-full rounded-full', meta.progress)} style={{ width: `${usage}%` }} />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400">
+                      <span>ผู้เข้าฟัง</span>
+                      <span className="font-medium text-slate-600">{session?.attendeeCount || 0} / {room.capacity} คน</span>
                     </div>
                   </div>
 
@@ -818,7 +1020,7 @@ export default function LectureRoomPage() {
                       </IconButton>
                     </div>
                   ) : null}
-                </DataPanel>
+                </article>
               );
             })}
           </div>
@@ -1029,18 +1231,23 @@ export default function LectureRoomPage() {
               </div>
             ) : null}
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[920px] text-left text-sm">
+          <div className="overflow-hidden">
+            <table className="w-full table-fixed text-left text-[11px] xl:text-xs">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
-                  {historyEditEnabled ? <th className="w-12 px-4 py-3 font-medium"></th> : null}
-                  <th className="px-4 py-3 font-medium">Party Code</th>
-                  <th className="px-4 py-3 font-medium">ห้อง</th>
-                  <th className="px-4 py-3 font-medium">อาจารย์</th>
-                  <th className="px-4 py-3 font-medium">เริ่ม</th>
-                  <th className="px-4 py-3 font-medium">สิ้นสุด</th>
-                  <th className="px-4 py-3 font-medium">ระยะเวลา</th>
-                  <th className="px-4 py-3 font-medium">คนเข้าฟัง</th>
+                  {historyEditEnabled ? <th className="w-[3%] px-2 py-3 font-medium"></th> : null}
+                  <th className="w-[7%] px-2 py-3 font-medium">Bonus</th>
+                  <th className="w-[11%] px-2 py-3 font-medium">Party</th>
+                  <th className="w-[9%] px-2 py-3 font-medium">ห้อง</th>
+                  <th className="w-[8%] px-2 py-3 font-medium">รหัสอาจารย์</th>
+                  <th className="w-[10%] px-2 py-3 font-medium">อาจารย์</th>
+                  <th className="w-[6%] px-2 py-3 font-medium">คน</th>
+                  <th className="w-[8%] px-2 py-3 font-medium">เริ่ม</th>
+                  <th className="w-[8%] px-2 py-3 font-medium">สิ้นสุด</th>
+                  <th className="w-[8%] px-2 py-3 font-medium">พากย์</th>
+                  <th className="w-[8%] px-2 py-3 font-medium">ใช้ห้อง</th>
+                  <th className="w-[6%] px-2 py-3 font-medium">Cashier</th>
+                  <th className="w-[11%] px-2 py-3 font-medium">ยอดขาย</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1056,7 +1263,7 @@ export default function LectureRoomPage() {
                     }}
                   >
                     {historyEditEnabled ? (
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-3">
                         <input
                           type="checkbox"
                           checked={selectedHistoryIds.includes(item.id)}
@@ -1066,15 +1273,36 @@ export default function LectureRoomPage() {
                         />
                       </td>
                     ) : null}
-                    <td className="px-4 py-3 font-medium text-slate-950">{item.partyCode}</td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="truncate px-2 py-3 font-medium text-slate-950" title={item.bonusCard?.bonus || item.bonusCardId || '-'}>{item.bonusCard?.bonus || item.bonusCardId || '-'}</td>
+                    <td className="truncate px-2 py-3 font-medium text-slate-950" title={item.partyCode}>{item.partyCode}</td>
+                    <td className="truncate px-2 py-3 text-slate-700" title={`${item.roomCode} · ${item.roomName}`}>
                       {item.roomCode} · {item.roomName}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{item.speakerName}</td>
-                    <td className="px-4 py-3 text-slate-700">{formatDate(item.startedAt)}</td>
-                    <td className="px-4 py-3 text-slate-700">{formatDate(item.endedAt)}</td>
-                    <td className="px-4 py-3 font-mono text-slate-700">{formatDuration(item.durationSeconds)}</td>
-                    <td className="px-4 py-3 text-slate-700">{item.attendeeCount}</td>
+                    <td className="px-2 py-3 text-slate-700" title={[item.speakerCode, item.speaker2Code].map((code) => code?.trim()).filter(Boolean).join(' / ') || '-'}>
+                      <div className="grid gap-1 leading-tight">
+                        {([item.speakerCode, item.speaker2Code].map((code) => code?.trim()).filter(Boolean) as string[]).length > 0
+                          ? ([item.speakerCode, item.speaker2Code].map((code) => code?.trim()).filter(Boolean) as string[]).map((code) => (
+                              <span key={code} className="truncate">{code}</span>
+                            ))
+                          : <span>-</span>}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 text-slate-700" title={[item.speakerName, item.speaker2Name].map((name) => name?.trim()).filter(Boolean).join(' / ') || '-'}>
+                      <div className="grid gap-1 leading-tight">
+                        {([item.speakerName, item.speaker2Name].map((name) => name?.trim()).filter(Boolean) as string[]).length > 0
+                          ? ([item.speakerName, item.speaker2Name].map((name) => name?.trim()).filter(Boolean) as string[]).map((name) => (
+                              <span key={name} className="truncate">{name}</span>
+                            ))
+                          : <span>-</span>}
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 text-slate-700">{item.attendeeCount}</td>
+                    <td className="truncate px-2 py-3 text-slate-700">{formatDate(item.startedAt)}</td>
+                    <td className="truncate px-2 py-3 text-slate-700">{formatDate(item.endedAt)}</td>
+                    <td className="truncate px-2 py-3 font-mono text-slate-700">{formatDuration(item.lectureDurationSeconds ?? item.durationSeconds ?? 0)}</td>
+                    <td className="truncate px-2 py-3 font-mono text-slate-700">{formatDuration(item.totalDurationSeconds ?? item.durationSeconds ?? 0)}</td>
+                    <td className="truncate px-2 py-3 text-slate-700" title={item.cashierCode || '-'}>{item.cashierCode || '-'}</td>
+                    <td className="truncate px-2 py-3 font-semibold text-slate-950" title={formatMoney(item.salesAmount)}>{formatMoney(item.salesAmount)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1285,59 +1513,42 @@ export default function LectureRoomPage() {
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-3">
-                <label className="grid gap-1 text-sm font-medium text-slate-700">
-                  ห้องบรรยาย
-                  <select
-                    value={assignForm.roomId}
-                    onChange={(event) => setAssignForm((prev) => ({ ...prev, roomId: event.target.value }))}
-                    className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
-                    required
-                  >
-                    <option value="">เลือกห้อง</option>
-                    {rooms
-                      .filter((room) => !activeRoomIds.has(room.id) && room.status !== 'inactive')
-                      .map((room) => (
-                        <option key={room.id} value={room.id}>
-                          {room.roomCode} - {room.roomName}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <label className="grid gap-1 text-sm font-medium text-slate-700">
-                  อาจารย์พากย์ 1
-                  <select
-                    value={assignForm.speakerId}
-                    onChange={(event) => setAssignForm((prev) => ({ ...prev, speakerId: event.target.value }))}
-                    className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
-                    required
-                  >
-                    <option value="">เลือกอาจารย์พากย์</option>
-                    {speakers
-                      .filter((speaker) => speaker.status !== 'inactive' && !activeSpeakerIds.has(speaker.id) && speaker.id !== assignForm.speaker2Id)
-                      .map((speaker) => (
-                        <option key={speaker.id} value={speaker.id}>
-                          {speaker.speakerCode} - {speaker.speakerName}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <label className="grid gap-1 text-sm font-medium text-slate-700">
-                  อาจารย์พากย์ 2
-                  <select
-                    value={assignForm.speaker2Id}
-                    onChange={(event) => setAssignForm((prev) => ({ ...prev, speaker2Id: event.target.value }))}
-                    className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#1167e8]"
-                  >
-                    <option value="">ไม่เลือก</option>
-                    {speakers
-                      .filter((speaker) => speaker.status !== 'inactive' && !activeSpeakerIds.has(speaker.id) && speaker.id !== assignForm.speakerId)
-                      .map((speaker) => (
-                        <option key={speaker.id} value={speaker.id}>
-                          {speaker.speakerCode} - {speaker.speakerName}
-                        </option>
-                      ))}
-                  </select>
-                </label>
+                <CustomSelect
+                  label="ห้องบรรยาย"
+                  placeholder="เลือกห้อง"
+                  value={assignForm.roomId}
+                  open={assignDropdown === 'room'}
+                  onOpenChange={(open) => setAssignDropdown(open ? 'room' : null)}
+                  onChange={(value) => setAssignForm((prev) => ({ ...prev, roomId: value }))}
+                  options={rooms
+                    .filter((room) => !activeRoomIds.has(room.id) && room.status !== 'inactive')
+                    .map((room) => ({ value: room.id, label: `${room.roomCode} - ${room.roomName}` }))}
+                  required
+                />
+                <CustomSelect
+                  label="อาจารย์พากย์ 1"
+                  placeholder="เลือกอาจารย์พากย์"
+                  value={assignForm.speakerId}
+                  open={assignDropdown === 'speaker1'}
+                  onOpenChange={(open) => setAssignDropdown(open ? 'speaker1' : null)}
+                  onChange={(value) => setAssignForm((prev) => ({ ...prev, speakerId: value }))}
+                  options={speakers
+                    .filter((speaker) => speaker.status !== 'inactive' && !activeSpeakerIds.has(speaker.id) && speaker.id !== assignForm.speaker2Id)
+                    .map((speaker) => ({ value: speaker.id, label: `${speaker.speakerCode} - ${speaker.speakerName}` }))}
+                  required
+                />
+                <CustomSelect
+                  label="อาจารย์พากย์ 2"
+                  placeholder="ไม่เลือก"
+                  value={assignForm.speaker2Id}
+                  open={assignDropdown === 'speaker2'}
+                  onOpenChange={(open) => setAssignDropdown(open ? 'speaker2' : null)}
+                  onChange={(value) => setAssignForm((prev) => ({ ...prev, speaker2Id: value }))}
+                  options={speakers
+                    .filter((speaker) => speaker.status !== 'inactive' && !activeSpeakerIds.has(speaker.id) && speaker.id !== assignForm.speakerId)
+                    .map((speaker) => ({ value: speaker.id, label: `${speaker.speakerCode} - ${speaker.speakerName}` }))}
+                  allowClear
+                />
               </div>
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
@@ -1345,7 +1556,10 @@ export default function LectureRoomPage() {
                 <XIcon className="h-4 w-4" />
                 Cancel
               </IconButton>
-              <button className="h-9 rounded-lg border border-[#1167e8] bg-[#1167e8] px-4 text-sm font-medium text-white hover:bg-[#0f5fd6]">
+              <button
+                disabled={!assignForm.roomId || !assignForm.speakerId}
+                className="h-9 rounded-lg border border-[#1167e8] bg-[#1167e8] px-4 text-sm font-medium text-white hover:bg-[#0f5fd6] disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-500"
+              >
                 Assign Room
               </button>
             </div>

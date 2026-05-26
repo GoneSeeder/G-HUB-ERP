@@ -11,6 +11,19 @@ export function getApiBaseUrl() {
   return configuredUrl.replace(/\/$/, '');
 }
 
+export function getRealtimeBaseUrl() {
+  const configuredUrl = (process.env.NEXT_PUBLIC_API_URL ?? '').trim();
+  if (configuredUrl && !LOCAL_API_URL.test(configuredUrl)) {
+    return configuredUrl.replace(/\/$/, '');
+  }
+
+  if (typeof window !== 'undefined' && LOCAL_API_URL.test(window.location.origin)) {
+    return 'http://localhost:3001';
+  }
+
+  return configuredUrl.replace(/\/$/, '') || (typeof window !== 'undefined' ? window.location.origin : '');
+}
+
 const API_URL = getApiBaseUrl();
 const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in again.';
 

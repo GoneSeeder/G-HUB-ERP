@@ -3,7 +3,7 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { publicApiFetch } from '@/lib/api';
 
-type MonitorStatus = 'RUNNING' | 'WAITING' | 'AVAILABLE' | 'MAINTENANCE';
+type MonitorStatus = 'WAITING' | 'RUNNING' | 'SELLING' | 'AVAILABLE' | 'MAINTENANCE';
 
 type ApiRoom = {
   id: string;
@@ -25,8 +25,11 @@ type ApiSession = {
   };
   speakerName: string;
   speaker2Name?: string;
+  bonusCard?: {
+    nation?: string;
+  } | null;
   attendeeCount: number;
-  status: 'arriving' | 'lecturing';
+  status: 'arriving' | 'lecturing' | 'selling';
   startedAt: string | null;
   createdAt: string;
 };
@@ -39,12 +42,16 @@ type MonitorRoom = {
   status: MonitorStatus;
   partyCode?: string;
   speaker?: string;
+  speakerNames: string[];
+  nation?: string;
+  flagSrc?: string;
+  flagCode?: string;
   attendeeCount: number;
   scheduledAt?: string;
   startedAt?: number;
 };
 
-const statusOrder: MonitorStatus[] = ['RUNNING', 'WAITING', 'AVAILABLE', 'MAINTENANCE'];
+const statusOrder: MonitorStatus[] = ['WAITING', 'RUNNING', 'SELLING', 'AVAILABLE', 'MAINTENANCE'];
 const filterOrder: Array<MonitorStatus | 'ALL'> = ['ALL', ...statusOrder];
 const roomsPerPage = 12;
 
@@ -55,20 +62,29 @@ const statusMeta: Record<
   RUNNING: {
     label: 'กำลังบรรยาย',
     shortLabel: 'กำลังบรรยาย',
-    dot: 'bg-emerald-400',
-    border: 'border-emerald-400/45',
-    badge: 'border-emerald-300/35 bg-emerald-400/18 text-emerald-200',
-    glow: 'shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_0_24px_rgba(52,211,153,0.10)] hover:shadow-[0_0_0_1px_rgba(52,211,153,0.6),0_0_32px_rgba(52,211,153,0.18)]',
-    progress: 'bg-emerald-400',
+    dot: 'bg-red-400',
+    border: 'border-red-400/70',
+    badge: 'border-red-300/35 bg-red-500/20 text-red-100',
+    glow: 'shadow-[0_0_0_1px_rgba(248,113,113,0.45),0_0_24px_rgba(248,113,113,0.12)] hover:shadow-[0_0_0_1px_rgba(248,113,113,0.7),0_0_32px_rgba(248,113,113,0.18)]',
+    progress: 'bg-red-400',
   },
   WAITING: {
-    label: 'รอเริ่ม',
-    shortLabel: 'รอเริ่ม',
+    label: 'รอบรรยาย',
+    shortLabel: 'รอบรรยาย',
     dot: 'bg-amber-400',
     border: 'border-amber-400/45',
     badge: 'border-amber-300/35 bg-amber-400/18 text-amber-200',
     glow: 'shadow-[0_0_0_1px_rgba(251,191,36,0.32)] hover:shadow-[0_0_0_1px_rgba(251,191,36,0.52),0_0_28px_rgba(251,191,36,0.12)]',
     progress: 'bg-amber-400',
+  },
+  SELLING: {
+    label: 'กำลังขายสินค้า',
+    shortLabel: 'กำลังขาย',
+    dot: 'bg-emerald-400',
+    border: 'border-emerald-400/50',
+    badge: 'border-emerald-300/35 bg-emerald-400/18 text-emerald-200',
+    glow: 'shadow-[0_0_0_1px_rgba(52,211,153,0.35),0_0_24px_rgba(52,211,153,0.10)] hover:shadow-[0_0_0_1px_rgba(52,211,153,0.6),0_0_32px_rgba(52,211,153,0.18)]',
+    progress: 'bg-emerald-400',
   },
   AVAILABLE: {
     label: 'ว่าง',
@@ -98,8 +114,8 @@ function LectureMonitor() {
   const [rooms, setRooms] = useState<MonitorRoom[]>([]);
   const [filter, setFilter] = useState<MonitorStatus | 'ALL'>('ALL');
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
-  const [now, setNow] = useState(Date.now());
-  const [lastUpdated, setLastUpdated] = useState(Date.now());
+  const [now, setNow] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState(0);
   const [page, setPage] = useState(0);
   const [error, setError] = useState('');
 
@@ -122,6 +138,7 @@ function LectureMonitor() {
   }, []);
 
   useEffect(() => {
+    setNow(Date.now());
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
@@ -158,7 +175,7 @@ function LectureMonitor() {
             <KpiCard tone="emerald" icon={<ClockIcon />} value={kpis.running} label="กำลังบรรยาย" description="ห้องที่เริ่มบรรยายจริง" />
             <KpiCard tone="orange" icon={<DoorIcon />} value={kpis.waiting} label="รอเริ่ม" description="จัดห้องแล้วรอเริ่ม" />
             <KpiCard tone="indigo" icon={<PeopleIcon />} value={kpis.attendees} label="ผู้เข้าฟังรวม" description="เฉพาะรอบที่กำลังใช้งาน" />
-            <KpiCard tone="purple" icon={<MonitorIcon />} value={kpis.total} label="ห้องทั้งหมด" description="ในระบบ" />
+            <KpiCard tone="purple" icon={<CartMetricIcon />} value={kpis.selling} label="กำลังขาย" description="รอปิดการขายสินค้า" />
             <KpiCard tone="violet" icon={<RingProgress percent={kpis.usagePercent} />} value={`${kpis.usagePercent}%`} label="อัตราใช้งาน" description="กำลังบรรยาย + รอเริ่ม" />
           </div>
         </section>
@@ -201,7 +218,9 @@ function mapMonitorRooms(rooms: ApiRoom[], sessions: ApiSession[]) {
   return rooms.map((room) => {
     const session = sessions.find((item) => item.roomId === room.id || item.room?.id === room.id);
     const status: MonitorStatus = session
-      ? session.status === 'lecturing'
+      ? session.status === 'selling'
+        ? 'SELLING'
+        : session.status === 'lecturing'
         ? 'RUNNING'
         : 'WAITING'
       : room.status === 'inactive'
@@ -214,7 +233,11 @@ function mapMonitorRooms(rooms: ApiRoom[], sessions: ApiSession[]) {
       capacity: room.capacity,
       status,
       partyCode: session?.partyCode,
-      speaker: [session?.speakerName || session?.speaker?.speakerName, session?.speaker2Name].filter(Boolean).join(' / '),
+      speakerNames: [session?.speakerName || session?.speaker?.speakerName, session?.speaker2Name].map((value) => value?.trim()).filter(Boolean) as string[],
+      speaker: [session?.speakerName || session?.speaker?.speakerName, session?.speaker2Name].map((value) => value?.trim()).filter(Boolean).join(' / '),
+      nation: countryMeta(session?.bonusCard?.nation).label,
+      flagSrc: countryMeta(session?.bonusCard?.nation).src,
+      flagCode: countryMeta(session?.bonusCard?.nation).code,
       attendeeCount: session?.attendeeCount || 0,
       scheduledAt: session ? formatOptionalClockTime(session.createdAt) : undefined,
       startedAt: session?.startedAt ? validTimestamp(session.startedAt) : undefined,
@@ -229,6 +252,15 @@ function sortMonitorRooms(rooms: MonitorRoom[]) {
     if (statusDiff !== 0) return statusDiff;
     return a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' });
   });
+}
+
+function countryMeta(value: string | null | undefined) {
+  const raw = String(value || '').trim();
+  const code = raw.toUpperCase();
+  if (code === 'CN' || code === 'CHINA' || raw === 'จีน') return { label: 'จีน', code: 'CN', src: '/lecture-flags/china.jpg' };
+  if (code === 'TW' || code === 'TAIWAN' || raw === 'ไต้หวัน') return { label: 'ไต้หวัน', code: 'TW', src: '/lecture-flags/taiwan.jpg' };
+  if (code === 'VN' || code === 'VIETNAM' || raw === 'เวียดนาม') return { label: 'เวียดนาม', code: 'VN', src: '/lecture-flags/vietnam.jpg' };
+  return { label: code || '-', code: '', src: '' };
 }
 
 function MonitorHeader({
@@ -258,7 +290,7 @@ function MonitorHeader({
         <div className="flex shrink-0 items-center gap-3">
           <span className="flex items-center gap-2 text-xs text-slate-400">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
-            อัปเดต {formatClockTime(lastUpdated)}
+            อัปเดต {lastUpdated ? formatClockTime(lastUpdated) : '--:--:--'}
           </span>
           <button type="button" onClick={onRefresh} className="flex items-center gap-2 rounded-xl border border-slate-700 px-3.5 py-2 text-xs text-slate-300 transition hover:border-slate-500 hover:bg-slate-800">
             <RefreshIcon /> รีเฟรช
@@ -273,6 +305,16 @@ function MonitorHeader({
 }
 
 function LiveClock({ now }: { now: number }) {
+  if (!now) {
+    return (
+      <div className="min-w-[390px] text-center">
+        <div className="font-mono text-5xl font-bold leading-none tracking-[0.18em] text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.12)]">
+          -- <span className="text-slate-500">:</span> -- <span className="text-slate-500">:</span> --
+        </div>
+        <div className="mt-3 text-sm font-light text-slate-500">Loading clock</div>
+      </div>
+    );
+  }
   const parts = getBangkokParts(now);
   return (
     <div className="min-w-[390px] text-center">
@@ -354,7 +396,7 @@ function FilterTabs({
 
 function RoomCard({ room, now, onOpen }: { room: MonitorRoom; now: number; onOpen: () => void }) {
   const meta = statusMeta[room.status];
-  const isActive = room.status === 'RUNNING' || room.status === 'WAITING';
+  const isActive = room.status === 'RUNNING' || room.status === 'WAITING' || room.status === 'SELLING';
   const usage = room.capacity > 0 ? Math.min(100, Math.round((room.attendeeCount / room.capacity) * 100)) : 0;
   const isMaintenance = room.status === 'MAINTENANCE';
   return (
@@ -375,9 +417,10 @@ function RoomCard({ room, now, onOpen }: { room: MonitorRoom; now: number; onOpe
           <div className="space-y-2.5">
             <div className="grid grid-cols-2 gap-x-3 gap-y-2">
               <DetailPair label="Party" value={room.partyCode || '-'} />
-              <DetailPair label={room.status === 'RUNNING' ? 'เริ่ม' : 'กำหนด'} value={room.scheduledAt || '-'} />
-              <DetailPair label="อาจารย์" value={room.speaker || '-'} />
-              <DetailPair label="ระยะเวลา" value={elapsedText(room.startedAt, now)} accent={room.status === 'RUNNING' ? 'green' : 'orange'} />
+              <DetailPair label={room.status === 'WAITING' ? 'รอเริ่ม' : room.status === 'SELLING' ? 'ขายสินค้า' : 'เริ่ม'} value={room.scheduledAt || '-'} />
+              <DetailPair label="อาจารย์" value={room.speakerNames.length ? room.speakerNames : '-'} />
+              <CountryPair room={room} />
+              <DetailPair label="ระยะเวลา" value={elapsedText(room.startedAt, now)} accent={room.status === 'SELLING' ? 'green' : 'orange'} />
             </div>
             <div className="space-y-1.5">
               <div className="h-1.5 overflow-hidden rounded-full bg-slate-800">
@@ -478,7 +521,7 @@ function RoomDetailModal({ room, now, onClose }: { room: MonitorRoom; now: numbe
         </div>
         <div className="mt-5 grid grid-cols-2 gap-x-8 gap-y-5 rounded-xl bg-slate-800/60 p-4">
           <DetailPair label="Party" value={room.partyCode || '-'} />
-          <DetailPair label="อาจารย์" value={room.speaker || '-'} />
+          <DetailPair label="อาจารย์" value={room.speakerNames.length ? room.speakerNames : '-'} />
           <DetailPair label="ผู้เข้าฟัง" value={`${room.attendeeCount} / ${room.capacity} คน`} />
           <DetailPair label="ระยะเวลา" value={elapsedText(room.startedAt, now)} accent={room.status === 'WAITING' ? 'orange' : 'green'} />
         </div>
@@ -491,18 +534,40 @@ function RoomDetailModal({ room, now, onClose }: { room: MonitorRoom; now: numbe
   );
 }
 
-function DetailPair({ label, value, accent }: { label: string; value: string; accent?: 'green' | 'orange' }) {
+function CountryPair({ room }: { room: MonitorRoom }) {
+  return (
+    <div className="min-w-0">
+      <p className="mb-0.5 text-[10px] leading-none text-slate-500">ประเทศ</p>
+      <div className="flex min-w-0 items-center gap-2">
+        {room.flagSrc ? (
+          <img src={room.flagSrc} alt={room.nation || room.flagCode || 'ประเทศ'} className="h-6 w-6 shrink-0 rounded-full object-cover shadow-[0_0_0_1px_rgba(255,255,255,0.08)]" />
+        ) : (
+          <span className="h-6 w-6 shrink-0 rounded-full border border-slate-700 bg-slate-800" />
+        )}
+        <p className="truncate text-xs font-normal text-slate-200">{[room.flagCode, room.nation].filter(Boolean).join(' ') || '-'}</p>
+      </div>
+    </div>
+  );
+}
+
+function DetailPair({ label, value, accent }: { label: string; value: string | string[]; accent?: 'green' | 'orange' }) {
   const valueClass = (() => {
     if (accent === 'green') return 'font-mono text-sm font-bold text-emerald-300';
     if (accent === 'orange') return 'font-mono text-sm font-bold text-orange-300';
     if (label === 'Party') return 'font-mono text-xs font-bold text-slate-200';
     return 'text-xs font-normal text-slate-200';
   })();
+  const values = Array.isArray(value) ? value : [value];
+  const title = values.join(' / ');
 
   return (
     <div className="min-w-0">
       <p className="mb-0.5 text-[10px] leading-none text-slate-500">{label}</p>
-      <p className={`truncate ${valueClass}`}>{value}</p>
+      <div className="grid gap-0.5" title={title}>
+        {values.map((item) => (
+          <p key={item} className={`truncate ${valueClass}`}>{item}</p>
+        ))}
+      </div>
     </div>
   );
 }
@@ -533,14 +598,15 @@ function calculateKpis(rooms: MonitorRoom[]) {
     (acc, status) => ({ ...acc, [status]: rooms.filter((room) => room.status === status).length }),
     {} as Record<MonitorStatus, number>,
   );
-  const active = counts.RUNNING + counts.WAITING;
+  const active = counts.RUNNING + counts.WAITING + counts.SELLING;
   return {
     counts,
     active,
     running: counts.RUNNING,
     waiting: counts.WAITING,
+    selling: counts.SELLING,
     total: rooms.length,
-    attendees: rooms.filter((room) => room.status === 'RUNNING' || room.status === 'WAITING').reduce((sum, room) => sum + room.attendeeCount, 0),
+    attendees: rooms.filter((room) => room.status === 'RUNNING' || room.status === 'WAITING' || room.status === 'SELLING').reduce((sum, room) => sum + room.attendeeCount, 0),
     usagePercent: rooms.length ? Math.round((active / rooms.length) * 100) : 0,
   };
 }
@@ -639,6 +705,16 @@ function PeopleIcon() {
       <path d="M16 21v-2a4 4 0 0 0-8 0v2" />
       <circle cx="12" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87M2 21v-2a4 4 0 0 1 3-3.87" />
+    </SvgIcon>
+  );
+}
+
+function CartMetricIcon() {
+  return (
+    <SvgIcon>
+      <path d="M6 6h15l-2 8H8L6 6ZM6 6 5 3H2" />
+      <circle cx="9" cy="20" r="1" />
+      <circle cx="18" cy="20" r="1" />
     </SvgIcon>
   );
 }

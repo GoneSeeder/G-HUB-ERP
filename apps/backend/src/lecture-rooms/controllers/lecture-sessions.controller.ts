@@ -4,7 +4,7 @@ import { RequireAppAccess } from '../../auth/decorators/app-access.decorator';
 import { AppAccessGuard } from '../../auth/guards/app-access.guard';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
-import { AssignSessionDto, UpdateLectureHistoryDto } from '../dto/session.dto';
+import { AssignSessionDto, CloseSaleDto, UpdateLectureHistoryDto } from '../dto/session.dto';
 import { LectureSessionsService } from '../services/lecture-sessions.service';
 
 @Controller('api')
@@ -41,6 +41,11 @@ export class LectureSessionsController {
   @Post('lecture-rooms/display/:roomCode/end')
   end(@Param('roomCode') roomCode: string) {
     return this.lectureSessionsService.end(roomCode);
+  }
+
+  @Post('lecture-rooms/display/:roomCode/close-sale')
+  closeSale(@Param('roomCode') roomCode: string, @Body() dto: CloseSaleDto) {
+    return this.lectureSessionsService.closeSale(roomCode, dto);
   }
 
   @Get('lecture-rooms/history')

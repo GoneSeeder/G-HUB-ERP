@@ -385,8 +385,12 @@ model LectureSession {
   speaker2Code  String   @default("")
   speaker2Name  String   @default("")
   attendeeCount Int       @default(0)
-  status        String    @default("arriving") // "arriving" | "lecturing"
+  status        String    @default("arriving") // "arriving" | "lecturing" | "selling"
   startedAt     DateTime?
+  lectureEndedAt DateTime?
+  lectureDurationSeconds Int @default(0)
+  cashierCode   String    @default("")
+  salesAmount   Decimal   @default(0)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -411,7 +415,12 @@ model LectureHistory {
   attendeeCount   Int      @default(0)
   startedAt       DateTime
   endedAt         DateTime
+  lectureEndedAt  DateTime?
+  lectureDurationSeconds Int @default(0)
+  totalDurationSeconds Int @default(0)
   durationSeconds Int
+  cashierCode     String   @default("")
+  salesAmount     Decimal  @default(0)
   createdAt       DateTime @default(now())
 
   bonusCard BonusCard? @relation(fields: [bonusCardId], references: [id], onDelete: SetNull)
