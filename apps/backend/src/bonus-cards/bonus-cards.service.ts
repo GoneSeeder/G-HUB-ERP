@@ -87,7 +87,7 @@ export class BonusCardsService {
           dateBookJw: row.workDate,
           bonusCode: row.bonus,
         },
-        data: { upload: false },
+        data: { upload: false, bonusCode: '' },
       });
     });
     return { message: 'Bonus card deleted successfully' };

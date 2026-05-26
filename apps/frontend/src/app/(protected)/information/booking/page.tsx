@@ -232,7 +232,7 @@ export default function InformationBookingPage() {
         setRows((current) =>
           current.map((row) =>
             row.dateBookJw === detail.workDate && row.bonusCode === detail.bonusCode
-              ? { ...row, upload: false }
+              ? { ...row, upload: false, bonusCode: '' }
               : row,
           ),
         );
