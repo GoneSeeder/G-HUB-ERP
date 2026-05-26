@@ -15,9 +15,6 @@ jobs:
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/frontend
 
     steps:
       - name: Checkout
@@ -25,22 +22,24 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: apps/frontend/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Type check
-        run: pnpm run type-check
+        run: pnpm --filter g-hub-frontend run type-check
 
       - name: Build
-        run: pnpm run build
+        run: pnpm --filter g-hub-frontend run build
 
   backend:
     name: Backend
@@ -49,9 +48,6 @@ jobs:
       DATABASE_URL: postgresql://admin:admin@localhost:5432/g_hub_ci
       JWT_SECRET: ci-secret
       JWT_EXPIRES_IN: 3600
-    defaults:
-      run:
-        working-directory: apps/backend
 
     steps:
       - name: Checkout
@@ -59,22 +55,24 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-          cache-dependency-path: apps/backend/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
-        run: pnpm run prisma:generate
+        run: pnpm --filter g-hub-backend run prisma:generate
 
       - name: Build
-        run: pnpm run build
+        run: pnpm --filter g-hub-backend run build
 
       - name: Test
-        run: pnpm test -- --runInBand --passWithNoTests
+        run: pnpm --filter g-hub-backend test -- --runInBand --passWithNoTests
