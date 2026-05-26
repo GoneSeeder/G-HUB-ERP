@@ -75,4 +75,4 @@ jobs:
         run: pnpm --filter g-hub-backend run build
 
       - name: Test
-        run: pnpm --filter g-hub-backend test -- --runInBand --passWithNoTests
+        run: pnpm --filter g-hub-backend test --runInBand --passWithNoTests
