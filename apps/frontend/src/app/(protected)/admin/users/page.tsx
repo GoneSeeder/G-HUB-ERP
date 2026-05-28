@@ -287,6 +287,9 @@ export default function AdminUsersPage() {
         <table className="w-full min-w-[900px] border-collapse text-sm">
           <thead className="sticky top-0 z-10 bg-slate-50">
             <tr>
+              <th className="w-16 border-b border-slate-200 px-4 py-2.5 text-left text-xs font-bold uppercase text-slate-400">
+                No.
+              </th>
               <th className="border-b border-slate-200 px-4 py-2.5 text-left text-xs font-bold uppercase text-slate-400">
                 Username
               </th>
@@ -308,8 +311,11 @@ export default function AdminUsersPage() {
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {users.map((user, index) => (
               <tr key={user.id} className="transition hover:bg-sky-50/50">
+                <td className="border-b border-slate-100 px-4 py-2.5 text-slate-500">
+                  {index + 1}
+                </td>
                 <td className="border-b border-slate-100 px-4 py-2.5 font-semibold text-slate-900">
                   {user.username}
                 </td>

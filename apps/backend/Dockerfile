@@ -22,7 +22,7 @@ RUN npm install
 COPY . .
 RUN DATABASE_URL="postgresql://admin:admin@localhost:5432/g-hub" npx prisma generate && npm run build
 
-FROM node:20-alpine
+FROM node:20-alpine AS production
 
 WORKDIR /app
 

@@ -59,7 +59,7 @@ export class UsersService {
 
   async findAll() {
     const users = await this.prisma.user.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
       include: this.userAccessInclude(),
     });
     return users.map((user) => this.toUserListItem(user));

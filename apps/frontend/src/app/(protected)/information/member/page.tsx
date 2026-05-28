@@ -6,8 +6,10 @@ import { EditIcon, PlusIcon, SearchIcon, TrashIcon, UploadIcon } from '@/compone
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { LoadingState } from '@/components/ui/loading-state';
 import { useDialog } from '@/components/ui/dialog-provider';
+import { ThaiIdScanButton } from '@/components/ThaiIdScanButton';
 import { apiFetch, apiUpload } from '@/lib/api';
 import { preventEnterSubmit } from '@/lib/form-behavior';
+import { ThaiIdData } from '@/hooks/useThaiIdScanner';
 
 const THAI_ID_BRIDGE_URL = 'http://127.0.0.1:32123';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
@@ -1037,23 +1039,11 @@ function MemberModal({
     }
   };
 
-  const scanCard = async () => {
-    setLookupStatus('Reading Thai ID card...');
-
-    try {
-      const response = await fetch(`${THAI_ID_BRIDGE_URL}/read-card`, {
-        method: 'GET',
-        cache: 'no-store',
-      });
-      const data = (await response.json()) as ThaiIdBridgeResponse;
-
-      if (!response.ok || data.ok === false) {
-        throw new Error(data.message || 'Unable to read Thai ID card.');
-      }
-
-      onChange({
+  const applyThaiIdCardData = (data: ThaiIdBridgeResponse | ThaiIdData) => {
+    const citizenId = 'citizenId' in data ? data.citizenId : undefined;
+    onChange({
         ...form,
-        nationalId: data.cid || form.nationalId,
+        nationalId: data.cid || citizenId || form.nationalId,
         titleTh: data.titleTh || form.titleTh,
         firstNameTh: data.firstNameTh || form.firstNameTh,
         lastNameTh: data.lastNameTh || form.lastNameTh,
@@ -1068,7 +1058,24 @@ function MemberModal({
         address: data.address || form.address,
         imageUrl: data.imageUrl || form.imageUrl,
       });
-      setLookupStatus('Card data loaded successfully.');
+  };
+
+  const scanCard = async () => {
+    setLookupStatus('Reading Thai ID card...');
+
+    try {
+      const response = await fetch(`${THAI_ID_BRIDGE_URL}/read-card`, {
+        method: 'GET',
+        cache: 'no-store',
+      });
+      const data = (await response.json()) as ThaiIdBridgeResponse;
+
+      if (!response.ok || data.ok === false) {
+        throw new Error(data.message || 'Unable to read Thai ID card.');
+      }
+
+      applyThaiIdCardData(data);
+      setLookupStatus('Card data loaded successfully from local bridge.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to read Thai ID card.';
       setLookupStatus(
@@ -1077,6 +1084,11 @@ function MemberModal({
           : message,
       );
     }
+  };
+
+  const onNativeScanSuccess = (data: ThaiIdData) => {
+    applyThaiIdCardData(data);
+    setLookupStatus('Card data loaded successfully from browser extension.');
   };
 
   const lookupNationalId = () => {
@@ -1119,13 +1131,11 @@ function MemberModal({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="min-h-10 rounded-md border border-emerald-500 bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-100"
-              onClick={scanCard}
-            >
-              Scan CardID
-            </button>
+            <ThaiIdScanButton
+              onSuccess={onNativeScanSuccess}
+              onError={setLookupStatus}
+              fallbackScan={scanCard}
+            />
             <button type="button" className="toolbar-btn" onClick={onClose}>
               Close
             </button>

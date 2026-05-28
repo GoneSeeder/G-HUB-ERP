@@ -100,6 +100,12 @@ type BonusUploadResponse = {
   skipped: number;
 };
 
+type BonusClearResponse = {
+  requested: number;
+  cleared: number;
+  ids: string[];
+};
+
 type BookingUploadRefreshDetail = {
   workDate?: string;
   bonusCode?: string;
@@ -766,6 +772,10 @@ function CreateBonusModal({
   const selectedRows = displayRows.filter((row) => selectedIds.includes(row.id));
   const allRowsSelected = displayRows.length > 0 && displayRows.every((row) => selectedIds.includes(row.id));
   const canGenerate = selectedRows.length > 0 && selectedRows.every(canGenerateBonus);
+  const canClear =
+    selectedRows.length > 0 &&
+    selectedRows.every((row) => !row.upload) &&
+    selectedRows.some((row) => Boolean(row.bonusCode || row.previewBonus));
   const canUpload = selectedRows.length > 0 && selectedRows.every((row) => canGenerateBonus(row) && Boolean(row.bonusCode || row.previewBonus));
 
   const loadRowsForDate = async () => {
@@ -805,7 +815,6 @@ function CreateBonusModal({
         sortCreateBonusRows(
           displayRows.map((row) => ({
             ...row,
-            bonusCode: bonusById.get(row.id) ?? row.bonusCode,
             previewBonus: bonusById.get(row.id) ?? row.previewBonus,
           })),
         ),
@@ -818,16 +827,49 @@ function CreateBonusModal({
     }
   };
 
-  const clearBonus = () => {
+  const clearBonus = async () => {
     if (selectedIds.length === 0) return;
-    setPreviewRows(
-      sortCreateBonusRows(
-        displayRows.map((row) => ({
-          ...row,
-          previewBonus: selectedIds.includes(row.id) ? '' : row.previewBonus,
-        })),
-      ),
-    );
+    setLoadingRows(true);
+    setLoadError(null);
+    setActionMessage('');
+    try {
+      const persistedIds = selectedRows
+        .filter((row) => row.bonusCode && !row.upload)
+        .map((row) => row.id);
+      if (persistedIds.length > 0) {
+        await apiFetch<BonusClearResponse>('/api/bookings/clear-bonus-codes', {
+          method: 'POST',
+          body: JSON.stringify({ ids: persistedIds }),
+        });
+      }
+      setPreviewRows(
+        sortCreateBonusRows(
+          displayRows.map((row) =>
+            selectedIds.includes(row.id)
+              ? {
+                  ...row,
+                  bonusCode: row.upload ? row.bonusCode : '',
+                  previewBonus: '',
+                }
+              : row,
+          ),
+        ),
+      );
+      setRows((current) =>
+        sortCreateBonusRows(
+          current.map((row) =>
+            selectedIds.includes(row.id) && !row.upload
+              ? { ...row, bonusCode: '' }
+              : row,
+          ),
+        ),
+      );
+      setActionMessage(`Cleared bonus code for ${selectedIds.length} selected row(s).`);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Clear bonus code failed.');
+    } finally {
+      setLoadingRows(false);
+    }
   };
 
   const uploadBonus = async () => {
@@ -933,7 +975,13 @@ function CreateBonusModal({
           <button type="button" className="toolbar-btn-primary disabled:bg-slate-100 disabled:text-slate-400" disabled={!canGenerate || loadingRows} onClick={() => void genBonus()}>
             <PlusIcon className="erp-action-icon" /> Gen. Bonus Auto
           </button>
-          <button type="button" className="toolbar-btn disabled:bg-slate-50 disabled:text-slate-400" disabled={selectedIds.length === 0} onClick={clearBonus}>
+          <button
+            type="button"
+            className="toolbar-btn disabled:bg-slate-50 disabled:text-slate-400"
+            disabled={!canClear || loadingRows}
+            title={selectedRows.some((row) => row.upload) ? 'Uploaded rows cannot clear bonus code.' : undefined}
+            onClick={() => void clearBonus()}
+          >
             <RefreshIcon className="erp-action-icon" /> Clear Bonus Code
           </button>
           <button type="button" className="toolbar-btn disabled:bg-slate-50 disabled:text-slate-400" disabled={!canUpload || loadingRows} onClick={() => void uploadBonus()}>

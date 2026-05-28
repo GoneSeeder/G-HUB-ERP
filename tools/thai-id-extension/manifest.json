@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Thai ID Scanner for G-HUB",
+  "version": "1.0.0",
+  "description": "Read Thai national ID cards for G-HUB ERP.",
+  "permissions": ["nativeMessaging"],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*",
+    "https://*.trycloudflare.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:3000/*",
+        "http://127.0.0.1:3000/*",
+        "https://*.trycloudflare.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

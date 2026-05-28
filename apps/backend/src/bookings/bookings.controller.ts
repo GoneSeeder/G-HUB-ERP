@@ -79,6 +79,11 @@ export class BookingsController {
     return this.bookingsService.generateBonusCodes(body.ids);
   }
 
+  @Post('clear-bonus-codes')
+  clearBonusCodes(@Body() body: { ids: string[] }) {
+    return this.bookingsService.clearBonusCodes(body.ids);
+  }
+
   @Post('agent-matchings')
   createAgentMatching(@Body() body: { agentCodeRef: string; agentNameRef?: string; agentId?: string; agentCode?: string }) {
     return this.bookingsService.createAgentMatching(body);

@@ -535,62 +535,93 @@ export class BookingsService {
     const usedByDate = new Map<string, Set<string>>();
     const generated: Array<{ id: string; bonus: string }> = [];
 
-    await this.prisma.$transaction(async (tx) => {
-      for (const id of uniqueIds) {
-        const row = rowById.get(id);
-        if (!row) {
-          throw new BadRequestException(`Booking "${id}" not found`);
-        }
-        this.assertCanGenerateBonus(row);
-        const workDate = row.dateBookJw;
-        if (!workDate) {
-          throw new BadRequestException(`Booking "${row.partyCode}" has no book date`);
-        }
-
-        const existingBonusCode = (row.bonusCode ?? '').trim();
-        if (existingBonusCode) {
-          generated.push({ id: row.id, bonus: existingBonusCode });
-          continue;
-        }
-
-        const dateKey = this.dateKey(workDate);
-        if (!usedByDate.has(dateKey)) {
-          const [existingBonusCards, existingBookings] = await Promise.all([
-            tx.bonusCard.findMany({
-              where: { workDate },
-              select: { bonus: true },
-            }),
-            tx.booking.findMany({
-              where: { dateBookJw: workDate, bonusCode: { not: '' } },
-              select: { bonusCode: true },
-            }),
-          ]);
-          usedByDate.set(
-            dateKey,
-            new Set([
-              ...existingBonusCards.map((item) => item.bonus),
-              ...existingBookings.map((item) => item.bonusCode),
-            ]),
-          );
-        }
-        const used = usedByDate.get(dateKey)!;
-        let bonus = this.nextGeiBonusCode(row.nation, counters);
-        while (used.has(bonus) || generated.some((item) => item.bonus === bonus)) {
-          bonus = this.nextGeiBonusCode(row.nation, counters);
-        }
-        this.assertBonusCodeWithinGeiLimit(row.nation, bonus);
-        used.add(bonus);
-        await tx.booking.update({
-          where: { id: row.id },
-          data: { bonusCode: bonus },
-        });
-        generated.push({ id: row.id, bonus });
+    for (const id of uniqueIds) {
+      const row = rowById.get(id);
+      if (!row) {
+        throw new BadRequestException(`Booking "${id}" not found`);
       }
-    });
+      this.assertCanGenerateBonus(row);
+      const workDate = row.dateBookJw;
+      if (!workDate) {
+        throw new BadRequestException(`Booking "${row.partyCode}" has no book date`);
+      }
+
+      const existingBonusCode = (row.bonusCode ?? '').trim();
+      if (existingBonusCode) {
+        generated.push({ id: row.id, bonus: existingBonusCode });
+        continue;
+      }
+
+      const dateKey = this.dateKey(workDate);
+      if (!usedByDate.has(dateKey)) {
+        const [existingBonusCards, existingBookings] = await Promise.all([
+          this.prisma.bonusCard.findMany({
+            where: { workDate },
+            select: { bonus: true },
+          }),
+          this.prisma.booking.findMany({
+            where: { dateBookJw: workDate, bonusCode: { not: '' } },
+            select: { bonusCode: true },
+          }),
+        ]);
+        usedByDate.set(
+          dateKey,
+          new Set([
+            ...existingBonusCards.map((item) => item.bonus),
+            ...existingBookings.map((item) => item.bonusCode),
+          ]),
+        );
+      }
+      const used = usedByDate.get(dateKey)!;
+      let bonus = this.nextGeiBonusCode(row.nation, counters);
+      while (used.has(bonus) || generated.some((item) => item.bonus === bonus)) {
+        bonus = this.nextGeiBonusCode(row.nation, counters);
+      }
+      this.assertBonusCodeWithinGeiLimit(row.nation, bonus);
+      used.add(bonus);
+      generated.push({ id: row.id, bonus });
+    }
 
     return {
       requested: uniqueIds.length,
       rows: generated,
+    };
+  }
+
+  async clearBonusCodes(ids: string[]) {
+    const uniqueIds = [...new Set(ids)].filter(Boolean);
+    if (uniqueIds.length === 0) {
+      throw new BadRequestException('Please select booking rows first');
+    }
+
+    const rows = await this.prisma.booking.findMany({
+      where: { id: { in: uniqueIds } },
+      select: {
+        id: true,
+        partyCode: true,
+        upload: true,
+      },
+    });
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    for (const id of uniqueIds) {
+      const row = rowById.get(id);
+      if (!row) {
+        throw new BadRequestException(`Booking "${id}" not found`);
+      }
+      if (row.upload) {
+        throw new BadRequestException(`Booking "${row.partyCode}" is already uploaded`);
+      }
+    }
+
+    await this.prisma.booking.updateMany({
+      where: { id: { in: uniqueIds }, upload: false },
+      data: { bonusCode: '' },
+    });
+
+    return {
+      requested: uniqueIds.length,
+      cleared: uniqueIds.length,
+      ids: uniqueIds,
     };
   }
 

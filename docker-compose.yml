@@ -17,21 +17,16 @@ services:
     build:
       context: ./apps/backend
       dockerfile: Dockerfile
-      target: development
+      target: production
     restart: always
     ports:
       - "3001:3001"
     environment:
       DATABASE_URL: postgresql://${DB_USER:-admin}:${DB_PASSWORD:-admin}@postgres:5432/${DB_NAME:-g-hub}
-      NODE_ENV: development
+      NODE_ENV: production
       PORT: 3001
-      CHOKIDAR_USEPOLLING: "true"
-      CHOKIDAR_INTERVAL: 500
-      TSC_WATCHFILE: PriorityPollingInterval
-      TSC_WATCHDIRECTORY: RecursiveDirectoryUsingDynamicPriorityPolling
     volumes:
-      - ./apps/backend:/app
-      - backend_node_modules:/app/node_modules
+      - ./apps/backend/uploads:/app/uploads
     depends_on:
       - postgres
     networks:
@@ -41,20 +36,17 @@ services:
     build:
       context: ./apps/frontend
       dockerfile: Dockerfile
-      target: development
+      target: production
+      args:
+        API_INTERNAL_URL: http://backend:3001
+        NEXT_PUBLIC_API_URL: ""
     restart: always
     ports:
       - "3000:3000"
     environment:
       API_INTERNAL_URL: http://backend:3001
       NEXT_PUBLIC_API_URL: ""
-      NODE_ENV: development
-      WATCHPACK_POLLING: "true"
-      CHOKIDAR_USEPOLLING: "true"
-    volumes:
-      - ./apps/frontend:/app
-      - frontend_node_modules:/app/node_modules
-      - frontend_next:/app/.next
+      NODE_ENV: production
     depends_on:
       - backend
     networks:
@@ -62,9 +54,6 @@ services:
 
 volumes:
   postgres_data:
-  backend_node_modules:
-  frontend_node_modules:
-  frontend_next:
 
 networks:
   g-hub-network:

@@ -1,0 +1,9 @@
+{
+  "name": "com.ghub.thaiid",
+  "description": "Thai ID Card Reader for G-HUB ERP",
+  "path": "C:\\Program Files\\GHUB\\thai-id-host\\thai-id-host.exe",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://REPLACE_WITH_EXTENSION_ID/"
+  ]
+}
