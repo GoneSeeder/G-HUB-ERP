@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useQuery } from '@tanstack/react-query';
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon, UploadIcon } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { LoadingState } from '@/components/ui/loading-state';
@@ -9,6 +10,7 @@ import { useDialog } from '@/components/ui/dialog-provider';
 import { ThaiIdScanButton } from '@/components/ThaiIdScanButton';
 import { apiFetch, apiUpload } from '@/lib/api';
 import { preventEnterSubmit } from '@/lib/form-behavior';
+import { queryOptions } from '@/lib/queries';
 import { ThaiIdData } from '@/hooks/useThaiIdScanner';
 
 const THAI_ID_BRIDGE_URL = 'http://127.0.0.1:32123';
@@ -42,12 +44,6 @@ type MemberForm = {
   company: string;
   guideHo: string;
   imageUrl: string;
-};
-
-type MeResponse = {
-  username: string;
-  name: string;
-  roles: string[];
 };
 
 type MemberItem = MemberForm & {
@@ -252,6 +248,7 @@ function createEmptyAgentForm(): AgentForm {
 
 export default function MemberPage() {
   const { requestConfirmation } = useDialog();
+  const { data: me } = useQuery(queryOptions.me);
   const [activeTab, setActiveTab] = useState<'guides' | 'agents'>('guides');
   const [memberEnterAnimationDone, setMemberEnterAnimationDone] = useState(false);
   const [search, setSearch] = useState('');
@@ -270,17 +267,15 @@ export default function MemberPage() {
   const [currentUserName, setCurrentUserName] = useState('');
 
   useEffect(() => {
-    apiFetch<MeResponse>('/api/auth/me')
-      .then((me) => {
-        const displayName = me.name || me.username;
-        setCurrentUserName(displayName);
-        setForm((current) => ({
-          ...current,
-          recorder: current.recorder || displayName,
-        }));
-      })
-      .catch(() => setCurrentUserName(''));
-  }, []);
+    const displayName = me ? me.name || me.username || '' : '';
+    setCurrentUserName(displayName);
+    if (!displayName) return;
+
+    setForm((current) => ({
+      ...current,
+      recorder: current.recorder || displayName,
+    }));
+  }, [me]);
 
   useEffect(() => {
     loadMembers();

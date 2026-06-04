@@ -1,11 +1,13 @@
 ﻿'use client';
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { EditIcon, PlusIcon, SaveIcon, TrashIcon, XIcon } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { useDialog } from '@/components/ui/dialog-provider';
 import { apiFetch } from '@/lib/api';
 import { preventEnterSubmit } from '@/lib/form-behavior';
+import { queryOptions } from '@/lib/queries';
 
 interface UserItem {
   id: string;
@@ -22,10 +24,6 @@ interface AppItem {
   code: string;
   name: string;
   description: string | null;
-}
-
-interface MeResponse {
-  sub: string;
 }
 
 type RoleCode = 'admin' | 'user';
@@ -84,6 +82,8 @@ const emptyForm: UserFormState = {
 
 export default function AdminUsersPage() {
   const { requestConfirmation } = useDialog();
+  const { data: me } = useQuery(queryOptions.me);
+  const { data: availableApps = [] } = useQuery(queryOptions.apps);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [apps, setApps] = useState<AppItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -113,13 +113,15 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     loadUsers();
-    apiFetch<MeResponse>('/api/auth/me')
-      .then((me) => setCurrentUserId(me.sub))
-      .catch(() => setCurrentUserId(null));
-    apiFetch<AppItem[]>('/api/apps')
-      .then((data) => setApps(data))
-      .catch(() => setApps([]));
   }, []);
+
+  useEffect(() => {
+    setCurrentUserId(me?.sub ?? null);
+  }, [me]);
+
+  useEffect(() => {
+    setApps(availableApps);
+  }, [availableApps]);
 
   const openCreateModal = () => {
     setEditingUser(null);

@@ -27,10 +27,12 @@ export const queryOptions = {
     queryKey: queryKeys.me,
     queryFn: () => apiFetch<MeResponse>('/api/auth/me'),
     staleTime: QUERY_STALE_TIME_MS,
+    retry: false,
   },
   apps: {
     queryKey: queryKeys.apps,
     queryFn: () => apiFetch<AppItem[]>('/api/apps'),
     staleTime: QUERY_STALE_TIME_MS,
+    retry: false,
   },
 };

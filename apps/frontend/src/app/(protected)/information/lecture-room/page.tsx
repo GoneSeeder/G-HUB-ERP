@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { io } from 'socket.io-client';
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRightIcon,
   EditIcon,
@@ -15,6 +16,7 @@ import {
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { useDialog } from '@/components/ui/dialog-provider';
 import { apiFetch, getRealtimeBaseUrl } from '@/lib/api';
+import { queryOptions } from '@/lib/queries';
 
 type RoomStatus = 'available' | 'arriving' | 'lecturing' | 'selling' | 'inactive';
 type SpeakerStatus = 'available' | 'lecturing' | 'inactive';
@@ -53,10 +55,6 @@ type LectureSession = {
   status: 'arriving' | 'lecturing' | 'selling';
   startedAt: string | null;
   createdAt: string;
-};
-
-type MeResponse = {
-  roles: string[];
 };
 
 type LectureHistory = {
@@ -602,6 +600,7 @@ function ModalShell({
 
 export default function LectureRoomPage() {
   const { requestConfirmation } = useDialog();
+  const { data: me } = useQuery(queryOptions.me);
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
   const [now, setNow] = useState(Date.now());
   const [rooms, setRooms] = useState<LectureRoom[]>([]);
@@ -661,9 +660,6 @@ export default function LectureRoomPage() {
 
   useEffect(() => {
     refreshAll().catch((err) => setError(err instanceof Error ? err.message : 'Failed to load lecture room data'));
-    apiFetch<MeResponse>('/api/auth/me')
-      .then((me) => setIsAdmin(me.roles.includes('admin')))
-      .catch(() => setIsAdmin(false));
     const socket = io(`${getRealtimeBaseUrl()}/lecture-rooms`, {
       transports: ['websocket', 'polling'],
     });
@@ -678,6 +674,10 @@ export default function LectureRoomPage() {
       socket.disconnect();
     };
   }, []);
+
+  useEffect(() => {
+    setIsAdmin(Boolean(me?.roles.includes('admin')));
+  }, [me]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);

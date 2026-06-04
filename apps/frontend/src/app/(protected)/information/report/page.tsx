@@ -1,9 +1,11 @@
 ﻿'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { CalendarIcon, PrintIcon, SearchIcon } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { apiFetch } from '@/lib/api';
+import { queryOptions } from '@/lib/queries';
 
 type ReportBonusCard = {
   id: string;
@@ -60,12 +62,6 @@ type ReportBooking = {
 type ReportType = 'bonus-card' | 'booking-shop';
 type ReportRow = ReportBonusCard | ReportBooking;
 
-type MeResponse = {
-  username: string;
-  name: string;
-  roles: string[];
-};
-
 const reportOptions: Array<{
   value: ReportType;
   label: string;
@@ -83,12 +79,8 @@ const reportOptions: Array<{
   },
 ];
 
-async function loadReportUserName() {
-  const me = await apiFetch<MeResponse>('/api/auth/me');
-  return me.name || me.username || '-';
-}
-
 export default function ReportPage() {
+  const { data: me } = useQuery(queryOptions.me);
   const today = getTodayLocalDate();
   const [reportType, setReportType] = useState<ReportType>('bonus-card');
   const [fromDate, setFromDate] = useState(today);
@@ -107,10 +99,8 @@ export default function ReportPage() {
     selectedReport.value === 'bonus-card' ? 'text-slate-950' : 'text-[#0752d6]';
 
   useEffect(() => {
-    loadReportUserName()
-      .then(setCurrentUserName)
-      .catch(() => setCurrentUserName(''));
-  }, []);
+    setCurrentUserName(me ? me.name || me.username || '' : '');
+  }, [me]);
 
   const showReport = async () => {
     setLoading(true);
@@ -119,7 +109,7 @@ export default function ReportPage() {
     try {
       let displayUserName = currentUserName;
       if (!displayUserName) {
-        displayUserName = await loadReportUserName().catch(() => '-');
+        displayUserName = me ? me.name || me.username || '-' : '-';
         setCurrentUserName(displayUserName === '-' ? '' : displayUserName);
       }
       setReportUserName(displayUserName);

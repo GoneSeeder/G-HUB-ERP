@@ -1,11 +1,13 @@
 'use client';
 
 import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { CalendarIcon, DownloadIcon, EditIcon, ListIcon, PlusIcon, PrintIcon, SaveIcon, SearchIcon, TrashIcon, UploadIcon, XIcon } from '@/components/ui/icons';
 import { DataPanel, PageHeader, PageShell } from '@/components/ui/page-shell';
 import { useDialog } from '@/components/ui/dialog-provider';
 import { ReferenceItem, ReferenceLookupModal, ReferenceLookupType } from '@/components/ui/reference-lookup-modal';
 import { apiFetch, apiUpload } from '@/lib/api';
+import { queryOptions } from '@/lib/queries';
 import { getFallbackReferenceItems } from '@/lib/reference-lookup-fallback';
 
 type BonusGuide = {
@@ -409,6 +411,7 @@ const exportColumns: Array<{ label: string; getValue: (row: BonusCard) => string
 
 export default function BonusCardPage() {
   const { requestConfirmation } = useDialog();
+  const { data: me } = useQuery(queryOptions.me);
   const [rows, setRows] = useState<BonusCard[]>([]);
   const [workDate, setWorkDate] = useState(() => getTodayLocalDate());
   const [search, setSearch] = useState('');
@@ -497,19 +500,20 @@ export default function BonusCardPage() {
   }, [workDate]);
 
   useEffect(() => {
-    const loadCurrentUser = async () => {
-      try {
-        const user = await apiFetch<CurrentUser>('/api/auth/me');
-        setCurrentUser(user);
-        setIsAdmin(user.roles.includes('admin'));
-      } catch {
-        setCurrentUser(null);
-        setIsAdmin(false);
-      }
-    };
+    if (!me) {
+      setCurrentUser(null);
+      setIsAdmin(false);
+      return;
+    }
 
-    loadCurrentUser();
-  }, []);
+    const user = {
+      username: me.username ?? '',
+      name: me.name ?? '',
+      roles: me.roles,
+    };
+    setCurrentUser(user);
+    setIsAdmin(user.roles.includes('admin'));
+  }, [me]);
 
   useEffect(() => {
     if (!exportOpen) {
