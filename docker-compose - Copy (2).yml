@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
+      POSTGRES_DB: ${DB_NAME:-g-hub}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - g-hub-network
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+      target: production
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-admin}:${DB_PASSWORD:-admin}@postgres:5432/${DB_NAME:-g-hub}
+      NODE_ENV: production
+      PORT: 3001
+    volumes:
+      - ./apps/backend/uploads:/app/uploads
+    depends_on:
+      - postgres
+    networks:
+      - g-hub-network
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        API_INTERNAL_URL: http://backend:3001
+        NEXT_PUBLIC_API_URL: ""
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      API_INTERNAL_URL: http://backend:3001
+      NEXT_PUBLIC_API_URL: ""
+      NODE_ENV: production
+    depends_on:
+      - backend
+    networks:
+      - g-hub-network
+
+volumes:
+  postgres_data:
+
+networks:
+  g-hub-network:
+    driver: bridge

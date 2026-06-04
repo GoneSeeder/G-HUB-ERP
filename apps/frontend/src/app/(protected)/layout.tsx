@@ -2,15 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { clearAuthTokenCookie, IDLE_TIMEOUT_MS, isSessionIdleExpired, touchSessionActivity } from '@/lib/auth';
+import { queryOptions } from '@/lib/queries';
 import { FolderIcon, LogOutIcon } from '@/components/ui/icons';
-
-interface MeResponse {
-  roles: string[];
-  apps: string[];
-}
 
 export default function ProtectedLayout({
   children,
@@ -32,15 +28,9 @@ export default function ProtectedLayout({
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [canSeeAdmin, setCanSeeAdmin] = useState(false);
-
-  useEffect(() => {
-    apiFetch<MeResponse>('/api/auth/me')
-      .then((me) => {
-        setCanSeeAdmin(me.roles.includes('admin') && me.apps.includes('admin'));
-      })
-      .catch(() => setCanSeeAdmin(false));
-  }, []);
+  const queryClient = useQueryClient();
+  const { data: me } = useQuery(queryOptions.me);
+  const canSeeAdmin = Boolean(me?.roles.includes('admin') && me.apps.includes('admin'));
 
   useEffect(() => {
     let lastTouch = 0;
@@ -55,6 +45,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
 
     const checkIdle = () => {
       if (isSessionIdleExpired()) {
+        queryClient.clear();
         clearAuthTokenCookie();
         router.push('/login');
         router.refresh();
@@ -70,9 +61,10 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
       activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetIdleTimer));
       window.clearInterval(intervalId);
     };
-  }, [router]);
+  }, [queryClient, router]);
 
   const logout = () => {
+    queryClient.clear();
     clearAuthTokenCookie();
     router.push('/login');
     router.refresh();

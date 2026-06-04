@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { QueryProvider } from '@/components/query-provider';
 import { DialogProvider } from '@/components/ui/dialog-provider';
 import './globals.css';
 
@@ -16,7 +17,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <DialogProvider>{children}</DialogProvider>
+        <QueryProvider>
+          <DialogProvider>{children}</DialogProvider>
+        </QueryProvider>
       </body>
     </html>
   );

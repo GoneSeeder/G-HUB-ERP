@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AppCard } from '@/components/ui/app-card';
 import {
   CardIcon,
@@ -11,23 +12,8 @@ import {
 } from '@/components/ui/icons';
 import { PageShell } from '@/components/ui/page-shell';
 import { LoadingState } from '@/components/ui/loading-state';
-import { apiFetch } from '@/lib/api';
 import { clearAuthTokenCookie } from '@/lib/auth';
-
-interface MeResponse {
-  sub: string;
-  username: string;
-  name: string;
-  roles: string[];
-  apps: string[];
-}
-
-interface AppItem {
-  id: string;
-  code: string;
-  name: string;
-  description: string | null;
-}
+import { queryOptions } from '@/lib/queries';
 
 type HubAppMeta = {
   eyebrow: string;
@@ -132,31 +118,29 @@ const appMetaByCode: Record<string, HubAppMeta> = {
 
 export default function HubPage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<MeResponse | null>(null);
-  const [apps, setApps] = useState<AppItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    isError: profileError,
+  } = useQuery(queryOptions.me);
+  const {
+    data: availableApps = [],
+    isLoading: appsLoading,
+    isError: appsError,
+  } = useQuery(queryOptions.apps);
 
   useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const [me, availableApps] = await Promise.all([
-          apiFetch<MeResponse>('/api/auth/me'),
-          apiFetch<AppItem[]>('/api/apps'),
-        ]);
-        setProfile(me);
-        setApps(availableApps.filter((app) => me.apps.includes(app.code)));
-      } catch {
-        clearAuthTokenCookie();
-        setError('Your session has expired. Please sign in again.');
-        router.push('/login');
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!profileError && !appsError) return;
 
-    loadProfile();
-  }, [router]);
+    queryClient.clear();
+    clearAuthTokenCookie();
+    setError('Your session has expired. Please sign in again.');
+    router.push('/login');
+  }, [appsError, profileError, queryClient, router]);
+
+  const loading = profileLoading || appsLoading;
 
   if (loading) {
     return <LoadingState label="Loading hub..." className="h-full" />;
@@ -170,6 +154,9 @@ export default function HubPage() {
     );
   }
 
+  const apps = profile
+    ? availableApps.filter((app) => profile.apps.includes(app.code))
+    : [];
   const visibleInformationApps = apps.filter((app) =>
     informationApps.includes(app.code),
   );

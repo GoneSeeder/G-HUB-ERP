@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { CheckIcon } from '@/components/ui/icons';
 import { getApiBaseUrl } from '@/lib/api';
 import { setAuthTokenCookie } from '@/lib/auth';
@@ -14,6 +15,7 @@ interface LoginResponse {
 
 export default function LoginPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -38,6 +40,7 @@ export default function LoginPage() {
 
       const data = (await response.json()) as LoginResponse;
       setAuthTokenCookie(data.accessToken);
+      queryClient.clear();
       router.push('/hub');
       router.refresh();
     } catch (submitError) {
