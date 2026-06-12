@@ -70,6 +70,10 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
     router.refresh();
   };
 
+  if (pathname.startsWith('/humansource')) {
+    return <div className="h-screen overflow-hidden bg-[#f6f8fb] text-slate-950">{children}</div>;
+  }
+
   const navLinkClass = (path: string) =>
     `inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm font-medium transition-colors ${
       pathname.startsWith(path)

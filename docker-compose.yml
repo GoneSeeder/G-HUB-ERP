@@ -36,17 +36,20 @@ services:
     build:
       context: ./apps/frontend
       dockerfile: Dockerfile
-      target: production
-      args:
-        API_INTERNAL_URL: http://backend:3001
-        NEXT_PUBLIC_API_URL: ""
+      target: development
     restart: always
     ports:
       - "3000:3000"
     environment:
       API_INTERNAL_URL: http://backend:3001
       NEXT_PUBLIC_API_URL: ""
-      NODE_ENV: production
+      NODE_ENV: development
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+      - /app/.next
     depends_on:
       - backend
     networks:

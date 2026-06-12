@@ -20,7 +20,7 @@ type HubAppMeta = {
   title: string;
   description: string;
   accent: string;
-  icon: 'users' | 'booking' | 'card' | 'list' | 'lecture' | 'report';
+  icon: 'users' | 'booking' | 'card' | 'list' | 'lecture' | 'report' | 'hr';
 };
 
 const informationApps = [
@@ -62,6 +62,16 @@ const salesCards = [
   },
 ];
 
+const humansourceCard = {
+  id: 'humansource-module',
+  code: 'humansource',
+  eyebrow: 'People Ops',
+  title: 'Humansource',
+  description: 'Modern HR workspace สำหรับข้อมูลองค์กร พนักงาน Payroll และรายงาน',
+  accent: 'bg-indigo-50 text-indigo-600',
+  icon: 'hr' as const,
+};
+
 const appHrefByCode: Record<string, string | undefined> = {
   'information-member': '/information/member',
   'information-bonus-card': '/information/bonus-card',
@@ -69,6 +79,7 @@ const appHrefByCode: Record<string, string | undefined> = {
   'information-name-list': '/information/name-list',
   'information-lecture-room': '/information/lecture-room',
   'information-report': '/information/report',
+  humansource: '/humansource/dashboard',
 };
 
 const appMetaByCode: Record<string, HubAppMeta> = {
@@ -293,6 +304,30 @@ export default function HubPage() {
         </section>
       ) : null}
 
+      <section className="erp-content-enter space-y-3">
+        <div className="flex flex-wrap items-baseline gap-2">
+          <h2 className="text-sm font-semibold text-slate-950">Human Resource</h2>
+          <p className="text-xs font-light text-slate-500">
+            HR workspace — พนักงาน เงินเดือน การประเมิน และรายงาน
+          </p>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <AppCard
+            href={appHrefByCode[humansourceCard.code]}
+            eyebrow="Human Resource"
+            title="Humansource (HR)"
+            description="จัดการข้อมูลพนักงาน เงินเดือน การประเมิน และรายงาน HR ครบวงจร"
+            code="HR"
+            icon={
+              <HubIconBadge accent={humansourceCard.accent}>
+                <HubIcon type={humansourceCard.icon} />
+              </HubIconBadge>
+            }
+          />
+        </div>
+      </section>
+
       {canSeeSales ? (
       <section className="erp-content-enter space-y-3">
         <div className="flex flex-wrap items-baseline gap-2">
@@ -348,6 +383,7 @@ function HubIcon({ type }: { type: HubAppMeta['icon'] }) {
   if (type === 'booking') return <BookingHubIcon />;
   if (type === 'lecture') return <LectureHubIcon />;
   if (type === 'report') return <ReportHubIcon />;
+  if (type === 'hr') return <UsersIcon />;
   return <ListIcon />;
 }
 
