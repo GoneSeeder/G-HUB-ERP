@@ -17,6 +17,8 @@ import {
   XIcon,
 } from '@/components/ui/icons';
 import { DatePicker } from '@/components/ui/date-picker';
+import { HrHomePage } from '@/components/humansource/hr-home-page';
+import { HrSettingsPage } from '@/components/humansource/hr-settings-page';
 import {
   HrBadge,
   HrButton,
@@ -55,14 +57,16 @@ import {
 type PageProps = { params: { slug?: string[] } };
 
 export default function HumansourcePage({ params }: PageProps) {
-  const pathname = `/humansource/${params.slug?.join('/') ?? 'dashboard'}`;
+  const pathname = `/humansource/${params.slug?.join('/') ?? 'home'}`;
   const page = findHrPage(pathname);
-  const section = params.slug?.[0] ?? 'dashboard';
-  const leaf = params.slug?.at(-1) ?? 'dashboard';
+  const section = params.slug?.[0] ?? 'home';
+  const leaf = params.slug?.at(-1) ?? 'home';
   const [showAddEmployee, setShowAddEmployee] = useState(false);
 
   return (
     <div className="min-h-full">
+      {section === 'home' && <HrHomePage />}
+      {section === 'settings' && <HrSettingsPage />}
       {section === 'dashboard' && <DashboardPage />}
       {leaf === 'structure' && <OrgTreePage type="organization" />}
       {leaf === 'position-structure' && <OrgTreePage type="position" />}
@@ -83,7 +87,9 @@ export default function HumansourcePage({ params }: PageProps) {
 
 function isSpecialPage(section: string, leaf: string) {
   return (
+    section === 'home' ||
     section === 'dashboard' ||
+    section === 'settings' ||
     section === 'reports' ||
     ['structure', 'position-structure', 'employee-type', 'work-cycle', 'employees', 'position-list'].includes(leaf)
   );
@@ -707,8 +713,19 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="flex min-h-full flex-col bg-white">
       {/* Header */}
-      <div className="px-6 pt-5 pb-0">
-        <h1 className="text-lg font-bold text-gray-800">บริหารข้อมูลพนักงาน</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-0 pt-5">
+        <div>
+          <h1 className="text-lg font-bold text-gray-800">บริหารข้อมูลพนักงาน</h1>
+          <p className="mt-0.5 text-xs text-gray-400">จัดการประวัติ สถานะ และข้อมูลการจ้างงานของพนักงาน</p>
+        </div>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex h-9 items-center gap-2 rounded-lg bg-gray-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800"
+        >
+          <PlusIcon className="h-4 w-4" />
+          เพิ่มพนักงาน
+        </button>
       </div>
 
       {/* Tabs */}
@@ -751,12 +768,6 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
           )}
           <button className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
             <DownloadIcon className="h-3.5 w-3.5" />ดูข้อมูล
-          </button>
-          <button
-            onClick={onAdd}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-primary/90"
-          >
-            <PlusIcon className="h-3.5 w-3.5" />เพิ่มพนักงาน
           </button>
         </div>
       </div>
@@ -853,7 +864,10 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
 const ADD_STEPS = [
   { id: 1, label: 'ข้อมูลจำเป็น', description: 'ระบุตัวตนและช่องทางติดต่อ' },
   { id: 2, label: 'การจ้างงานและสิทธิ์', description: 'สังกัด วันเริ่มงาน และบัญชี G-HUB' },
-  { id: 3, label: 'ตรวจสอบก่อนสร้าง', description: 'ยืนยันข้อมูลและงานที่ต้องติดตาม' },
+  { id: 3, label: 'ที่อยู่และผู้ติดต่อ', description: 'ที่อยู่ปัจจุบันและกรณีฉุกเฉิน' },
+  { id: 4, label: 'ธนาคารและเงินเดือน', description: 'บัญชีรับเงินเดือนและกลุ่ม Payroll' },
+  { id: 5, label: 'ประกันสังคมและภาษี', description: 'ข้อมูลนำส่งและวิธีคำนวณภาษี' },
+  { id: 6, label: 'เอกสารและตรวจสอบ', description: 'เอกสารประกอบและสรุปก่อนสร้าง' },
 ];
 
 type EmployeeDraft = {
@@ -879,6 +893,28 @@ type EmployeeDraft = {
   workSchedule: string;
   createAccount: boolean;
   sendInvite: boolean;
+  currentAddress: string;
+  subdistrict: string;
+  district: string;
+  province: string;
+  postalCode: string;
+  emergencyName: string;
+  emergencyRelationship: string;
+  emergencyPhone: string;
+  bankName: string;
+  bankBranch: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  payrollGroup: string;
+  salaryRate: string;
+  socialSecurityStatus: string;
+  socialSecurityHospital: string;
+  taxMethod: string;
+  providentFund: string;
+  documentIdCard: boolean;
+  documentHouseRegistration: boolean;
+  documentBankBook: boolean;
+  documentEmploymentContract: boolean;
 };
 
 const EMPTY_EMPLOYEE: EmployeeDraft = {
@@ -904,6 +940,28 @@ const EMPTY_EMPLOYEE: EmployeeDraft = {
   workSchedule: 'จันทร์ - ศุกร์ (08:30 - 17:30)',
   createAccount: true,
   sendInvite: false,
+  currentAddress: '',
+  subdistrict: '',
+  district: '',
+  province: '',
+  postalCode: '',
+  emergencyName: '',
+  emergencyRelationship: '',
+  emergencyPhone: '',
+  bankName: '',
+  bankBranch: '',
+  bankAccountName: '',
+  bankAccountNumber: '',
+  payrollGroup: 'พนักงานรายเดือน',
+  salaryRate: '',
+  socialSecurityStatus: 'ขึ้นทะเบียนผู้ประกันตนใหม่',
+  socialSecurityHospital: '',
+  taxMethod: 'คำนวณภาษีแบบเฉลี่ยทั้งปี',
+  providentFund: 'ไม่เข้าร่วม',
+  documentIdCard: false,
+  documentHouseRegistration: false,
+  documentBankBook: false,
+  documentEmploymentContract: false,
 };
 
 type PersonalField = keyof Pick<
@@ -1120,7 +1178,7 @@ function AddEmployeeModal({ onClose }: { onClose: () => void }) {
           <div className="mt-8 hidden border-t border-slate-100 pt-5 md:block">
             <p className="text-xs font-semibold text-slate-700">หลักการของขั้นตอนนี้</p>
             <p className="mt-2 text-xs leading-5 text-slate-500">
-              กรอกเฉพาะข้อมูลที่จำเป็นต่อการเริ่มงาน ส่วนบัญชีธนาคาร ภาษี ประกันสังคม และเอกสาร สามารถติดตามภายหลังได้
+              กรอกข้อมูลตั้งแต่ประวัติ การจ้างงาน การจ่ายเงิน ไปจนถึงเอกสารในขั้นตอนเดียว สามารถย้อนกลับมาแก้ไขแต่ละส่วนก่อนสร้างพนักงานได้
             </p>
           </div>
         </aside>
@@ -1135,7 +1193,10 @@ function AddEmployeeModal({ onClose }: { onClose: () => void }) {
 
             {step === 1 && <StepPersonal draft={draft} update={update} errors={personalErrors} />}
             {step === 2 && <StepEmployment draft={draft} update={update} />}
-            {step === 3 && <StepContact draft={draft} />}
+            {step === 3 && <StepAddress draft={draft} update={update} />}
+            {step === 4 && <StepPayroll draft={draft} update={update} />}
+            {step === 5 && <StepTaxAndSocialSecurity draft={draft} update={update} />}
+            {step === 6 && <StepDocumentsAndReview draft={draft} update={update} />}
           </div>
         </main>
       </div>
@@ -1481,21 +1542,332 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StepContact({ draft }: { draft: EmployeeDraft }) {
+function StepAddress({
+  draft,
+  update,
+}: {
+  draft: EmployeeDraft;
+  update: <K extends keyof EmployeeDraft>(key: K, value: EmployeeDraft[K]) => void;
+}) {
+  return (
+    <div className="space-y-8">
+      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">ที่อยู่ปัจจุบัน</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">ใช้สำหรับเอกสารพนักงานและการติดต่อจากบริษัท</p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <FormRow label="บ้านเลขที่ อาคาร ถนน และรายละเอียด">
+              <TextInput
+                value={draft.currentAddress}
+                onChange={(value) => update('currentAddress', value)}
+                placeholder="เช่น 99/9 อาคาร G-HUB ถนนรัชดาภิเษก"
+              />
+            </FormRow>
+          </div>
+          <FormRow label="แขวง / ตำบล">
+            <TextInput
+              value={draft.subdistrict}
+              onChange={(value) => update('subdistrict', value)}
+              placeholder="ระบุแขวงหรือตำบล"
+            />
+          </FormRow>
+          <FormRow label="เขต / อำเภอ">
+            <TextInput
+              value={draft.district}
+              onChange={(value) => update('district', value)}
+              placeholder="ระบุเขตหรืออำเภอ"
+            />
+          </FormRow>
+          <FormRow label="จังหวัด">
+            <TextInput
+              value={draft.province}
+              onChange={(value) => update('province', value)}
+              placeholder="ระบุจังหวัด"
+            />
+          </FormRow>
+          <FormRow label="รหัสไปรษณีย์">
+            <TextInput
+              value={draft.postalCode}
+              onChange={(value) => update('postalCode', value.replace(/\D/g, '').slice(0, 5))}
+              placeholder="00000"
+              inputMode="numeric"
+              maxLength={5}
+            />
+          </FormRow>
+        </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">ผู้ติดต่อฉุกเฉิน</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">บุคคลที่บริษัทสามารถติดต่อได้เมื่อเกิดเหตุจำเป็น</p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FormRow label="ชื่อผู้ติดต่อ">
+            <TextInput
+              value={draft.emergencyName}
+              onChange={(value) => update('emergencyName', value)}
+              placeholder="ชื่อและนามสกุล"
+            />
+          </FormRow>
+          <FormRow label="ความสัมพันธ์">
+            <SelectInput
+              options={['บิดา', 'มารดา', 'คู่สมรส', 'พี่น้อง', 'ญาติ', 'อื่น ๆ']}
+              value={draft.emergencyRelationship}
+              onChange={(value) => update('emergencyRelationship', value)}
+              placeholder="เลือกความสัมพันธ์"
+            />
+          </FormRow>
+          <FormRow label="เบอร์โทรศัพท์">
+            <TextInput
+              value={draft.emergencyPhone}
+              onChange={(value) => update('emergencyPhone', value.replace(/\D/g, '').slice(0, 10))}
+              placeholder="0XX-XXX-XXXX"
+              inputMode="tel"
+              maxLength={10}
+            />
+          </FormRow>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function StepPayroll({
+  draft,
+  update,
+}: {
+  draft: EmployeeDraft;
+  update: <K extends keyof EmployeeDraft>(key: K, value: EmployeeDraft[K]) => void;
+}) {
+  return (
+    <div className="space-y-8">
+      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">บัญชีรับเงินเดือน</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">ข้อมูลสำหรับโอนเงินเดือนและออกเอกสารการจ่าย</p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FormRow label="ธนาคาร">
+            <SelectInput
+              options={['กสิกรไทย', 'กรุงเทพ', 'กรุงไทย', 'ไทยพาณิชย์', 'กรุงศรีอยุธยา', 'ทีทีบี', 'ออมสิน']}
+              value={draft.bankName}
+              onChange={(value) => update('bankName', value)}
+              placeholder="เลือกธนาคาร"
+            />
+          </FormRow>
+          <FormRow label="สาขาธนาคาร">
+            <TextInput
+              value={draft.bankBranch}
+              onChange={(value) => update('bankBranch', value)}
+              placeholder="ระบุสาขา"
+            />
+          </FormRow>
+          <FormRow label="ชื่อบัญชี">
+            <TextInput
+              value={draft.bankAccountName}
+              onChange={(value) => update('bankAccountName', value)}
+              placeholder="ชื่อตามหน้าสมุดบัญชี"
+            />
+          </FormRow>
+          <FormRow label="เลขที่บัญชี">
+            <TextInput
+              value={draft.bankAccountNumber}
+              onChange={(value) => update('bankAccountNumber', value.replace(/\D/g, '').slice(0, 15))}
+              placeholder="กรอกเฉพาะตัวเลข"
+              inputMode="numeric"
+              maxLength={15}
+            />
+          </FormRow>
+        </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">ข้อมูล Payroll</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">กำหนดกลุ่มคำนวณและอัตราค่าจ้างเริ่มต้น</p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FormRow label="กลุ่มเงินเดือน">
+            <SelectInput
+              options={['พนักงานรายเดือน', 'พนักงานรายวัน', 'พนักงานชั่วคราว', 'ผู้บริหาร']}
+              value={draft.payrollGroup}
+              onChange={(value) => update('payrollGroup', value)}
+            />
+          </FormRow>
+          <FormRow label="อัตราค่าจ้าง" hint="สามารถปรับองค์ประกอบรายได้และรายการหักใน Payroll ภายหลัง">
+            <TextInput
+              value={draft.salaryRate}
+              onChange={(value) => update('salaryRate', value.replace(/[^\d.]/g, ''))}
+              placeholder="0.00"
+              prefix="THB"
+              inputMode="numeric"
+            />
+          </FormRow>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function StepTaxAndSocialSecurity({
+  draft,
+  update,
+}: {
+  draft: EmployeeDraft;
+  update: <K extends keyof EmployeeDraft>(key: K, value: EmployeeDraft[K]) => void;
+}) {
+  return (
+    <div className="space-y-8">
+      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">ประกันสังคม</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">สถานะสำหรับจัดเตรียมการขึ้นทะเบียนและนำส่งเงินสมทบ</p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FormRow label="สถานะผู้ประกันตน">
+            <SelectInput
+              options={[
+                'ขึ้นทะเบียนผู้ประกันตนใหม่',
+                'โอนย้ายจากนายจ้างเดิม',
+                'เป็นผู้ประกันตนอยู่แล้ว',
+                'ไม่เข้าประกันสังคม',
+              ]}
+              value={draft.socialSecurityStatus}
+              onChange={(value) => update('socialSecurityStatus', value)}
+            />
+          </FormRow>
+          <FormRow label="สถานพยาบาล">
+            <TextInput
+              value={draft.socialSecurityHospital}
+              onChange={(value) => update('socialSecurityHospital', value)}
+              placeholder="ระบุสถานพยาบาล หากมี"
+            />
+          </FormRow>
+        </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">ภาษีและกองทุน</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">ค่าเริ่มต้นสำหรับการคำนวณ Payroll ของพนักงาน</p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FormRow label="วิธีคำนวณภาษี">
+            <SelectInput
+              options={['คำนวณภาษีแบบเฉลี่ยทั้งปี', 'คำนวณตามเงินได้จริงรายเดือน', 'ยังไม่หักภาษี']}
+              value={draft.taxMethod}
+              onChange={(value) => update('taxMethod', value)}
+            />
+          </FormRow>
+          <FormRow label="กองทุนสำรองเลี้ยงชีพ">
+            <SelectInput
+              options={['ไม่เข้าร่วม', 'เข้าร่วม 2%', 'เข้าร่วม 3%', 'เข้าร่วม 5%', 'กำหนดภายหลัง']}
+              value={draft.providentFund}
+              onChange={(value) => update('providentFund', value)}
+            />
+          </FormRow>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DocumentUploadRow({
+  title,
+  description,
+  selected,
+  onChange,
+}: {
+  title: string;
+  description: string;
+  selected: boolean;
+  onChange: (selected: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 py-4 last:border-b-0">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
+          selected ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
+        }`}>
+          {selected ? <CheckIcon className="h-4 w-4" /> : 'DOC'}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-slate-900">{title}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{selected ? 'เพิ่มเอกสารแล้ว' : description}</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange(!selected)}
+        className={`h-9 rounded-lg px-3 text-xs font-semibold transition ${
+          selected
+            ? 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+        }`}
+      >
+        {selected ? 'นำออก' : 'เลือกเอกสาร'}
+      </button>
+    </div>
+  );
+}
+
+function StepDocumentsAndReview({
+  draft,
+  update,
+}: {
+  draft: EmployeeDraft;
+  update: <K extends keyof EmployeeDraft>(key: K, value: EmployeeDraft[K]) => void;
+}) {
   const fullName = `${draft.title} ${draft.firstName} ${draft.lastName}`.replace(/\s+/g, ' ').trim();
-  const followUps = [
-    'ที่อยู่และผู้ติดต่อฉุกเฉิน',
-    'บัญชีธนาคารและข้อมูลเงินเดือน',
-    'ประกันสังคมและภาษี',
-    'เอกสารประกอบการจ้างงาน',
-  ];
+  const documentCount = [
+    draft.documentIdCard,
+    draft.documentHouseRegistration,
+    draft.documentBankBook,
+    draft.documentEmploymentContract,
+  ].filter(Boolean).length;
 
   return (
     <div className="space-y-8">
       <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">ข้อมูลที่จะสร้าง</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">ตรวจสอบข้อมูลหลักก่อนสร้างประวัติพนักงาน</p>
+          <h3 className="text-sm font-semibold text-slate-900">เอกสารประกอบ</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">เพิ่มตอนนี้หรือกลับมาแนบในโปรไฟล์พนักงานภายหลังได้</p>
+        </div>
+        <div className="border-y border-slate-100">
+          <DocumentUploadRow
+            title="สำเนาบัตรประชาชน"
+            description="ใช้ยืนยันตัวตนและข้อมูลภาษี"
+            selected={draft.documentIdCard}
+            onChange={(value) => update('documentIdCard', value)}
+          />
+          <DocumentUploadRow
+            title="สำเนาทะเบียนบ้าน"
+            description="ใช้ประกอบข้อมูลที่อยู่"
+            selected={draft.documentHouseRegistration}
+            onChange={(value) => update('documentHouseRegistration', value)}
+          />
+          <DocumentUploadRow
+            title="สำเนาหน้าสมุดบัญชี"
+            description="ใช้ตรวจสอบบัญชีรับเงินเดือน"
+            selected={draft.documentBankBook}
+            onChange={(value) => update('documentBankBook', value)}
+          />
+          <DocumentUploadRow
+            title="สัญญาจ้างงาน"
+            description="เอกสารยืนยันเงื่อนไขการจ้าง"
+            selected={draft.documentEmploymentContract}
+            onChange={(value) => update('documentEmploymentContract', value)}
+          />
+        </div>
+      </section>
+
+      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">ตรวจสอบก่อนสร้าง</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">ย้อนกลับไปแก้ไขแต่ละขั้นได้ก่อนบันทึก</p>
         </div>
         <dl className="border-t border-slate-100">
           <ReviewRow label="พนักงาน" value={fullName} />
@@ -1503,74 +1875,33 @@ function StepContact({ draft }: { draft: EmployeeDraft }) {
           <ReviewRow label="สังกัด" value={[draft.company, draft.branch, draft.department].filter(Boolean).join(' / ')} />
           <ReviewRow label="ตำแหน่ง" value={draft.position} />
           <ReviewRow label="วันเริ่มงาน" value={draft.startDate} />
-          <ReviewRow label="ผู้บังคับบัญชา" value={draft.supervisor} />
+          <ReviewRow
+            label="บัญชีเงินเดือน"
+            value={[draft.bankName, draft.bankAccountNumber].filter(Boolean).join(' / ')}
+          />
+          <ReviewRow label="ประกันสังคม" value={draft.socialSecurityStatus} />
+          <ReviewRow label="เอกสาร" value={`${documentCount} / 4 รายการ`} />
         </dl>
-      </section>
-
-      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">บัญชี G-HUB</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">สิทธิ์เริ่มต้นจะมีเฉพาะข้อมูลของตนเอง</p>
-        </div>
-        <div className="space-y-3">
-          <div className="flex items-start gap-3">
-            <span className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full ${
-              draft.createAccount ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'
-            }`}>
-              <CheckIcon className="h-3 w-3" />
-            </span>
-            <div>
-              <p className="text-sm font-medium text-slate-900">
-                {draft.createAccount ? `สร้างบัญชี ${draft.employeeCode}` : 'ยังไม่สร้างบัญชีผู้ใช้'}
-              </p>
-              <p className="mt-0.5 text-xs text-slate-500">
-                {draft.createAccount
-                  ? 'พนักงานเข้าดูโปรไฟล์ เอกสาร และรายการของตนเองได้'
-                  : 'HR สามารถเปิดบัญชีภายหลังจากหน้าพนักงาน'}
-              </p>
-            </div>
-          </div>
-          {draft.createAccount ? (
-            <div className="flex items-start gap-3">
-              <span className={`mt-0.5 flex h-5 w-5 items-center justify-center rounded-full ${
-                draft.sendInvite && draft.personalEmail.trim()
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-amber-100 text-amber-600'
-              }`}>
-                <CheckIcon className="h-3 w-3" />
-              </span>
-              <div>
-                <p className="text-sm font-medium text-slate-900">
-                  {draft.sendInvite && draft.personalEmail.trim()
-                    ? 'ส่งลิงก์ตั้งรหัสผ่านครั้งแรก'
-                    : 'รอพนักงานตั้งรหัสผ่าน'}
-                </p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  {draft.sendInvite && draft.personalEmail.trim()
-                    ? draft.personalEmail
-                    : 'เพิ่มอีเมลหรือออกลิงก์ใช้งานครั้งเดียวจากโปรไฟล์พนักงานภายหลัง'}
-                </p>
-              </div>
-            </div>
-          ) : null}
-        </div>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[180px_minmax(0,1fr)]">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">ติดตามหลังสร้าง</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">ข้อมูลเหล่านี้ไม่ขวางการสร้างพนักงาน และเติมภายหลังได้</p>
+          <h3 className="text-sm font-semibold text-slate-900">บัญชี G-HUB</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">สิทธิ์เริ่มต้นมีเฉพาะ HR Self-service ของตนเอง</p>
         </div>
-        <div className="divide-y divide-slate-100 border-y border-slate-100">
-          {followUps.map((item) => (
-            <div key={item} className="flex items-center justify-between gap-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="h-2 w-2 rounded-full bg-amber-400" />
-                <span className="text-sm text-slate-700">{item}</span>
-              </div>
-              <span className="text-xs font-medium text-slate-400">รอดำเนินการ</span>
-            </div>
-          ))}
+        <div className="border-y border-slate-100 py-1">
+          <ReviewRow
+            label="ชื่อผู้ใช้"
+            value={draft.createAccount ? draft.employeeCode : 'ยังไม่สร้างบัญชี'}
+          />
+          <ReviewRow
+            label="การตั้งรหัสผ่าน"
+            value={
+              draft.createAccount && draft.sendInvite && draft.personalEmail.trim()
+                ? `ส่งคำเชิญไปยัง ${draft.personalEmail.trim()}`
+                : 'รอตั้งรหัสผ่านภายหลัง'
+            }
+          />
         </div>
       </section>
     </div>
@@ -1738,6 +2069,13 @@ function StepEmployment({
 
 function StepSocialSecurity({ draft, onClose }: { draft: EmployeeDraft; onClose: () => void }) {
   const fullName = `${draft.title} ${draft.firstName} ${draft.lastName}`.replace(/\s+/g, ' ').trim();
+  const documentCount = [
+    draft.documentIdCard,
+    draft.documentHouseRegistration,
+    draft.documentBankBook,
+    draft.documentEmploymentContract,
+  ].filter(Boolean).length;
+  const payrollReady = Boolean(draft.bankName && draft.bankAccountNumber && draft.salaryRate);
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#f7f8fb] px-5">
@@ -1774,8 +2112,16 @@ function StepSocialSecurity({ draft, onClose }: { draft: EmployeeDraft; onClose:
             </span>
           </div>
           <div className="flex items-center justify-between gap-4 border-t border-slate-100 py-3">
-            <span className="text-sm text-slate-600">ข้อมูลที่ต้องติดตาม</span>
-            <span className="text-xs font-semibold text-amber-600">4 หมวด</span>
+            <span className="text-sm text-slate-600">ข้อมูล Payroll</span>
+            <span className={`text-xs font-semibold ${payrollReady ? 'text-emerald-600' : 'text-amber-600'}`}>
+              {payrollReady ? 'พร้อมใช้งาน' : 'บันทึกร่างแล้ว'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-4 border-t border-slate-100 py-3">
+            <span className="text-sm text-slate-600">เอกสารประกอบ</span>
+            <span className={`text-xs font-semibold ${documentCount === 4 ? 'text-emerald-600' : 'text-indigo-600'}`}>
+              {documentCount} / 4 รายการ
+            </span>
           </div>
         </div>
 

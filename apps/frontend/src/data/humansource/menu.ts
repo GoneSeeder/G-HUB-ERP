@@ -1,3 +1,5 @@
+import { allHrNavigationItems } from './navigation';
+
 export type HrMenuItem = {
   title: string;
   href: string;
@@ -150,15 +152,26 @@ export const hrMenuGroups: HrMenuGroup[] = [
   },
 ];
 
-export const allHrMenuItems = hrMenuGroups.flatMap((group) =>
+const legacyHrMenuItems = hrMenuGroups.flatMap((group) =>
   group.items.flatMap((item) => [item, ...(item.children ?? [])]),
 );
 
+export const allHrMenuItems = Array.from(
+  new Map([
+    ...legacyHrMenuItems,
+    ...allHrNavigationItems.map((item) => ({
+      title: item.label,
+      href: item.path,
+      description: item.description,
+    })),
+  ].map((item) => [item.href, item])).values(),
+);
+
 export function findHrPage(pathname: string): HrMenuItem {
-  const normalized = pathname === '/humansource' ? '/humansource/dashboard' : pathname;
+  const normalized = pathname === '/humansource' ? '/humansource/home' : pathname;
   return (
     allHrMenuItems.find((item) => item.href === normalized) ??
     hrMenuGroups.find((group) => group.href === normalized)?.items[0] ??
-    { title: 'Dashboard', href: '/humansource/dashboard', description: 'ภาพรวมข้อมูล HR และเมนู Dashboard ทั้งหมด' }
+    { title: 'หน้าหลัก', href: '/humansource/home', description: 'ข่าวสาร งานที่ต้องจัดการ และข้อมูลประจำวันของพนักงาน' }
   );
 }

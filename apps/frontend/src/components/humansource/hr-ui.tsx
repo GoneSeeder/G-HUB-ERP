@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { CalendarIcon, CheckIcon, SearchIcon, XIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 
@@ -92,6 +92,101 @@ export function HrSelectMock({ label, value }: { label: string; value: string })
               {option === value ? <CheckIcon className="h-4 w-4" /> : null}
             </button>
           ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+type HrCustomSelectOption = string | {
+  value: string;
+  label: string;
+  description?: string;
+};
+
+export function HrCustomSelect({
+  value,
+  options,
+  onChange,
+  label,
+  className,
+}: {
+  value: string;
+  options: HrCustomSelectOption[];
+  onChange: (value: string) => void;
+  label?: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [openAbove, setOpenAbove] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const normalizedOptions = options.map((option) => (
+    typeof option === 'string' ? { value: option, label: option } : option
+  ));
+  const selectedOption = normalizedOptions.find((option) => option.value === value) ?? normalizedOptions[0];
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className={cn('hr-custom-select', className)}>
+      <button
+        type="button"
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="hr-custom-select__trigger"
+        onClick={() => {
+          if (!open) {
+            const rect = rootRef.current?.getBoundingClientRect();
+            setOpenAbove(Boolean(rect && window.innerHeight - rect.bottom < 260 && rect.top > 260));
+          }
+          setOpen((current) => !current);
+        }}
+      >
+        <span className="hr-custom-select__value">{selectedOption?.label ?? value}</span>
+        <span className="hr-custom-select__chevron" aria-hidden="true" />
+      </button>
+
+      {open ? (
+        <div className={cn('hr-custom-select__menu', openAbove ? 'hr-custom-select__menu--above' : 'hr-custom-select__menu--below')} role="listbox">
+          {normalizedOptions.map((option) => {
+            const selected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                className={cn('hr-custom-select__option', selected && 'hr-custom-select__option--selected')}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+              >
+                <span className="min-w-0">
+                  <span className="hr-custom-select__option-label">{option.label}</span>
+                  {option.description ? <span className="hr-custom-select__option-description">{option.description}</span> : null}
+                </span>
+                {selected ? <CheckIcon className="hr-custom-select__check" /> : null}
+              </button>
+            );
+          })}
         </div>
       ) : null}
     </div>

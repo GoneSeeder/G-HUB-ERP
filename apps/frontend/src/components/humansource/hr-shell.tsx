@@ -8,6 +8,12 @@ import { LogOutIcon, SearchIcon } from '@/components/ui/icons';
 import { clearAuthTokenCookie } from '@/lib/auth';
 import { queryOptions } from '@/lib/queries';
 import { cn } from '@/lib/cn';
+import {
+  hrNavigation,
+  hrSettingsGroups,
+  type HrNavigationItem,
+  type HrNavSection,
+} from '@/data/humansource/navigation';
 
 // ─── Sidebar nav data ─────────────────────────────────────────────────────────
 
@@ -15,10 +21,12 @@ type NavChild = { label: string; path: string };
 type NavItem = {
   key: string;
   label: string;
+  description?: string;
   path?: string;
   color: string;
   icon: (p: { className?: string; style?: React.CSSProperties }) => JSX.Element;
   children?: NavChild[];
+  sections?: HrNavSection[];
 };
 
 function DashboardIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
@@ -80,6 +88,20 @@ function HomeIcon({ className, style }: { className?: string; style?: React.CSSP
     </svg>
   );
 }
+function TimeIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+      <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /><path d="M5 3 3 5" /><path d="m19 3 2 2" />
+    </svg>
+  );
+}
+function SelfServiceIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+      <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /><path d="m16.5 14.5 1.2 1.2 2.3-2.5" />
+    </svg>
+  );
+}
 function ChevronIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
@@ -88,7 +110,7 @@ function ChevronIcon({ className, style }: { className?: string; style?: React.C
   );
 }
 
-const NAV: NavItem[] = [
+const LEGACY_NAV: NavItem[] = [
   { key: 'dashboard', label: 'Dashboard', path: '/humansource/dashboard', color: '#6366f1', icon: DashboardIcon },
   {
     key: 'org', label: 'ข้อมูลองค์กร', color: '#0ea5e9', icon: OrgIcon,
@@ -147,9 +169,30 @@ const NAV: NavItem[] = [
   },
 ];
 
+const NAV_ICONS: Record<HrNavigationItem['icon'], NavItem['icon']> = {
+  home: HomeIcon,
+  dashboard: DashboardIcon,
+  organization: OrgIcon,
+  time: TimeIcon,
+  recruitment: RecruitIcon,
+  payroll: PayrollIcon,
+  performance: EvalIcon,
+  'self-service': SelfServiceIcon,
+  reports: ReportIcon,
+  settings: SettingsIcon,
+};
+
+const NAV: NavItem[] = hrNavigation.map((item) => ({
+  ...item,
+  icon: NAV_ICONS[item.icon],
+}));
+const SETTINGS_PATHS = hrSettingsGroups.flatMap((group) => group.items.map((item) => item.path));
+
+void LEGACY_NAV;
+
 const COLLAPSED_W = 52;
 const EXPANDED_W = 220;
-const SUBMENU_W = 208;
+const SUBMENU_W = 292;
 
 // ─── Shell ────────────────────────────────────────────────────────────────────
 
@@ -157,6 +200,38 @@ function BellIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  );
+}
+
+function ProfileIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
+  );
+}
+
+function KeyIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="8" cy="15" r="4" /><path d="m11 12 8-8" /><path d="m16 7 2 2" /><path d="m14 9 2 2" />
+    </svg>
+  );
+}
+
+function SunIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" />
+    </svg>
+  );
+}
+
+function MoonIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z" />
     </svg>
   );
 }
@@ -172,6 +247,7 @@ export function HrShell({ children }: { children: ReactNode }) {
   const [submenuItem, setSubmenuItem] = useState<NavItem | null>(null);
   const [submenuClosing, setSubmenuClosing] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const submenuTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const collapseAfterSubmenu = useRef(false);
@@ -212,6 +288,11 @@ export function HrShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     closeSubmenu(true);
   }, [pathname, pinned]);
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem('ghub-hr-theme');
+    if (savedTheme === 'dark' || savedTheme === 'light') setTheme(savedTheme);
+  }, []);
 
   useEffect(() => () => {
     if (submenuTimer.current) clearTimeout(submenuTimer.current);
@@ -256,14 +337,24 @@ export function HrShell({ children }: { children: ReactNode }) {
     router.refresh();
   };
 
-  const showSubmenu = Boolean(submenuItem?.children);
+  const updateTheme = (nextTheme: 'light' | 'dark') => {
+    setTheme(nextTheme);
+    window.localStorage.setItem('ghub-hr-theme', nextTheme);
+  };
+
+  const showSubmenu = Boolean(submenuItem?.sections?.length);
 
   const userName = me?.name ?? me?.username ?? 'User';
   const userInitial = userName.slice(0, 1).toUpperCase();
   const userSub = me?.username ?? me?.sub ?? '';
+  const ThemeIcon = theme === 'dark' ? MoonIcon : SunIcon;
+  const settingsItem = NAV.find((item) => item.key === 'settings');
+  const settingsActive =
+    pathname.startsWith('/humansource/settings') ||
+    SETTINGS_PATHS.some((path) => pathname.startsWith(path));
 
   return (
-    <div className="relative h-screen overflow-hidden bg-gray-50">
+    <div className={cn('hr-shell relative h-screen overflow-hidden bg-gray-50', theme === 'dark' && 'hr-theme-dark')}>
       <aside
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
@@ -312,11 +403,12 @@ export function HrShell({ children }: { children: ReactNode }) {
 
         {/* Nav items */}
         <div className="hr-nav-scroll flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden py-3">
-          {NAV.map((item) => {
+          {NAV.filter((item) => item.key !== 'settings').map((item) => {
             const Icon = item.icon;
             const activeByPath = item.path
-              ? pathname === item.path
-              : Boolean(item.children?.some((c) => pathname.startsWith(c.path)));
+              ? pathname === item.path || (item.key === 'home' && pathname === '/humansource')
+              : Boolean(item.sections?.some((section) =>
+                  section.items.some((child) => pathname.startsWith(child.path))));
             const isOpen = openKey === item.key;
             const active = activeByPath || isOpen;
 
@@ -372,7 +464,7 @@ export function HrShell({ children }: { children: ReactNode }) {
                   >
                     {item.label}
                   </span>
-                  {item.children && expanded && (
+                  {item.sections?.length && expanded && (
                     <ChevronIcon
                       className={cn('h-3 w-3 text-gray-400 transition-transform duration-200', isOpen && 'rotate-90')}
                     />
@@ -383,8 +475,48 @@ export function HrShell({ children }: { children: ReactNode }) {
           })}
         </div>
 
-        {/* Footer: back to G-HUB */}
+        {/* Footer: settings and back to G-HUB */}
         <div className="flex-shrink-0 border-t border-gray-100">
+          {settingsItem && (
+            <button
+              type="button"
+              onClick={() => {
+                router.push(settingsItem.path!);
+                dismissNavigation();
+              }}
+              title={expanded ? undefined : settingsItem.label}
+              className={cn(
+                'group flex h-10 w-full items-center overflow-hidden text-xs font-medium',
+                expanded ? 'rounded-xl pr-3' : 'rounded-none',
+                settingsActive ? 'text-indigo-700' : 'text-gray-500 hover:text-gray-800',
+              )}
+            >
+              <span
+                className="flex h-10 flex-shrink-0 items-center justify-center"
+                style={{ width: COLLAPSED_W }}
+              >
+                <span
+                  className={cn(
+                    'flex h-9 w-10 items-center justify-center rounded-xl',
+                    settingsActive ? 'bg-indigo-50' : 'group-hover:bg-gray-50',
+                  )}
+                  style={{ color: settingsActive ? settingsItem.color : undefined }}
+                >
+                  <SettingsIcon style={{ width: 16, height: 16 }} />
+                </span>
+              </span>
+              <span
+                className="overflow-hidden whitespace-nowrap"
+                style={{
+                  opacity: expanded ? 1 : 0,
+                  width: expanded ? 'auto' : 0,
+                  transition: 'opacity 150ms ease-out',
+                }}
+              >
+                {settingsItem.label}
+              </span>
+            </button>
+          )}
           <Link
             href="/hub"
             title={expanded ? undefined : 'กลับ G-HUB'}
@@ -450,24 +582,46 @@ export function HrShell({ children }: { children: ReactNode }) {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>
           </div>
-          <div className="flex-1 space-y-0.5 overflow-y-auto px-2 py-2">
-            {submenuItem.children!.map((c) => {
-              const active = pathname === c.path;
-              return (
-                <Link
-                  key={c.path}
-                  href={c.path}
-                  onClick={dismissNavigation}
-                  className={cn(
-                    'flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors duration-150',
-                    active ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800',
-                  )}
-                >
-                  {active && <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-indigo-500" />}
-                  <span className={active ? '' : 'pl-3.5'}>{c.label}</span>
-                </Link>
-              );
-            })}
+          <div className="hr-nav-scroll flex-1 overflow-y-auto px-3 py-3">
+            {submenuItem.sections!.map((section, sectionIndex) => (
+              <section
+                key={section.label}
+                className={cn(sectionIndex > 0 && 'mt-5 border-t border-gray-100 pt-4')}
+              >
+                <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-gray-400">
+                  {section.label}
+                </p>
+                <div className="space-y-0.5">
+                  {section.items.map((child) => {
+                    const active = pathname === child.path;
+                    return (
+                      <Link
+                        key={child.path}
+                        href={child.path}
+                        onClick={dismissNavigation}
+                        className={cn(
+                          'group flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left transition-colors duration-150',
+                          active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full',
+                            active ? 'bg-indigo-500' : 'bg-gray-300 group-hover:bg-gray-400',
+                          )}
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-xs font-semibold leading-5">{child.label}</span>
+                          <span className="mt-0.5 block text-[10px] font-normal leading-4 text-gray-400">
+                            {child.description}
+                          </span>
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         </div>
       )}
@@ -537,19 +691,79 @@ export function HrShell({ children }: { children: ReactNode }) {
               </button>
 
               {userOpen && (
-                <div className="absolute right-0 top-11 z-50 w-56 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl animate-[hrFadeUp_140ms_ease-out]">
+                <div className="absolute right-0 top-11 z-50 w-64 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.18)] animate-[hrFadeUp_140ms_ease-out]">
                   <div className="border-b border-gray-100 px-4 py-3">
                     <p className="text-sm font-semibold text-gray-800">{userName}</p>
                     <p className="mt-0.5 truncate text-[11px] text-gray-400">{userSub}</p>
                   </div>
+                  <div className="py-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserOpen(false);
+                        router.push('/humansource/self-service/profile');
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-xs font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700"
+                    >
+                      <ProfileIcon className="h-4 w-4 text-indigo-500" />
+                      โปรไฟล์
+                    </button>
+
+                    <div className="flex items-center gap-3 px-4 py-2">
+                      <ThemeIcon className="h-4 w-4 flex-shrink-0 text-indigo-500" />
+                      <span className="flex-1 text-xs font-medium text-gray-700">ธีม</span>
+                      <div className="flex rounded-lg bg-gray-100 p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => updateTheme('light')}
+                          title="ธีมสว่าง"
+                          aria-label="ใช้ธีมสว่าง"
+                          aria-pressed={theme === 'light'}
+                          className={cn(
+                            'flex h-7 w-7 items-center justify-center rounded-md transition',
+                            theme === 'light' ? 'bg-white text-amber-500 shadow-sm' : 'text-gray-400 hover:text-gray-700',
+                          )}
+                        >
+                          <SunIcon className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateTheme('dark')}
+                          title="ธีมมืด"
+                          aria-label="ใช้ธีมมืด"
+                          aria-pressed={theme === 'dark'}
+                          className={cn(
+                            'flex h-7 w-7 items-center justify-center rounded-md transition',
+                            theme === 'dark' ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-400 hover:text-gray-700',
+                          )}
+                        >
+                          <MoonIcon className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUserOpen(false);
+                        router.push('/humansource/self-service/change-password');
+                      }}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-xs font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700"
+                    >
+                      <KeyIcon className="h-4 w-4 text-indigo-500" />
+                      เปลี่ยนรหัสผ่าน
+                    </button>
+                  </div>
+                  <div className="border-t border-gray-100 py-1.5">
                   <button
                     type="button"
                     onClick={logout}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-xs text-rose-600 hover:bg-rose-50"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-xs font-medium text-rose-600 hover:bg-rose-50"
                   >
-                    <LogOutIcon className="h-3.5 w-3.5" />
+                    <LogOutIcon className="h-4 w-4" />
                     ออกจากระบบ
                   </button>
+                  </div>
                 </div>
               )}
             </div>
