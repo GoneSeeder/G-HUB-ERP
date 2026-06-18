@@ -20,11 +20,11 @@ export function HrButton({
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex min-h-10 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-medium transition duration-200 focus:outline-none focus:ring-4 focus:ring-indigo-100',
-        variant === 'primary' && 'bg-slate-950 text-white shadow-[0_14px_28px_rgba(15,23,42,0.16)] hover:bg-slate-800',
-        variant === 'secondary' && 'bg-white text-slate-700 shadow-sm shadow-slate-200/80 hover:bg-indigo-50 hover:text-indigo-700',
-        variant === 'danger' && 'bg-rose-50 text-rose-600 hover:bg-rose-100',
-        variant === 'ghost' && 'border-transparent bg-transparent text-slate-500 hover:bg-white hover:text-slate-900',
+        'hr-button',
+        variant === 'primary' && 'hr-button--primary',
+        variant === 'secondary' && 'hr-button--secondary',
+        variant === 'danger' && 'hr-button--danger',
+        variant === 'ghost' && 'hr-button--ghost',
         className,
       )}
     >
@@ -35,7 +35,7 @@ export function HrButton({
 
 export function HrCard({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <section className={cn('rounded-[22px] bg-white p-5 shadow-sm shadow-slate-200/80', className)}>
+    <section className={cn('hr-card', className)}>
       {children}
     </section>
   );
@@ -60,13 +60,13 @@ export function HrBadge({ children, tone = 'slate' }: { children: ReactNode; ton
 
 export function HrInput({ placeholder, value = '' }: { placeholder: string; value?: string }) {
   return (
-    <label className="relative block min-w-0 flex-1">
-      <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+    <label className="hr-search-field">
+      <SearchIcon className="hr-search-field__icon" />
       <input
         value={value}
         readOnly
         placeholder={placeholder}
-        className="h-11 w-full rounded-2xl bg-white pl-10 pr-4 text-sm text-slate-700 shadow-sm shadow-slate-200/80 outline-none transition placeholder:text-slate-400 focus:ring-4 focus:ring-indigo-100"
+        className="hr-search-field__input"
       />
     </label>
   );
@@ -75,19 +75,19 @@ export function HrInput({ placeholder, value = '' }: { placeholder: string; valu
 export function HrSelectMock({ label, value }: { label: string; value: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="relative">
+    <div className="hr-filter-select">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex h-11 min-w-36 items-center justify-between gap-3 rounded-2xl bg-white px-4 text-left text-sm text-slate-700 shadow-sm shadow-slate-200/80 transition hover:bg-indigo-50 focus:outline-none focus:ring-4 focus:ring-indigo-100"
+        className="hr-filter-select__trigger"
       >
         <span className="truncate">{label}: {value}</span>
-        <span className={cn('h-2 w-2 rotate-45 border-b-2 border-r-2 border-slate-400 transition', open && 'rotate-[225deg]')} />
+        <span className={cn('hr-filter-select__chevron', open && 'hr-filter-select__chevron--open')} />
       </button>
       {open ? (
-        <div className="absolute right-0 top-12 z-30 w-48 rounded-2xl bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,0.14)]">
+        <div className="hr-filter-select__menu">
           {['ทั้งหมด', 'เปิด', 'ปิด'].map((option) => (
-            <button key={option} type="button" className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm text-slate-600 hover:bg-indigo-50 hover:text-indigo-700">
+            <button key={option} type="button" className="hr-filter-select__option">
               {option}
               {option === value ? <CheckIcon className="h-4 w-4" /> : null}
             </button>
@@ -195,8 +195,8 @@ export function HrCustomSelect({
 
 export function HrDatePickerMock({ label = 'ช่วงวันที่' }: { label?: string }) {
   return (
-    <button type="button" className="inline-flex h-11 items-center gap-2 rounded-2xl bg-white px-4 text-sm text-slate-600 shadow-sm shadow-slate-200/80 transition hover:bg-indigo-50 focus:outline-none focus:ring-4 focus:ring-indigo-100">
-      <CalendarIcon className="h-4 w-4 text-indigo-500" />
+    <button type="button" className="hr-date-trigger">
+      <CalendarIcon className="hr-date-trigger__icon" />
       {label}
     </button>
   );
@@ -250,21 +250,21 @@ export function HrTabs({ tabs, active }: { tabs: string[]; active: string }) {
 
 export function HrEmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="flex min-h-64 flex-col items-center justify-center rounded-[22px] bg-indigo-50/55 px-6 py-10 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-indigo-600 shadow-sm shadow-indigo-100">
+    <div className="hr-empty-state">
+      <div className="hr-empty-state__icon">
         <XIcon className="h-6 w-6" />
       </div>
-      <h3 className="text-base font-semibold text-slate-950">{title}</h3>
-      <p className="mt-2 max-w-md text-sm font-light text-slate-500">{description}</p>
+      <h3 className="hr-empty-state__title">{title}</h3>
+      <p className="hr-empty-state__description">{description}</p>
     </div>
   );
 }
 
 export function HrLoadingState() {
   return (
-    <div className="space-y-3 rounded-[22px] bg-white p-5 shadow-sm shadow-slate-200/70">
+    <div className="hr-loading-state">
       {[0, 1, 2].map((item) => (
-        <div key={item} className="h-12 animate-pulse rounded-2xl bg-slate-100" />
+        <div key={item} className="hr-loading-state__row" />
       ))}
     </div>
   );
@@ -272,8 +272,8 @@ export function HrLoadingState() {
 
 export function HrModalMock() {
   return (
-    <div className="rounded-[22px] bg-slate-50 p-4">
-      <div className="rounded-2xl bg-white p-4 shadow-sm">
+    <div className="hr-modal-mock">
+      <div className="hr-modal-mock__panel">
         <p className="text-sm font-semibold text-slate-900">HR Modal</p>
         <p className="mt-1 text-xs text-slate-500">ตัวอย่าง modal แบบ custom สำหรับฟอร์ม HR</p>
       </div>
@@ -283,8 +283,8 @@ export function HrModalMock() {
 
 export function HrDrawerMock() {
   return (
-    <div className="rounded-[22px] bg-white p-4 shadow-sm shadow-slate-200/70">
-      <div className="ml-auto min-h-24 w-full max-w-xs rounded-2xl bg-indigo-50 p-4 text-sm text-indigo-700">
+    <div className="hr-drawer-mock">
+      <div className="hr-drawer-mock__panel">
         HR Drawer สำหรับรายละเอียดด้านข้าง
       </div>
     </div>

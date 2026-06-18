@@ -82,6 +82,319 @@ body {
   display: none;
 }
 
+.hr-shell {
+  --hr-surface: #ffffff;
+  --hr-page: #f6f7fa;
+  --hr-border: #e2e8f0;
+  --hr-border-soft: #edf1f6;
+  --hr-text: #0f172a;
+  --hr-text-muted: #64748b;
+  --hr-text-subtle: #94a3b8;
+  --hr-primary: #4f46e5;
+  --hr-primary-soft: #eef2ff;
+  --hr-focus: rgba(79, 70, 229, 0.14);
+  --hr-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.hr-page {
+  min-height: 100%;
+  background: var(--hr-page);
+  color: var(--hr-text);
+}
+
+.hr-card {
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  padding: 1rem;
+  box-shadow: var(--hr-shadow);
+}
+
+.hr-dashboard-card {
+  padding: 1rem;
+}
+
+.hr-button {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  padding: 0 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.hr-button:focus-visible,
+.hr-search-field__input:focus,
+.hr-filter-select__trigger:focus,
+.hr-date-trigger:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--hr-focus);
+}
+
+.hr-button--primary {
+  border: 1px solid transparent;
+  background: #111827;
+  color: #fff;
+}
+
+.hr-button--primary:hover {
+  background: #1f2937;
+}
+
+.hr-button--secondary {
+  border: 1px solid var(--hr-border);
+  background: var(--hr-surface);
+  color: #475569;
+}
+
+.hr-button--danger {
+  border: 1px solid transparent;
+  background: #dc2626;
+  color: #fff;
+}
+
+.hr-button--danger:hover {
+  background: #b91c1c;
+}
+
+.hr-button--secondary:hover,
+.hr-button--ghost:hover,
+.hr-date-trigger:hover,
+.hr-filter-select__trigger:hover,
+.hr-filter-select__option:hover {
+  background: #f8fafc;
+  color: var(--hr-text);
+}
+
+.hr-button--danger {
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.hr-button--danger:hover {
+  background: #ffe4e6;
+}
+
+.hr-button--ghost {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--hr-text-muted);
+}
+
+.hr-search-field {
+  position: relative;
+  display: block;
+  min-width: 0;
+  flex: 1;
+}
+
+.hr-search-field__icon {
+  pointer-events: none;
+  position: absolute;
+  left: 0.875rem;
+  top: 50%;
+  width: 1rem;
+  height: 1rem;
+  color: var(--hr-text-subtle);
+  transform: translateY(-50%);
+}
+
+.hr-search-field__input {
+  width: 100%;
+  height: 2.5rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  padding: 0 0.875rem 0 2.5rem;
+  color: #334155;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.hr-search-field__input::placeholder {
+  color: var(--hr-text-subtle);
+}
+
+.hr-filter-select {
+  position: relative;
+}
+
+.hr-filter-select__trigger,
+.hr-date-trigger {
+  display: inline-flex;
+  height: 2.5rem;
+  align-items: center;
+  gap: 0.625rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  padding: 0 0.875rem;
+  color: #475569;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.hr-filter-select__trigger {
+  min-width: 9rem;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.hr-filter-select__chevron,
+.hr-dashboard-select__chevron {
+  width: 0.45rem;
+  height: 0.45rem;
+  flex: 0 0 auto;
+  rotate: 45deg;
+  border-right: 2px solid var(--hr-text-subtle);
+  border-bottom: 2px solid var(--hr-text-subtle);
+  translate: 0 -0.1rem;
+  transition: rotate 140ms ease;
+}
+
+.hr-filter-select__chevron--open {
+  rotate: 225deg;
+}
+
+.hr-filter-select__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.25rem);
+  z-index: 30;
+  width: 12rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  padding: 0.25rem;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.14);
+}
+
+.hr-filter-select__option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 0.375rem;
+  padding: 0.625rem 0.75rem;
+  color: #475569;
+  font-size: 0.8125rem;
+  text-align: left;
+}
+
+.hr-date-trigger__icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--hr-primary);
+}
+
+.hr-empty-state {
+  display: flex;
+  min-height: 16rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #c7d2fe;
+  border-radius: 0.5rem;
+  background: rgba(238, 242, 255, 0.55);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+
+.hr-empty-state__icon {
+  display: flex;
+  width: 3.5rem;
+  height: 3.5rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  border-radius: 0.5rem;
+  background: #fff;
+  color: var(--hr-primary);
+  box-shadow: var(--hr-shadow);
+}
+
+.hr-empty-state__title {
+  color: var(--hr-text);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.hr-empty-state__description {
+  max-width: 28rem;
+  margin-top: 0.5rem;
+  color: var(--hr-text-muted);
+  font-size: 0.875rem;
+  font-weight: 300;
+}
+
+.hr-loading-state,
+.hr-drawer-mock {
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  padding: 1rem;
+  box-shadow: var(--hr-shadow);
+}
+
+.hr-loading-state {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.hr-loading-state__row {
+  height: 3rem;
+  border-radius: 0.5rem;
+  background: #f1f5f9;
+  animation: hrPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.hr-modal-mock {
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  padding: 1rem;
+}
+
+.hr-modal-mock__panel {
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  padding: 1rem;
+  box-shadow: var(--hr-shadow);
+}
+
+.hr-drawer-mock__panel {
+  min-height: 6rem;
+  width: 100%;
+  max-width: 20rem;
+  margin-left: auto;
+  border-radius: 0.5rem;
+  background: var(--hr-primary-soft);
+  padding: 1rem;
+  color: #4338ca;
+  font-size: 0.875rem;
+}
+
+.hr-dashboard-select {
+  min-width: 7rem;
+}
+
+.hr-dashboard-select .hr-custom-select__trigger {
+  min-height: 1.875rem;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+}
+
+.hr-dashboard-select .hr-custom-select__menu {
+  min-width: 9.5rem;
+}
+
 @keyframes hrSlideIn {
   from {
     opacity: 0;
@@ -101,6 +414,12 @@ body {
   to {
     opacity: 0;
     transform: translateX(-100%);
+  }
+}
+
+@keyframes hrPulse {
+  50% {
+    opacity: 0.55;
   }
 }
 
@@ -1357,6 +1676,16 @@ input[type='number']::-webkit-inner-spin-button {
 /* Humansource theme system. Scoped to the module so it does not alter G-HUB. */
 .hr-theme-dark {
   color-scheme: dark;
+  --hr-surface: #181c25;
+  --hr-page: #0f1218;
+  --hr-border: #2a303b;
+  --hr-border-soft: #272d38;
+  --hr-text: #f4f7fb;
+  --hr-text-muted: #c7cfdb;
+  --hr-text-subtle: #8e99aa;
+  --hr-primary-soft: rgba(79, 70, 229, 0.22);
+  --hr-focus: rgba(99, 102, 241, 0.24);
+  --hr-shadow: none;
   background: #0f1218 !important;
 }
 
@@ -1482,10 +1811,52 @@ input[type='number']::-webkit-inner-spin-button {
 .hr-theme-dark .hr-shift-option,
 .hr-theme-dark .hr-shift-section,
 .hr-theme-dark .hr-shift-setting-panel,
-.hr-theme-dark .hr-settings-table-wrap {
+.hr-theme-dark .hr-settings-table-wrap,
+.hr-theme-dark .hr-card,
+.hr-theme-dark .hr-search-field__input,
+.hr-theme-dark .hr-filter-select__trigger,
+.hr-theme-dark .hr-filter-select__menu,
+.hr-theme-dark .hr-date-trigger,
+.hr-theme-dark .hr-loading-state,
+.hr-theme-dark .hr-drawer-mock,
+.hr-theme-dark .hr-modal-mock__panel {
   border-color: #2a303b;
   background-color: #181c25;
   color: #e8edf5;
+}
+
+.hr-theme-dark .hr-button--secondary,
+.hr-theme-dark .hr-button--ghost:hover,
+.hr-theme-dark .hr-date-trigger:hover,
+.hr-theme-dark .hr-filter-select__trigger:hover,
+.hr-theme-dark .hr-filter-select__option:hover {
+  border-color: #2a303b;
+  background-color: #1d222c;
+  color: #f4f7fb;
+}
+
+.hr-theme-dark .hr-empty-state {
+  border-color: rgba(99, 102, 241, 0.38);
+  background-color: rgba(79, 70, 229, 0.12);
+}
+
+.hr-theme-dark .hr-empty-state__icon,
+.hr-theme-dark .hr-modal-mock {
+  background-color: #151922;
+}
+
+.hr-theme-dark .hr-empty-state__title {
+  color: #f4f7fb;
+}
+
+.hr-theme-dark .hr-empty-state__description,
+.hr-theme-dark .hr-filter-select__option,
+.hr-theme-dark .hr-search-field__input::placeholder {
+  color: #8e99aa;
+}
+
+.hr-theme-dark .hr-loading-state__row {
+  background-color: #242a35;
 }
 
 .hr-theme-dark .hr-settings-table thead,
@@ -1548,4 +1919,2544 @@ input[type='number']::-webkit-inner-spin-button {
 
 .hr-theme-dark .hr-custom-select__option-description {
   color: #8e99aa;
+}
+
+/* HR settings focus layout */
+.hr-settings-focus {
+  background: var(--hr-surface);
+}
+
+.hr-settings-focus__rail {
+  border-color: var(--hr-border);
+  background: var(--hr-surface);
+}
+
+.hr-settings-focus__rail-header {
+  border-color: var(--hr-border-soft);
+  background: #fbfcfe;
+}
+
+.hr-settings-focus__rail-badge {
+  border-radius: 0.5rem;
+  background: #111827;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.hr-settings-focus__rail-title,
+.hr-settings-focus__title {
+  color: var(--hr-text);
+  font-weight: 650;
+}
+
+.hr-settings-focus__progress,
+.hr-settings-focus__description,
+.hr-settings-focus__nav-desc {
+  color: var(--hr-text-subtle);
+}
+
+.hr-settings-focus__progress-track {
+  background: #eef2f7;
+}
+
+.hr-settings-focus__progress-fill {
+  background: var(--hr-primary);
+}
+
+.hr-settings-focus__nav {
+  display: grid;
+  align-content: start;
+  gap: 0.25rem;
+}
+
+.hr-settings-focus__nav-item {
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+}
+
+.hr-settings-focus__nav-item:hover {
+  background: #f8fafc;
+}
+
+.hr-settings-focus__nav-item--active {
+  border-color: var(--hr-primary-border, #dfe6ff);
+  background: var(--hr-primary-soft);
+}
+
+.hr-settings-focus__nav-index {
+  border-radius: 0.375rem;
+}
+
+.hr-settings-focus__nav-item--active .hr-settings-focus__nav-index {
+  background: var(--hr-primary);
+  color: #fff;
+}
+
+.hr-settings-focus__nav-label {
+  color: #334155;
+}
+
+.hr-settings-focus__nav-item--active .hr-settings-focus__nav-label,
+.hr-settings-focus__eyebrow,
+.hr-settings-focus__tab--active {
+  color: var(--hr-primary);
+}
+
+.hr-settings-focus__main-header {
+  background: var(--hr-surface);
+}
+
+.hr-settings-focus__tabs {
+  border-color: var(--hr-border);
+  scrollbar-width: none;
+}
+
+.hr-settings-focus__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.hr-settings-focus__tab {
+  border-color: transparent;
+  color: var(--hr-text-muted);
+  font-size: 0.8125rem;
+}
+
+.hr-settings-focus__tab:hover {
+  color: var(--hr-text);
+}
+
+.hr-settings-focus__tab--active {
+  border-color: var(--hr-primary);
+  font-weight: 650;
+}
+
+.hr-theme-dark .hr-settings-focus,
+.hr-theme-dark .hr-settings-focus__rail,
+.hr-theme-dark .hr-settings-focus__main-header {
+  background: var(--hr-surface);
+}
+
+.hr-theme-dark .hr-settings-focus__rail-header {
+  background: #151922;
+}
+
+.hr-theme-dark .hr-settings-focus__nav-item:hover {
+  background: #1d222c;
+}
+
+.hr-theme-dark .hr-settings-focus__nav-item--active {
+  border-color: var(--hr-primary-border, rgba(99, 102, 241, 0.28));
+  background: var(--hr-primary-soft);
+}
+
+.hr-theme-dark .hr-settings-focus__nav-label {
+  color: #d8dee8;
+}
+
+/* ─── HR Time General Settings ──────────────────────────────────────── */
+
+.hr-time-general {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.hr-time-section {
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  box-shadow: var(--hr-shadow);
+}
+
+.hr-time-section__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--hr-border-soft);
+}
+
+.hr-time-section__number {
+  display: inline-flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--hr-primary);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-top: 0.125rem;
+}
+
+.hr-time-section__title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--hr-text);
+}
+
+.hr-time-section__description {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  color: var(--hr-text-muted);
+  line-height: 1.5;
+}
+
+.hr-time-section__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+
+/* Weekly calendar table */
+.hr-time-calendar {
+  position: relative;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+}
+
+.hr-time-calendar__head,
+.hr-time-calendar__body {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.hr-time-calendar__head {
+  border-bottom: 1px solid var(--hr-border);
+  background: #f8fafc;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.hr-time-calendar__headcell {
+  display: flex;
+  min-height: 3rem;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.125rem;
+  border-right: 1px solid var(--hr-border);
+  padding: 0.625rem 0.75rem;
+}
+
+.hr-time-calendar__headcell:last-child,
+.hr-time-calendar__body .hr-time-daycell:last-child {
+  border-right: 0;
+}
+
+.hr-time-calendar__short {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--hr-text);
+}
+
+.hr-time-calendar__full {
+  font-size: 0.6875rem;
+  color: var(--hr-text-muted);
+}
+
+@media (max-width: 900px) {
+  .hr-time-calendar__head {
+    display: none;
+  }
+
+  .hr-time-calendar__body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hr-time-calendar__body .hr-time-daycell {
+    border-top: 1px solid var(--hr-border);
+  }
+
+  .hr-time-calendar__body .hr-time-daycell:nth-child(-n + 2) {
+    border-top: 0;
+  }
+
+  .hr-time-calendar__body .hr-time-daycell:nth-child(2n) {
+    border-right: 0;
+  }
+}
+
+.hr-time-daycell {
+  position: relative;
+  border-right: 1px solid var(--hr-border);
+}
+
+.hr-time-daycell__btn {
+  display: flex;
+  width: 100%;
+  min-height: 7rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.625rem 0.75rem;
+  text-align: left;
+  transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.hr-time-daycell__btn:hover {
+  background: #f8fafc;
+}
+
+.hr-time-daycell--off .hr-time-daycell__btn {
+  background: #fff7f8;
+}
+
+.hr-time-daycell--open .hr-time-daycell__btn {
+  box-shadow: inset 0 0 0 2px var(--hr-primary), 0 0 0 3px var(--hr-focus);
+}
+
+.hr-time-daycell__short {
+  display: none;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--hr-text);
+}
+
+.hr-time-daycell__full {
+  display: none;
+  font-size: 0.6875rem;
+  color: var(--hr-text-muted);
+}
+
+@media (max-width: 900px) {
+  .hr-time-daycell__short,
+  .hr-time-daycell__full {
+    display: block;
+  }
+}
+
+.hr-time-daycell__shift {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.125rem;
+}
+
+.hr-time-daycell__code {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--hr-text);
+}
+
+.hr-time-daycell--off .hr-time-daycell__code {
+  color: #be123c;
+}
+
+.hr-time-daycell__detail {
+  font-size: 0.6875rem;
+  color: var(--hr-text-muted);
+  line-height: 1.4;
+}
+
+.hr-time-dot {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+/* Shift picker popover */
+.hr-time-picker {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 0.375rem);
+  left: 0;
+  width: 280px;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.625rem;
+  background: var(--hr-surface);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .hr-time-picker {
+    left: 0;
+    right: auto;
+  }
+}
+
+.hr-time-picker__search {
+  position: relative;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--hr-border-soft);
+}
+
+.hr-time-picker__search-icon {
+  position: absolute;
+  top: 50%;
+  left: 1.25rem;
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--hr-text-subtle);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.hr-time-picker__search-input {
+  width: 100%;
+  height: 2rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  padding: 0 0.625rem 0 2rem;
+  font-size: 0.8125rem;
+  color: var(--hr-text);
+  outline: none;
+}
+
+.hr-time-picker__search-input:focus {
+  border-color: var(--hr-primary);
+  box-shadow: 0 0 0 3px var(--hr-focus);
+}
+
+.hr-time-picker__body {
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 0.5rem 0.375rem;
+}
+
+.hr-time-picker__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-bottom: 0.5rem;
+}
+
+.hr-time-picker__group:last-child {
+  margin-bottom: 0;
+}
+
+.hr-time-picker__group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--hr-text-muted);
+  letter-spacing: 0.03em;
+}
+
+.hr-time-picker__option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  background: transparent;
+  padding: 0.4375rem 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--hr-text);
+  text-align: left;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.hr-time-picker__option:hover:not(.hr-time-picker__option--selected) {
+  background: #f1f5f9;
+}
+
+.hr-time-picker__option--selected {
+  background: var(--hr-primary-soft);
+  border-color: var(--hr-primary);
+}
+
+.hr-time-picker__option--selected:hover {
+  background: var(--hr-primary-soft);
+  color: var(--hr-text);
+}
+
+.hr-time-picker__option-code {
+  font-weight: 600;
+  flex-shrink: 0;
+  min-width: 1.75rem;
+}
+
+.hr-time-picker__option--selected .hr-time-picker__option-code,
+.hr-time-picker__option--selected:hover .hr-time-picker__option-code {
+  color: var(--hr-primary);
+}
+
+.hr-time-picker__option-detail {
+  flex: 1;
+  font-size: 0.75rem;
+  color: var(--hr-text-muted);
+}
+
+.hr-time-picker__option--selected:hover .hr-time-picker__option-detail {
+  color: var(--hr-text-muted);
+}
+
+.hr-time-picker__option-check {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.hr-time-picker__empty {
+  padding: 1.25rem 0.5rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--hr-text-muted);
+}
+
+.hr-time-picker__footer {
+  padding: 0.5rem 0.75rem 0.625rem;
+  border-top: 1px solid var(--hr-border-soft);
+  background: #fafbfd;
+}
+
+.hr-time-picker__edit-link {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--hr-primary);
+}
+
+.hr-time-picker__edit-link:hover {
+  text-decoration: underline;
+}
+
+/* Week legend */
+.hr-time-weeklegend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--hr-border-soft);
+  border-radius: 0.5rem;
+  background: #fafbfd;
+}
+
+.hr-time-weeklegend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: var(--hr-text);
+}
+
+.hr-time-weeklegend__divider {
+  width: 1px;
+  height: 0.875rem;
+  background: var(--hr-border);
+}
+
+.hr-time-weeklegend__hint {
+  font-size: 0.75rem;
+  color: var(--hr-text-muted);
+}
+
+.hr-time-duplicate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hr-time-duplicate__text {
+  font-size: 0.8125rem;
+  color: var(--hr-text);
+}
+
+.hr-time-duplicate__input {
+  width: 5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.hr-time-duplicate__example {
+  margin-top: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.375rem;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  font-size: 0.75rem;
+  color: #3730a3;
+  line-height: 1.6;
+}
+
+.hr-time-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-self: flex-start;
+  max-width: 100%;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  padding: 0.25rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.hr-time-switch__btn {
+  display: inline-flex;
+  min-width: 8.5rem;
+  min-height: 2.125rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  padding: 0 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--hr-text-muted);
+  background: transparent;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.hr-time-switch__btn--active {
+  color: var(--hr-primary);
+  background: var(--hr-primary-soft);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--hr-primary-border, rgba(79, 70, 229, 0.2));
+}
+
+.hr-time-switch__hint {
+  margin-top: 0.625rem;
+  font-size: 0.75rem;
+  color: var(--hr-text-muted);
+}
+
+.hr-time-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
+@media (max-width: 520px) {
+  .hr-time-switch {
+    width: 100%;
+  }
+
+  .hr-time-switch__btn {
+    min-width: 0;
+    padding: 0 0.625rem;
+    white-space: normal;
+    line-height: 1.25;
+  }
+}
+
+.hr-theme-dark .hr-time-calendar,
+.hr-theme-dark .hr-time-calendar__headcell,
+.hr-theme-dark .hr-time-daycell,
+.hr-theme-dark .hr-time-weeklegend {
+  border-color: var(--hr-border);
+}
+
+.hr-theme-dark .hr-time-calendar__head,
+.hr-theme-dark .hr-time-picker__footer,
+.hr-theme-dark .hr-time-weeklegend {
+  background: #151922;
+}
+
+.hr-theme-dark .hr-time-daycell__btn:hover,
+.hr-theme-dark .hr-time-picker__option:hover:not(.hr-time-picker__option--selected) {
+  background: #1d222c;
+}
+
+.hr-theme-dark .hr-time-daycell--off .hr-time-daycell__btn {
+  background: rgba(190, 18, 60, 0.12);
+}
+
+.hr-theme-dark .hr-time-switch {
+  background: #151922;
+}
+
+/* HR holiday year calendar */
+.hr-holiday-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.hr-holiday-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  padding: 0.875rem 1rem;
+  box-shadow: var(--hr-shadow);
+}
+
+.hr-holiday-toolbar__copy {
+  min-width: min(20rem, 100%);
+}
+
+.hr-holiday-eyebrow {
+  display: none;
+  margin-bottom: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--hr-primary);
+}
+
+.hr-holiday-toolbar__copy h3 {
+  color: var(--hr-text);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.hr-holiday-toolbar__copy span {
+  display: inline-flex;
+  margin-top: 0.25rem;
+  color: var(--hr-text-muted);
+  font-size: 0.75rem;
+}
+
+.hr-holiday-toolbar__controls,
+.hr-holiday-year-actions,
+.hr-holiday-toolbar__left,
+.hr-holiday-add {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.hr-holiday-toolbar__controls {
+  align-items: center;
+  margin-left: auto;
+}
+
+.hr-holiday-year-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.hr-holiday-label {
+  display: none;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--hr-text-muted);
+}
+
+.hr-holiday-year-select {
+  min-width: 7rem;
+}
+
+.hr-holiday-filterbar {
+  display: flex;
+  height: 2.5rem;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  overflow: visible;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: #f8fafc;
+  padding: 0.1875rem;
+}
+
+.hr-holiday-filterbar .hr-holiday-year-actions {
+  align-items: stretch;
+  gap: 0.1875rem;
+  flex-wrap: nowrap;
+}
+
+.hr-holiday-filterbar .hr-custom-select__trigger {
+  min-height: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  padding-inline: 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.hr-holiday-filterbar .hr-custom-select__trigger:hover {
+  background: var(--hr-surface);
+}
+
+.hr-holiday-filterbar .hr-custom-select__menu {
+  min-width: 9rem;
+}
+
+.hr-holiday-filterbar__button {
+  display: inline-flex;
+  height: 2rem;
+  align-items: center;
+  border-left: 1px solid var(--hr-border-soft);
+  border-radius: 0.375rem;
+  padding: 0 0.75rem;
+  color: var(--hr-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.hr-holiday-filterbar__button:hover {
+  background: var(--hr-surface);
+  color: var(--hr-primary);
+}
+
+.hr-holiday-type-select {
+  min-width: 10rem;
+}
+
+.hr-holiday-form {
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  box-shadow: var(--hr-shadow);
+}
+
+.hr-holiday-form__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--hr-border-soft);
+  padding: 1rem;
+}
+
+.hr-holiday-form__header h4 {
+  color: var(--hr-text);
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
+.hr-holiday-form__header p {
+  margin-top: 0.25rem;
+  color: var(--hr-text-muted);
+  font-size: 0.75rem;
+}
+
+.hr-holiday-form__close {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  color: var(--hr-text-muted);
+  font-size: 1rem;
+}
+
+.hr-holiday-form__close:hover {
+  background: #f8fafc;
+  color: var(--hr-text);
+}
+
+.hr-holiday-form__body {
+  display: grid;
+  grid-template-columns: 11rem minmax(14rem, 1fr) 12rem;
+  gap: 0.875rem;
+  padding: 1rem;
+}
+
+.hr-holiday-form__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  border-top: 1px solid var(--hr-border-soft);
+  padding: 0.875rem 1rem;
+}
+
+.hr-holiday-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(2px);
+}
+
+.hr-holiday-sheet {
+  display: flex;
+  width: min(420px, 100vw);
+  height: 100%;
+  flex-direction: column;
+  border-left: 1px solid var(--hr-border);
+  background: var(--hr-surface);
+  box-shadow: -18px 0 36px rgba(15, 23, 42, 0.16);
+}
+
+.hr-holiday-sheet__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--hr-border-soft);
+  padding: 1rem;
+}
+
+.hr-holiday-sheet__header h4 {
+  color: var(--hr-text);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.hr-holiday-sheet__section {
+  border-bottom: 1px solid var(--hr-border-soft);
+  padding: 1rem;
+}
+
+.hr-holiday-sheet__section-title {
+  margin-bottom: 0.75rem;
+  color: var(--hr-text);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.hr-holiday-sheet__list,
+.hr-holiday-sheet__form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.hr-holiday-sheet__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--hr-border-soft);
+  border-radius: 0.5rem;
+  background: #fbfcfe;
+  padding: 0.625rem 0.75rem;
+}
+
+.hr-holiday-sheet__item span:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 0.125rem;
+}
+
+.hr-holiday-sheet__item b {
+  overflow: hidden;
+  color: var(--hr-text);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hr-holiday-sheet__item small,
+.hr-holiday-sheet__empty {
+  color: var(--hr-text-muted);
+  font-size: 0.75rem;
+}
+
+.hr-holiday-sheet__footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  border-top: 1px solid var(--hr-border-soft);
+  padding: 1rem;
+}
+
+.hr-holiday-add__date {
+  width: 10rem;
+}
+
+.hr-holiday-add__title {
+  width: min(18rem, 100%);
+}
+
+.hr-holiday-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  border: 1px solid var(--hr-border-soft);
+  border-radius: 0.5rem;
+  background: #fafbfd;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.75rem;
+  color: var(--hr-text-muted);
+}
+
+.hr-holiday-summary span:first-child {
+  font-weight: 600;
+  color: var(--hr-text);
+}
+
+.hr-holiday-calendar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.875rem;
+}
+
+.hr-holiday-month {
+  display: flex;
+  min-height: 13.5rem;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  box-shadow: var(--hr-shadow);
+}
+
+.hr-holiday-month__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--hr-border-soft);
+  background: #fbfcfe;
+  padding: 0.75rem 0.875rem;
+}
+
+.hr-holiday-month__header > div {
+  min-width: 0;
+}
+
+.hr-holiday-month__header h3 {
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: var(--hr-text);
+}
+
+.hr-holiday-month__header span {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--hr-text-subtle);
+}
+
+.hr-holiday-month__add {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hr-border);
+  border-radius: 999px;
+  background: var(--hr-surface);
+  color: var(--hr-primary);
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.hr-holiday-month__add:hover {
+  border-color: var(--hr-primary);
+  background: var(--hr-primary-soft);
+}
+
+.hr-holiday-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.hr-holiday-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.625rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  background: #fbfcfe;
+  padding: 0.5rem;
+  text-align: left;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.hr-holiday-row__main {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.625rem;
+  text-align: left;
+}
+
+.hr-holiday-row:hover {
+  border-color: var(--hr-border);
+  background: #f8fafc;
+}
+
+.hr-holiday-row--selected {
+  background: var(--hr-primary-soft);
+}
+
+.hr-holiday-date-badge {
+  display: flex;
+  height: 2.5rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  box-shadow: inset 0 0 0 1px var(--hr-border);
+}
+
+.hr-holiday-date-badge b {
+  font-size: 0.875rem;
+  color: var(--hr-text);
+  line-height: 1;
+}
+
+.hr-holiday-date-badge span {
+  margin-top: 0.1875rem;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: var(--hr-text-subtle);
+}
+
+.hr-holiday-row__content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hr-holiday-row__title {
+  overflow: hidden;
+  color: var(--hr-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hr-holiday-row__actions {
+  display: inline-flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.hr-holiday-row:hover .hr-holiday-row__actions,
+.hr-holiday-row:focus-within .hr-holiday-row__actions {
+  opacity: 1;
+}
+
+.hr-holiday-row__actions button {
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.375rem;
+  color: var(--hr-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.hr-holiday-row__actions button:hover {
+  background: var(--hr-surface);
+  color: var(--hr-primary);
+}
+
+.hr-holiday-row__actions .hr-holiday-row__delete:hover {
+  color: #e11d48;
+}
+
+.hr-holiday-empty-month {
+  display: flex;
+  flex: 1;
+  min-height: 9rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0.75rem;
+  border: 1px dashed var(--hr-border);
+  border-radius: 0.5rem;
+  background: #fbfcfe;
+  color: var(--hr-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.hr-holiday-empty-month:hover {
+  border-color: var(--hr-primary);
+  background: var(--hr-primary-soft);
+  color: var(--hr-primary);
+}
+
+.hr-holiday-weekdays,
+.hr-holiday-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.hr-holiday-weekdays {
+  border-bottom: 1px solid var(--hr-border-soft);
+  background: #f8fafc;
+}
+
+.hr-holiday-weekdays span {
+  padding: 0.45rem 0.25rem;
+  text-align: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--hr-text-subtle);
+}
+
+.hr-holiday-day {
+  position: relative;
+  display: flex;
+  min-height: 4.25rem;
+  flex-direction: column;
+  gap: 0.1875rem;
+  border: 0;
+  border-right: 1px solid var(--hr-border-soft);
+  border-bottom: 1px solid var(--hr-border-soft);
+  background: transparent;
+  padding: 0.375rem;
+  text-align: left;
+  transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.hr-holiday-day:nth-child(7n) {
+  border-right: 0;
+}
+
+.hr-holiday-day:hover:not(.hr-holiday-day--empty) {
+  background: #f8fafc;
+}
+
+.hr-holiday-day--empty {
+  pointer-events: none;
+  background: #fbfcfe;
+}
+
+.hr-holiday-day--holiday {
+  background: #f6fbff;
+}
+
+.hr-holiday-day__number {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--hr-text);
+}
+
+.hr-holiday-chip {
+  overflow: hidden;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 0.125rem 0.375rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.hr-holiday-chip--public {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.hr-holiday-chip--company {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.hr-holiday-chip--branch {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.hr-holiday-more {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  color: var(--hr-text-subtle);
+}
+
+@media (max-width: 1280px) {
+  .hr-holiday-calendar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .hr-holiday-calendar {
+    grid-template-columns: 1fr;
+  }
+
+  .hr-holiday-add,
+  .hr-holiday-toolbar__left,
+  .hr-holiday-toolbar__controls,
+  .hr-holiday-year-actions {
+    width: 100%;
+  }
+
+  .hr-holiday-toolbar__controls {
+    justify-content: stretch;
+  }
+
+  .hr-holiday-filterbar {
+    flex: 1;
+  }
+
+  .hr-holiday-filterbar .hr-holiday-year-actions {
+    width: 100%;
+  }
+
+  .hr-holiday-filterbar .hr-custom-select {
+    flex: 1;
+  }
+
+  .hr-holiday-year-filter,
+  .hr-holiday-year-select,
+  .hr-holiday-type-select,
+  .hr-holiday-add__date,
+  .hr-holiday-add__title {
+    width: 100%;
+  }
+
+  .hr-holiday-form__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hr-theme-dark .hr-holiday-summary,
+.hr-theme-dark .hr-holiday-toolbar,
+.hr-theme-dark .hr-holiday-form,
+.hr-theme-dark .hr-holiday-sheet,
+.hr-theme-dark .hr-holiday-month__header,
+.hr-theme-dark .hr-holiday-weekdays,
+.hr-theme-dark .hr-holiday-day--empty {
+  background: #151922;
+}
+
+.hr-theme-dark .hr-holiday-day:hover:not(.hr-holiday-day--empty) {
+  background: #1d222c;
+}
+
+.hr-theme-dark .hr-holiday-day--holiday {
+  background: rgba(47, 128, 255, 0.1);
+}
+
+.hr-theme-dark .hr-holiday-month__add,
+.hr-theme-dark .hr-holiday-date-badge {
+  border-color: var(--hr-border);
+  background: var(--hr-surface);
+}
+
+.hr-theme-dark .hr-holiday-row,
+.hr-theme-dark .hr-holiday-sheet__item,
+.hr-theme-dark .hr-holiday-empty-month {
+  background: #151922;
+}
+
+.hr-theme-dark .hr-holiday-filterbar {
+  background: #151922;
+}
+
+.hr-theme-dark .hr-holiday-filterbar .hr-custom-select__trigger:hover,
+.hr-theme-dark .hr-holiday-filterbar__button:hover {
+  background: #1d222c;
+}
+
+.hr-theme-dark .hr-holiday-form__close:hover,
+.hr-theme-dark .hr-holiday-row__actions button:hover {
+  background: #1d222c;
+}
+
+.hr-theme-dark .hr-holiday-row:hover {
+  background: #1d222c;
+}
+
+.hr-theme-dark .hr-holiday-row--selected,
+.hr-theme-dark .hr-holiday-empty-month:hover {
+  background: var(--hr-primary-soft);
+}
+
+/* HR holiday calendar ref layout */
+.hr-holiday-page {
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  color: var(--hr-text);
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.hr-holiday-toolbar-row {
+  flex-shrink: 0;
+}
+
+.hr-holiday-page-header {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  border-bottom: 0;
+}
+
+/* HR-style toolbar — flat neutral surface, indigo accent on active states. */
+.hr-holiday-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.hr-holiday-toolbar-row .hr-holiday-page-header {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.hr-holiday-calendars-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hr-holiday-calendar-card {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2.25rem;
+  padding: 0 0.875rem 0 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.hr-holiday-calendar-card:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.hr-holiday-calendar-card--active {
+  border-color: #4f46e5;
+  background: #eef2ff;
+}
+
+.hr-holiday-calendar-card--add {
+  border-style: dashed;
+  color: #6b7280;
+}
+
+.hr-holiday-calendar-card--add:hover {
+  border-style: dashed;
+  border-color: #4f46e5;
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+/* Color dot — small, inline; replaces the bulky orange tile. */
+.hr-holiday-calendar-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.hr-holiday-calendar-card__icon > svg {
+  display: none;
+}
+
+.hr-holiday-calendar-card__icon--ghost {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+}
+
+.hr-holiday-calendar-card__icon--ghost > svg {
+  display: block;
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.hr-holiday-calendar-card__body {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.hr-holiday-calendar-card__title {
+  color: #111827;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.hr-holiday-calendar-card--active .hr-holiday-calendar-card__title {
+  color: #3730a3;
+}
+
+.hr-holiday-calendar-card__count {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.hr-holiday-calendar-card--active .hr-holiday-calendar-card__count {
+  color: #4f46e5;
+}
+
+.hr-holiday-calendar-card__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.25rem;
+  color: #9ca3af;
+  margin-left: 0.125rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.hr-holiday-calendar-card:hover .hr-holiday-calendar-card__delete,
+.hr-holiday-calendar-card--active .hr-holiday-calendar-card__delete {
+  opacity: 1;
+}
+
+.hr-holiday-calendar-card__delete:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Color picker — compact circles, HR style. */
+.hr-holiday-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.hr-holiday-color-swatch {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.hr-holiday-color-swatch:hover {
+  transform: scale(1.1);
+}
+
+.hr-holiday-color-swatch--active {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #4f46e5;
+}
+
+.hr-holiday-seed-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.hr-holiday-seed-toggle:hover {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+}
+
+.hr-holiday-seed-toggle input[type='checkbox'] {
+  margin-top: 0.1875rem;
+  width: 1rem;
+  height: 1rem;
+  accent-color: #4f46e5;
+  cursor: pointer;
+}
+
+.hr-holiday-seed-toggle > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  min-width: 0;
+}
+
+.hr-holiday-seed-toggle strong {
+  color: #111827;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.hr-holiday-seed-toggle small {
+  color: #6b7280;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.hr-holiday-page-header--right {
+  justify-content: flex-end;
+}
+
+.hr-holiday-page-header--right .hr-holiday-year-nav {
+  margin-left: auto;
+}
+
+.hr-holiday-page-header--right .hr-holiday-add-button {
+  margin-left: 0;
+  padding-bottom: 0;
+}
+
+.hr-holiday-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.hr-holiday-title h3 {
+  color: var(--hr-text);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.hr-holiday-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.hr-holiday-year-nav {
+  display: inline-flex;
+  width: 8rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  padding: 0 0.5rem;
+}
+
+.hr-holiday-year-nav > button {
+  display: inline-flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  color: var(--hr-text-muted);
+}
+
+.hr-holiday-year-nav > button:hover {
+  background: #f4f6fb;
+  color: var(--hr-text);
+}
+
+.hr-holiday-year-nav .hr-custom-select__trigger {
+  min-height: 2rem;
+  height: 2rem;
+  min-width: 5.25rem;
+  border: 0;
+  background: transparent;
+  padding-inline: 0.25rem;
+  font-weight: 700;
+}
+
+.hr-holiday-year-nav .hr-custom-select__value {
+  text-align: center;
+}
+
+.hr-holiday-status {
+  margin-top: -0.25rem;
+  color: var(--hr-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.hr-holiday-add-button {
+  min-height: 2.25rem;
+  margin-left: auto;
+}
+
+.hr-holiday-filter-select {
+  width: 8.75rem;
+}
+
+.hr-holiday-filter-select .hr-custom-select__trigger {
+  min-height: 2.5rem;
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+}
+
+.hr-holiday-search {
+  display: inline-flex;
+  width: min(14rem, 100%);
+  height: 2.25rem;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  padding: 0 0.75rem;
+  color: var(--hr-text-muted);
+}
+
+.hr-holiday-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--hr-text);
+  font-size: 0.8125rem;
+  outline: 0;
+}
+
+.hr-holiday-search input::placeholder {
+  color: var(--hr-text-subtle);
+}
+
+.hr-holiday-add-year {
+  height: 2.5rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  padding: 0 0.875rem;
+  color: var(--hr-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.hr-holiday-add-year:hover {
+  background: #f8fafc;
+  color: var(--hr-primary);
+}
+
+.hr-holiday-summary {
+  display: grid;
+  grid-template-columns: 9rem repeat(4, minmax(0, 1fr));
+  align-items: center;
+  gap: 0.875rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  padding: 1rem 1.25rem;
+  box-shadow: none;
+}
+
+.hr-holiday-total {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 0.625rem;
+  border-right: 1px solid var(--hr-border-soft);
+}
+
+.hr-holiday-total span {
+  grid-column: 1 / -1;
+  color: var(--hr-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.hr-holiday-total b {
+  color: var(--hr-text);
+  font-size: 2rem;
+  font-weight: 750;
+  line-height: 1.1;
+}
+
+.hr-holiday-total small {
+  align-self: end;
+  color: var(--hr-text-muted);
+  font-size: 0.8125rem;
+}
+
+.hr-holiday-summary-type {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.375rem 0.5rem;
+  color: var(--hr-text);
+  font-size: 0.8125rem;
+}
+
+.hr-holiday-summary-type b {
+  grid-column: 1 / 2;
+  color: var(--hr-text);
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.hr-holiday-summary-type small {
+  color: var(--hr-text-muted);
+  font-size: 0.8125rem;
+}
+
+.hr-holiday-dot {
+  display: inline-flex;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+
+.hr-holiday-calendar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.hr-holiday-month {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  border: 1px solid var(--hr-border-soft);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  box-shadow: none;
+}
+
+.hr-holiday-month h4 {
+  padding: 0.375rem 0.5rem 0.125rem;
+}
+
+.hr-holiday-month h4 {
+  padding: 0.5rem 0.625rem 0.25rem;
+  text-align: center;
+  color: #334155;
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.hr-holiday-weekdays {
+  border-bottom: 0;
+  background: transparent;
+  padding: 0 0.625rem;
+}
+
+.hr-holiday-weekdays span {
+  padding: 0.2rem 0;
+  color: var(--hr-text-subtle);
+  font-size: 0.59375rem;
+  font-weight: 600;
+}
+
+.hr-holiday-grid {
+  position: relative;
+  gap: 0;
+  padding: 0.125rem 0.5rem 0.25rem;
+  flex: 1 1 0;
+  min-height: 0;
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+}
+
+.hr-holiday-day {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-feature-settings: 'tnum';
+  text-align: center;
+  overflow: visible;
+}
+
+.hr-holiday-day__button {
+  display: inline-flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.hr-holiday-day:nth-child(7n) {
+  border-right: 0;
+}
+
+.hr-holiday-day:hover:not(.hr-holiday-day--empty) {
+  background: transparent;
+}
+
+.hr-holiday-day--muted .hr-holiday-day__number {
+  color: #cbd5e1;
+}
+
+.hr-holiday-day__number {
+  display: inline-flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.hr-holiday-day:hover .hr-holiday-day__number {
+  background: #f1f5f9;
+  color: var(--hr-text);
+}
+
+.hr-holiday-day--holiday .hr-holiday-day__number {
+  font-weight: 600;
+}
+
+.hr-holiday-day--holiday:hover .hr-holiday-day__number {
+  filter: brightness(0.96);
+}
+
+.hr-holiday-hover-card {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.5rem);
+  z-index: 40;
+  display: grid;
+  width: 16rem;
+  gap: 0.625rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+  padding: 0.875rem;
+  text-align: left;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 0.25rem);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.hr-holiday-hover-card::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-right: 1px solid var(--hr-border);
+  border-bottom: 1px solid var(--hr-border);
+  background: var(--hr-surface);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* Invisible bridge between day cell and hover card so the cursor doesn't lose hover when moving up. */
+.hr-holiday-hover-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 0.75rem;
+}
+
+.hr-holiday-day:hover .hr-holiday-hover-card,
+.hr-holiday-day:focus-within .hr-holiday-hover-card,
+.hr-holiday-day--pinned .hr-holiday-hover-card {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.hr-holiday-hover-card b {
+  color: var(--hr-text);
+  font-size: 0.8125rem;
+  font-weight: 750;
+}
+
+.hr-holiday-hover-card__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 0.5rem;
+}
+
+.hr-holiday-hover-card__item strong {
+  display: block;
+  color: var(--hr-text);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.hr-holiday-hover-card__item small {
+  display: block;
+  margin-top: 0.125rem;
+  color: var(--hr-text-muted);
+  font-size: 0.6875rem;
+}
+
+.hr-holiday-hover-card__description {
+  line-height: 1.45;
+}
+
+.hr-holiday-hover-card__actions {
+  display: inline-flex;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+
+.hr-holiday-hover-card__actions button {
+  height: 1.625rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.375rem;
+  background: var(--hr-surface);
+  padding: 0 0.5rem;
+  color: var(--hr-primary);
+  font-size: 0.6875rem;
+  font-weight: 650;
+}
+
+.hr-holiday-hover-card__actions button:hover {
+  background: var(--hr-primary-soft);
+  border-color: var(--hr-primary);
+}
+
+.hr-holiday-hover-card__actions .hr-holiday-hover-card__delete {
+  color: #e11d48;
+}
+
+.hr-holiday-hover-card__actions .hr-holiday-hover-card__delete:hover {
+  border-color: #fecdd3;
+  background: #fff1f2;
+}
+
+.hr-holiday-month footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid var(--hr-border-soft);
+  padding: 0.1875rem 0.5rem;
+  color: var(--hr-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.hr-holiday-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(3px);
+  padding: 1.5rem;
+}
+
+.hr-holiday-modal {
+  display: flex;
+  width: min(26.25rem, 100%);
+  max-height: calc(100vh - 3rem);
+  flex-direction: column;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.2);
+}
+
+.hr-holiday-modal--confirm {
+  width: min(24rem, 100%);
+}
+
+.hr-holiday-confirm__lead {
+  color: var(--hr-text);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.hr-holiday-confirm__meta {
+  margin-top: 0.5rem;
+  color: var(--hr-text-subtle);
+  font-size: 0.8125rem;
+}
+
+.hr-holiday-confirm__note {
+  margin-top: 0.875rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+/* Toolbar pill buttons — match employees-page filter style. */
+.hr-holiday-trash-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: #f9fafb;
+  color: #4b5563;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 140ms ease, color 140ms ease, background-color 140ms ease;
+}
+
+.hr-holiday-trash-button:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+.hr-holiday-trash-button__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.hr-holiday-modal--trash {
+  width: min(28rem, 100%);
+}
+
+.hr-holiday-trash-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.875rem;
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.hr-holiday-trash-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: #ffffff;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.hr-holiday-trash-list__item:hover {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.hr-holiday-trash-list__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.hr-holiday-trash-list__info strong {
+  color: #111827;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.hr-holiday-trash-list__info small {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.hr-holiday-trash-list__restore {
+  display: inline-flex;
+  align-items: center;
+  height: 1.875rem;
+  padding: 0 0.75rem;
+  border: 1px solid #4f46e5;
+  border-radius: 0.375rem;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms ease;
+  flex-shrink: 0;
+}
+
+.hr-holiday-trash-list__restore:hover {
+  background: #4338ca;
+  border-color: #4338ca;
+}
+
+.hr-holiday-modal > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 1.5rem 1rem;
+}
+
+.hr-holiday-modal > header h4 {
+  color: var(--hr-text);
+  font-size: 1.125rem;
+  font-weight: 750;
+}
+
+.hr-holiday-modal > header button {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  color: var(--hr-text-muted);
+}
+
+.hr-holiday-modal > header button:hover {
+  background: #f8fafc;
+  color: var(--hr-text);
+}
+
+.hr-holiday-modal__body {
+  display: grid;
+  gap: 1rem;
+  overflow: auto;
+  padding: 0.5rem 1.5rem 1rem;
+}
+
+.hr-holiday-field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.hr-holiday-field > span {
+  color: var(--hr-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.hr-holiday-field > span b {
+  color: #ef3348;
+}
+
+.hr-holiday-field input,
+.hr-holiday-field textarea,
+.hr-holiday-date-input,
+.hr-holiday-date-picker > button {
+  width: 100%;
+  min-height: 2.5rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  color: var(--hr-text);
+  font-size: 0.8125rem;
+  outline: 0;
+}
+
+.hr-holiday-field input,
+.hr-holiday-field textarea {
+  padding: 0 0.875rem;
+}
+
+.hr-holiday-field textarea {
+  min-height: 7.75rem;
+  padding-block: 0.75rem;
+  resize: vertical;
+}
+
+.hr-holiday-field small {
+  margin-top: -1.875rem;
+  padding-right: 0.75rem;
+  text-align: right;
+  color: var(--hr-text-subtle);
+  font-size: 0.75rem;
+  pointer-events: none;
+}
+
+.hr-holiday-field--error input,
+.hr-holiday-field--error textarea,
+.hr-holiday-field--error .hr-holiday-date-input,
+.hr-holiday-field--error .hr-holiday-date-picker > button {
+  border-color: #ef3348;
+  box-shadow: 0 0 0 3px rgba(239, 51, 72, 0.12);
+}
+
+.hr-holiday-field__error {
+  margin-top: 0 !important;
+  padding-right: 0 !important;
+  text-align: left !important;
+  color: #ef3348 !important;
+}
+
+.hr-holiday-field-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.hr-holiday-date-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+  color: var(--hr-text-muted);
+}
+
+.hr-holiday-date-input input {
+  min-height: auto;
+  border: 0;
+  padding: 0;
+}
+
+.hr-holiday-system-date input {
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hr-holiday-system-date input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.hr-holiday-date-picker {
+  position: relative;
+  display: block;
+}
+
+.hr-holiday-date-picker > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.875rem;
+  text-align: left;
+  color: var(--hr-text);
+  font-weight: 600;
+}
+
+.hr-holiday-date-picker > button:hover {
+  border-color: var(--hr-primary);
+  background: #f8fafc;
+}
+
+.hr-holiday-date-popover {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 0.375rem);
+  z-index: 120;
+  display: grid;
+  width: 18rem;
+  gap: 0.625rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 0.5rem;
+  background: var(--hr-surface);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+  padding: 0.75rem;
+}
+
+.hr-holiday-date-popover__header {
+  display: grid;
+  grid-template-columns: 4.25rem 1fr 4.25rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hr-holiday-date-popover__header b {
+  text-align: center;
+  color: var(--hr-text);
+  font-size: 0.8125rem;
+  font-weight: 750;
+}
+
+.hr-holiday-date-popover__header button {
+  height: 1.875rem;
+  border-radius: 0.375rem;
+  color: var(--hr-text-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.hr-holiday-date-popover__header button:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: var(--hr-primary);
+}
+
+.hr-holiday-date-popover__header button:disabled {
+  opacity: 0.35;
+}
+
+.hr-holiday-date-popover__weekdays,
+.hr-holiday-date-popover__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.hr-holiday-date-popover__weekdays span {
+  text-align: center;
+  color: var(--hr-text-subtle);
+  font-size: 0.625rem;
+  font-weight: 750;
+}
+
+.hr-holiday-date-popover__grid {
+  gap: 0.125rem;
+}
+
+.hr-holiday-date-popover__grid button {
+  display: inline-flex;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  color: var(--hr-text);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.hr-holiday-date-popover__grid button:hover:not(:disabled) {
+  background: var(--hr-primary-soft);
+  color: var(--hr-primary);
+}
+
+.hr-holiday-date-popover__grid button:disabled {
+  color: var(--hr-text-subtle);
+  opacity: 0.35;
+}
+
+.hr-holiday-date-popover__grid .hr-holiday-date-popover__day--selected {
+  background: var(--hr-primary);
+  color: #fff;
+}
+
+.hr-holiday-check,
+.hr-holiday-radio-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--hr-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.hr-holiday-check {
+  height: 2.5rem;
+}
+
+.hr-holiday-check input,
+.hr-holiday-radio-group input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--hr-primary);
+}
+
+.hr-holiday-radio-group {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  min-height: 2.5rem;
+  align-items: center;
+}
+
+.hr-holiday-modal > footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  border-top: 1px solid var(--hr-border-soft);
+  padding: 1rem 1.5rem;
+}
+
+.hr-theme-dark .hr-holiday-page-header,
+.hr-theme-dark .hr-holiday-year-nav,
+.hr-theme-dark .hr-holiday-filter-select .hr-custom-select__trigger,
+.hr-theme-dark .hr-holiday-search,
+.hr-theme-dark .hr-holiday-add-year,
+.hr-theme-dark .hr-holiday-summary,
+.hr-theme-dark .hr-holiday-month,
+.hr-theme-dark .hr-holiday-hover-card,
+.hr-theme-dark .hr-holiday-modal,
+.hr-theme-dark .hr-holiday-field input,
+.hr-theme-dark .hr-holiday-field textarea,
+.hr-theme-dark .hr-holiday-date-input,
+.hr-theme-dark .hr-holiday-date-picker > button,
+.hr-theme-dark .hr-holiday-date-popover {
+  background: #151922;
+}
+
+.hr-theme-dark .hr-holiday-year-nav > button:hover,
+.hr-theme-dark .hr-holiday-add-year:hover,
+.hr-theme-dark .hr-holiday-day:hover .hr-holiday-day__number,
+.hr-theme-dark .hr-holiday-modal > header button:hover,
+.hr-theme-dark .hr-holiday-date-picker > button:hover,
+.hr-theme-dark .hr-holiday-date-popover__header button:hover:not(:disabled) {
+  background: #1d222c;
+}
+
+.hr-theme-dark .hr-holiday-hover-card::after {
+  background: #151922;
+}
+
+@media (max-width: 1280px) {
+  .hr-holiday-calendar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .hr-holiday-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hr-holiday-total {
+    border-right: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .hr-holiday-calendar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .hr-holiday-page-header,
+  .hr-holiday-controls {
+    align-items: stretch;
+  }
+
+  .hr-holiday-page-header,
+  .hr-holiday-controls,
+  .hr-holiday-field-row {
+    flex-direction: column;
+    grid-template-columns: 1fr;
+  }
+
+  .hr-holiday-year-nav,
+  .hr-holiday-filter-select,
+  .hr-holiday-search,
+  .hr-holiday-add-year {
+    width: 100%;
+  }
+
+  .hr-holiday-summary,
+  .hr-holiday-calendar {
+    grid-template-columns: 1fr;
+  }
 }

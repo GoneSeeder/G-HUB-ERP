@@ -2,48 +2,28 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type CSSProperties, type FormEvent, useEffect, useRef, useState } from 'react';
 import {
   hrSettingsGroups,
   type HrNavChild,
   type HrSettingsGroup,
 } from '@/data/humansource/navigation';
+import { PlusIcon } from '@/components/ui/icons';
 import { HrCustomSelect } from './hr-ui';
+import { HolidayYearCalendar as HolidayYearCalendarCrud } from './hr-holiday-year-calendar';
+import { CUSTOM_SHIFTS_STORAGE_KEY, type HrShiftGroupKey, type HrShiftRow } from './hr-shifts';
+import { AddWorkInLocationModal } from './hr-workin-modal';
+import { TimeGeneralSettings } from './hr-time-general';
 
 type GroupKey = HrSettingsGroup['key'];
 
 const SETTINGS_ROOT = '/humansource/settings';
-const CUSTOM_SHIFTS_STORAGE_KEY = 'g-hub.hr.custom-shifts';
 const COMPANY_OPTIONS = ['ใช้กับทุกบริษัท', 'G-HUB Enterprise', 'Operations', 'ฝ่ายขาย', 'คลังสินค้า'];
 const TIMEZONE_OPTIONS = ['Asia/Bangkok (UTC+07:00)', 'Asia/Singapore (UTC+08:00)', 'UTC (UTC+00:00)'];
 const ATTENDANCE_RULE_OPTIONS = ['ตามเวลาทำงานในกะ', 'นับตามชั่วโมงทำงานจริง', 'ไม่บังคับเวลาเข้าออก'];
 
-type ShiftGroupKey = 'same-day' | 'overnight' | 'total-hours' | 'combined';
-
-type ShiftRow = {
-  enabled: boolean;
-  code: string;
-  name: string;
-  type: string;
-  time: string;
-  company: string;
-  updatedBy: string;
-  updatedAt: string;
-  groupKey: ShiftGroupKey;
-  description?: string;
-  timezone?: string;
-  color?: string;
-  attendanceRule?: string;
-  flexibleEntryEnabled?: boolean;
-  flexibleMinutes?: number;
-  minimumWorkHours?: number;
-  trackBreak?: boolean;
-  shiftAllowanceEnabled?: boolean;
-  shiftAllowanceAmount?: number;
-  prorateShiftAllowance?: boolean;
-  holidayPremiumEnabled?: boolean;
-  overtimePremiumEnabled?: boolean;
-};
+type ShiftGroupKey = HrShiftGroupKey;
+type ShiftRow = HrShiftRow;
 
 type ShiftForm = {
   code: string;
@@ -120,6 +100,7 @@ const SHIFT_COLORS = [
   '#475569', '#64748b', '#94a3b8', '#c4a484', '#c59b25',
 ];
 
+// Hub overview cards keep their original per-group colors.
 const GROUP_STYLES: Record<GroupKey, {
   accent: string;
   accent2: string;
@@ -152,6 +133,15 @@ const GROUP_STYLES: Record<GroupKey, {
   },
 };
 
+function getAccentVars(accent: string): CSSProperties {
+  return {
+    '--hr-primary': accent,
+    '--hr-primary-soft': `${accent}14`,
+    '--hr-primary-border': `${accent}33`,
+    '--hr-focus': `${accent}24`,
+  } as CSSProperties;
+}
+
 export function HrSettingsPage() {
   const pathname = usePathname();
   const router = useRouter();
@@ -161,8 +151,8 @@ export function HrSettingsPage() {
     : 0;
 
   return (
-    <div className="min-h-full bg-[#f6f7fa] px-4 py-5 text-gray-950 lg:px-6">
-      <div className="mx-auto max-w-[1540px]">
+    <div className={`flex flex-1 flex-col ${activeGroup ? 'min-h-full' : 'px-6 py-5 lg:px-8 xl:px-10'}`}>
+      <div className={`flex w-full flex-1 flex-col ${activeGroup ? '' : 'mx-auto max-w-[1560px]'}`}>
         {activeGroup ? (
           <FocusPage
             group={activeGroup}
@@ -280,7 +270,6 @@ function FocusPage({
   pathname: string;
   onSelectTopic: (item: HrNavChild) => void;
 }) {
-  const styles = GROUP_STYLES[group.key];
   const activeTopic = getActiveSettingsTopic(group, pathname);
   const activeTopicIndex = Math.max(0, group.items.findIndex((item) => item.path === activeTopic.path));
   const activeItem = getActiveSettingsItem(group, pathname);
@@ -293,88 +282,96 @@ function FocusPage({
       }))
     : getFallbackTabs(group.key).map((label) => ({ label }));
 
+  const progress = getProgress(group.progress);
+  const groupAccent = GROUP_STYLES[group.key].accent;
+
   return (
-    <section className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-      <div className="grid min-h-[720px] lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="border-b border-gray-200 bg-gray-50 lg:border-b-0 lg:border-r">
-          <div className="px-4 py-5 text-white" style={{ backgroundColor: styles.accent }}>
-            <div className="flex items-center justify-between gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-sm font-semibold" style={{ color: styles.accent }}>
+    <section
+      className="hr-settings-focus flex min-h-full flex-1 flex-col overflow-hidden border-l border-gray-200 bg-white"
+      style={getAccentVars(groupAccent)}
+    >
+      <div className="grid min-h-full flex-1 lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="hr-settings-focus__rail flex flex-col border-b border-gray-200 bg-white lg:border-b-0 lg:border-r">
+          {/* Clean neutral rail header */}
+          <div className="hr-settings-focus__rail-header border-b border-gray-100 px-4 py-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="hr-settings-focus__rail-badge flex h-7 w-7 items-center justify-center rounded-lg bg-gray-950 text-xs font-bold text-white">
                 {order}
               </span>
-              <span className="text-[11px] font-medium text-white/90">{group.progress}</span>
+              <span className="hr-settings-focus__progress text-[11px] font-medium text-gray-400">{group.progress}</span>
             </div>
-            <h2 className="mt-4 text-base font-semibold">{group.title}</h2>
-            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/30">
-              <span className="block h-full w-1/2 rounded-full bg-white" />
+            <h2 className="hr-settings-focus__rail-title mt-3 text-sm font-bold text-gray-800">{group.title}</h2>
+            <div className="hr-settings-focus__progress-track mt-2.5 h-1 overflow-hidden rounded-full bg-gray-100">
+              <span className="hr-settings-focus__progress-fill block h-full rounded-full" style={{ width: `${progress.percent}%` }} />
             </div>
           </div>
 
-          <div className="p-3">
-            <div className="space-y-1">
-              {group.items.map((item, index) => {
-                const active = item.path === activeTopic.path;
-                return (
-                  <button
-                    key={item.path}
-                    type="button"
-                    onClick={() => onSelectTopic(item)}
-                    className={`flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition ${
-                      active ? styles.soft : 'hover:bg-white'
+          <nav className="hr-settings-focus__nav flex-1 p-2">
+            {group.items.map((item, index) => {
+              const active = item.path === activeTopic.path;
+              return (
+                <button
+                  key={item.path}
+                  type="button"
+                  onClick={() => onSelectTopic(item)}
+                  className={`hr-settings-focus__nav-item flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2.5 text-left transition-colors ${
+                    active ? 'hr-settings-focus__nav-item--active' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <span
+                    className={`hr-settings-focus__nav-index mt-px flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-[10px] font-bold ${
+                      active ? '' : 'bg-gray-100 text-gray-400'
                     }`}
                   >
-                    <span
-                      className={`mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold ${
-                        active ? 'text-white' : 'bg-white text-gray-400'
-                      }`}
-                      style={active ? { backgroundColor: styles.accent } : undefined}
-                    >
-                      {order}.{index + 1}
+                    {order}.{index + 1}
+                  </span>
+                  <span className="min-w-0">
+                    <span className={`hr-settings-focus__nav-label block text-[13px] ${active ? 'font-semibold' : 'font-medium text-gray-700'}`}>{item.label}</span>
+                    <span className="hr-settings-focus__nav-desc mt-0.5 block text-[11px] leading-4 text-gray-400">
+                      {item.children?.length ? `${item.children.length} รายการย่อย` : item.description}
                     </span>
-                    <span className="min-w-0">
-                      <span className={`block text-sm ${active ? `font-semibold ${styles.text}` : 'font-medium text-gray-700'}`}>{item.label}</span>
-                      <span className="mt-1 block text-[11px] leading-4 text-gray-400">
-                        {item.children?.length ? `${item.children.length} รายการย่อย` : item.description}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
         </aside>
 
-        <main className="min-w-0">
-          <div className="border-b border-gray-200 px-5 py-5">
+        <main className="flex min-w-0 flex-col">
+          <div className="hr-settings-focus__main-header flex-shrink-0 px-6 pb-0 pt-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className={`text-xs font-medium ${styles.text}`}>{order}.{activeTopicIndex + 1}</p>
-                <h2 className="mt-1 text-xl font-semibold text-gray-950">{activeTopic.label}</h2>
-                <p className="mt-1 max-w-3xl text-xs leading-5 text-gray-500">{activeTopic.description}</p>
+                <p className="hr-settings-focus__eyebrow text-xs font-medium">{order}.{activeTopicIndex + 1}</p>
+                <h1 className="hr-settings-focus__title mt-0.5 text-lg font-bold text-gray-800">{activeTopic.label}</h1>
+                <p className="hr-settings-focus__description mt-0.5 max-w-3xl text-xs text-gray-400">{activeTopic.description}</p>
               </div>
             </div>
 
             {showTabs ? (
-              <div className="mt-5 flex gap-5 overflow-x-auto border-b border-gray-200 text-sm font-medium">
-                {tabs.map((tab, index) => (
-                  <Link
-                    key={tab.path ?? tab.label}
-                    href={tab.path ?? getSettingsPath(group, activeTopic)}
-                    className={`relative whitespace-nowrap pb-3 transition ${
-                      (tab.path ? normalizePath(tab.path) === activePath : index === 0) ? styles.text : 'text-gray-500 hover:text-gray-900'
-                    }`}
-                  >
-                    {tab.label}
-                    {(tab.path ? normalizePath(tab.path) === activePath : index === 0) ? (
-                      <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full" style={{ backgroundColor: styles.accent }} />
-                    ) : null}
-                  </Link>
-                ))}
+              <div className="hr-settings-focus__tabs mt-3 flex items-center gap-0 overflow-x-auto border-b border-gray-200">
+                {tabs.map((tab, index) => {
+                  const tabActive = tab.path ? normalizePath(tab.path) === activePath : index === 0;
+                  return (
+                    <Link
+                      key={tab.path ?? tab.label}
+                      href={tab.path ?? getSettingsPath(group, activeTopic)}
+                      className={`hr-settings-focus__tab -mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+                        tabActive ? 'hr-settings-focus__tab--active' : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      {tab.label}
+                    </Link>
+                  );
+                })}
               </div>
-            ) : null}
+            ) : (
+              <div className="border-b border-gray-200" />
+            )}
           </div>
 
-          <SettingsWorkbench group={group} topic={activeTopic} activeItem={activeItem} accent={styles.accent} />
+          <div className="flex min-h-0 flex-1 flex-col">
+            <SettingsWorkbench group={group} topic={activeTopic} activeItem={activeItem} accent={groupAccent} />
+          </div>
         </main>
       </div>
     </section>
@@ -465,49 +462,326 @@ function TimeSettingsTable({
   activeItem: HrNavChild;
   accent: string;
 }) {
+  const [showAddWorkIn, setShowAddWorkIn] = useState(false);
+
+  if (activeItem.path === '/humansource/time/general') {
+    return <TimeGeneralSettings accent={accent} />;
+  }
+
+  if (activeItem.path.includes('holiday-calendar')) {
+    return <HolidayYearCalendarCrud accent={accent} />;
+  }
+
   if (isShiftSettingsPath(activeItem.path)) {
     return <ShiftSettingsBoard accent={accent} />;
   }
 
+  if (activeItem.path.includes('leave')) {
+    // Old leave UI removed — replaced in Phase 2+ by hr-leave-settings.tsx.
+    return (
+      <div className="p-5">
+        <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
+          <p className="text-sm font-medium text-gray-600">ตั้งค่าการลา</p>
+          <p className="mt-1 text-xs text-gray-400">กำลังพัฒนาในเฟสถัดไป</p>
+        </div>
+      </div>
+    );
+  }
+
   const view = getTimeSettingsView(activeItem);
+  const isAttendanceLocations =
+    activeItem.path.includes('attendance-locations') ||
+    activeItem.path.includes('devices') ||
+    activeItem.path.includes('gps') ||
+    activeItem.path.includes('network');
 
   return (
     <div className="p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          {view.filters.map((filter, index) => (
+          {view.filters.map((filter) => (
             <button
               key={filter}
               type="button"
-              className={`h-9 rounded-lg border px-3 text-xs font-medium ${index === 2 ? 'text-white' : 'border-gray-200 bg-white text-gray-700'}`}
-              style={index === 2 ? { backgroundColor: accent, borderColor: accent } : undefined}
+              className="h-9 rounded-lg border border-gray-200 bg-gray-50 px-3 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
             >
               {filter}
             </button>
           ))}
         </div>
-        <button type="button" className="inline-flex h-9 items-center gap-2 rounded-lg px-4 text-xs font-medium text-white" style={{ backgroundColor: accent }}>
-          + {view.actionLabel}
+        <button
+          type="button"
+          onClick={() => isAttendanceLocations && setShowAddWorkIn(true)}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-gray-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800"
+        >
+          <PlusIcon className="h-4 w-4" />
+          {view.actionLabel}
         </button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <TimePolicyCard
-          title={activeItem.label}
-          description={activeItem.description ?? topic.description}
-          value="หน้าที่เลือก"
-          accent={accent}
-        />
-        {view.policies.map((policy) => (
-          <TimePolicyCard key={policy.title} {...policy} accent={accent} />
-        ))}
-      </div>
+      {showAddWorkIn && <AddWorkInLocationModal accent={accent} onClose={() => setShowAddWorkIn(false)} />}
+
+      {!isAttendanceLocations ? (
+        <div className="grid gap-3 md:grid-cols-3">
+          <TimePolicyCard
+            title={activeItem.label}
+            description={activeItem.description ?? topic.description}
+            value="หน้าที่เลือก"
+            accent={accent}
+          />
+          {view.policies.map((policy) => (
+            <TimePolicyCard key={policy.title} {...policy} accent={accent} />
+          ))}
+        </div>
+      ) : null}
 
       <SettingsTable
         headers={view.headers}
         rows={view.rows}
         accent={accent}
       />
+    </div>
+  );
+}
+
+// AddWorkInLocationModal moved to ./hr-workin-modal.tsx — imported above.
+
+type HolidayEntry = {
+  date: string;
+  title: string;
+  type: 'public' | 'company' | 'branch';
+};
+
+const MONTHS_TH = [
+  'มกราคม',
+  'กุมภาพันธ์',
+  'มีนาคม',
+  'เมษายน',
+  'พฤษภาคม',
+  'มิถุนายน',
+  'กรกฎาคม',
+  'สิงหาคม',
+  'กันยายน',
+  'ตุลาคม',
+  'พฤศจิกายน',
+  'ธันวาคม',
+];
+
+function seedHolidaysForYear(year: number): HolidayEntry[] {
+  return [
+    { date: `${year}-01-01`, title: 'วันขึ้นปีใหม่', type: 'public' },
+    { date: `${year}-04-13`, title: 'วันสงกรานต์', type: 'public' },
+    { date: `${year}-04-14`, title: 'วันสงกรานต์', type: 'public' },
+    { date: `${year}-04-15`, title: 'วันสงกรานต์', type: 'public' },
+    { date: `${year}-05-01`, title: 'วันแรงงานแห่งชาติ', type: 'public' },
+    { date: `${year}-12-05`, title: 'วันพ่อแห่งชาติ', type: 'public' },
+    { date: `${year}-12-10`, title: 'วันรัฐธรรมนูญ', type: 'public' },
+    { date: `${year}-12-31`, title: 'วันสิ้นปี', type: 'public' },
+  ];
+}
+
+function formatDateKey(year: number, monthIndex: number, day: number) {
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function getHolidayDayMeta(date: string) {
+  const parsed = new Date(`${date}T00:00:00`);
+  const weekdays = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+  return {
+    day: date.slice(8, 10),
+    weekday: weekdays[parsed.getDay()] ?? '',
+  };
+}
+
+export function HolidayYearCalendarLegacy({ accent }: { accent: string }) {
+  const currentYear = new Date().getFullYear();
+  const [holidayYears, setHolidayYears] = useState<Record<number, HolidayEntry[]>>(() => ({
+    [currentYear]: seedHolidaysForYear(currentYear),
+    [currentYear + 1]: seedHolidaysForYear(currentYear + 1),
+  }));
+  const [selectedYear, setSelectedYear] = useState(String(currentYear));
+  const [holidayDate, setHolidayDate] = useState(`${currentYear}-01-01`);
+  const [holidayTitle, setHolidayTitle] = useState('');
+  const [holidayType, setHolidayType] = useState<HolidayEntry['type']>('company');
+  const [showHolidayForm, setShowHolidayForm] = useState(false);
+  void showHolidayForm;
+
+  const year = Number(selectedYear);
+  const holidays = holidayYears[year] ?? [];
+  const yearOptions = Object.keys(holidayYears)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map((item) => ({
+      value: String(item),
+      label: `${item + 543}`,
+      description: `${holidayYears[item]?.length ?? 0} วันหยุด`,
+    }));
+
+  const addYear = () => {
+    const nextYear = Math.max(...Object.keys(holidayYears).map(Number)) + 1;
+    setHolidayYears((current) => ({
+      ...current,
+      [nextYear]: seedHolidaysForYear(nextYear),
+    }));
+    setSelectedYear(String(nextYear));
+    setHolidayDate(`${nextYear}-01-01`);
+  };
+
+  const addHoliday = () => {
+    const title = holidayTitle.trim();
+    if (!holidayDate || !title) return;
+
+    const targetYear = Number(holidayDate.slice(0, 4));
+    const nextHoliday: HolidayEntry = {
+      date: holidayDate,
+      title,
+      type: holidayType,
+    };
+
+    setHolidayYears((current) => ({
+      ...current,
+      [targetYear]: [...(current[targetYear] ?? seedHolidaysForYear(targetYear)), nextHoliday]
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    }));
+    setSelectedYear(String(targetYear));
+    setHolidayTitle('');
+    setShowHolidayForm(false);
+  };
+
+  const selectDate = (date: string) => {
+    setHolidayDate(date);
+    setHolidayTitle('');
+    setHolidayType('company');
+  };
+
+  const selectMonth = (monthIndex: number) => {
+    selectDate(formatDateKey(year, monthIndex, 1));
+    setShowHolidayForm(true);
+  };
+
+  return (
+    <div className="hr-holiday-page">
+      <div className="hr-holiday-toolbar">
+        <div className="hr-holiday-toolbar__left">
+          <div className="hr-holiday-year-filter">
+            <span className="hr-holiday-label">ปีปฏิทิน</span>
+            <HrCustomSelect
+              value={selectedYear}
+              options={yearOptions}
+              onChange={(value) => {
+                setSelectedYear(value);
+                setHolidayDate(`${value}-01-01`);
+              }}
+              label="เลือกปีปฏิทินวันหยุด"
+              className="hr-holiday-year-select"
+            />
+          </div>
+          <button type="button" className="hr-settings-filter" onClick={addYear}>
+            เพิ่มปีใหม่
+          </button>
+        </div>
+
+        <div className="hr-holiday-add">
+          <input
+            type="date"
+            value={holidayDate}
+            onChange={(event) => setHolidayDate(event.target.value)}
+            className="hr-shift-control hr-holiday-add__date"
+          />
+          <input
+            type="text"
+            value={holidayTitle}
+            onChange={(event) => setHolidayTitle(event.target.value)}
+            placeholder="ชื่อวันหยุด"
+            className="hr-shift-control hr-holiday-add__title"
+          />
+          <HrCustomSelect
+            value={holidayType}
+            options={[
+              { value: 'company', label: 'วันหยุดบริษัท' },
+              { value: 'public', label: 'วันหยุดราชการ' },
+              { value: 'branch', label: 'วันหยุดเฉพาะสาขา' },
+            ]}
+            onChange={(value) => setHolidayType(value as HolidayEntry['type'])}
+            label="ประเภทวันหยุด"
+            className="hr-holiday-type-select"
+          />
+          <button
+            type="button"
+            onClick={addHoliday}
+            className="hr-settings-primary-action"
+            style={{ backgroundColor: accent }}
+          >
+            <PlusIcon className="h-4 w-4" />
+            เพิ่มวันหยุด
+          </button>
+        </div>
+      </div>
+
+      <div className="hr-holiday-summary">
+        <span>{holidays.length} วันหยุดในปี {year + 543}</span>
+        <span>เลือกเดือนหรือวันที่ แล้วเพิ่มวันหยุดลงในปฏิทินปีนี้ได้ทันที</span>
+      </div>
+
+      <div className="hr-holiday-calendar">
+        {MONTHS_TH.map((month, monthIndex) => {
+          const monthHolidays = holidays
+            .filter((holiday) => Number(holiday.date.slice(5, 7)) === monthIndex + 1)
+            .sort((a, b) => a.date.localeCompare(b.date));
+
+          return (
+          <section key={month} className="hr-holiday-month">
+            <header className="hr-holiday-month__header">
+              <div>
+                <h3>{month}</h3>
+                <span>{monthHolidays.length ? `${monthHolidays.length} วันหยุด` : 'ยังไม่มีวันหยุด'}</span>
+              </div>
+              <button
+                type="button"
+                className="hr-holiday-month__add"
+                onClick={() => selectMonth(monthIndex)}
+                aria-label={`เพิ่มวันหยุดเดือน${month}`}
+              >
+                <PlusIcon className="h-4 w-4" />
+              </button>
+            </header>
+            {monthHolidays.length ? (
+              <div className="hr-holiday-list">
+                {monthHolidays.map((holiday) => {
+                  const meta = getHolidayDayMeta(holiday.date);
+                  const selected = holidayDate === holiday.date;
+                  return (
+                    <button
+                      key={`${holiday.date}-${holiday.title}`}
+                      type="button"
+                      className={`hr-holiday-row ${selected ? 'hr-holiday-row--selected' : ''}`}
+                      onClick={() => selectDate(holiday.date)}
+                      style={selected ? { borderColor: accent, boxShadow: `inset 0 0 0 1px ${accent}` } : undefined}
+                    >
+                      <span className="hr-holiday-date-badge">
+                        <b>{meta.day}</b>
+                        <span>{meta.weekday}</span>
+                      </span>
+                      <span className="hr-holiday-row__content">
+                        <span className="hr-holiday-row__title">{holiday.title}</span>
+                        <span className={`hr-holiday-chip hr-holiday-chip--${holiday.type}`}>
+                          {holiday.type === 'public' ? 'วันหยุดราชการ' : holiday.type === 'company' ? 'วันหยุดบริษัท' : 'เฉพาะสาขา'}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <button type="button" className="hr-holiday-empty-month" onClick={() => selectMonth(monthIndex)}>
+                <PlusIcon className="h-4 w-4" />
+                เพิ่มวันหยุดเดือนนี้
+              </button>
+            )}
+          </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -1335,21 +1609,20 @@ function TimePolicyCard({
   title,
   description,
   value,
-  accent,
 }: {
   title: string;
   description: string;
   value: string;
-  accent: string;
+  accent?: string;
 }) {
   return (
     <section className="rounded-lg border border-gray-200 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-gray-950">{title}</h3>
-          <p className="mt-1 text-xs leading-5 text-gray-500">{description}</p>
+          <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+          <p className="mt-1 text-xs leading-5 text-gray-400">{description}</p>
         </div>
-        <span className="rounded-full px-2 py-1 text-[10px] font-medium text-white" style={{ backgroundColor: accent }}>
+        <span className="shrink-0 rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
           {value}
         </span>
       </div>
@@ -1360,36 +1633,23 @@ function TimePolicyCard({
 function getTimeSettingsView(activeItem: HrNavChild) {
   const path = activeItem.path;
 
+  // สถานที่และวิธีลงเวลา — ตารางรวมทุกอุปกรณ์ (แยกตามอุปกรณ์อยู่ใน modal สร้าง)
   if (path.includes('attendance-locations') || path.includes('devices') || path.includes('gps') || path.includes('network')) {
     return {
-      actionLabel: 'เพิ่มสถานที่',
-      filters: ['บริษัท', 'วิธีลงเวลา', 'ใช้งาน'],
+      actionLabel: 'เพิ่มสถานที่เวิร์กอิน',
+      filters: ['บริษัท', 'ประเภทอุปกรณ์', 'ใช้งาน'],
       policies: [
-        { title: 'GPS / Wi-Fi / IP', description: 'กำหนดขอบเขตที่อนุญาตให้ลงเวลาแยกตามสาขาหรือทีม', value: '3 วิธี' },
-        { title: 'Face Recognition', description: 'เปิดใช้การยืนยันตัวตนสำหรับจุดที่ต้องการความแม่นยำสูง', value: 'พร้อม' },
+        { title: 'GPS',             description: 'ลงเวลาด้วยตำแหน่งที่ตั้ง (พิกัด + รัศมี)',          value: 'พร้อม' },
+        { title: 'IOMO (สแกนหน้า)', description: 'ลงเวลาด้วยเครื่องสแกนใบหน้าความแม่นยำสูง',          value: 'พร้อม' },
+        { title: 'QR Code Station', description: 'ลงเวลาด้วยการสแกน QR Code ที่จุดสแกน',                value: 'พร้อม' },
       ],
-      headers: ['สถานที่', 'วิธีลงเวลา', 'ขอบเขต', 'ผู้ใช้งาน', 'สถานะ'],
+      headers: ['ชื่อสถานที่เวิร์กอิน', 'รายละเอียด', 'อัปเดตล่าสุด', 'สถานะ'],
       rows: [
-        ['สำนักงานใหญ่', 'GPS + Wi-Fi', 'รัศมี 100 เมตร', 'พนักงานออฟฟิศ', 'ใช้งาน'],
-        ['คลังสินค้า', 'เครื่องสแกน', 'Device A-01', 'Operations', 'ใช้งาน'],
-        ['ทีมขายภาคสนาม', 'GPS', 'รัศมี 300 เมตร', 'ฝ่ายขาย', 'ใช้งาน'],
-      ],
-    };
-  }
-
-  if (path.includes('leave')) {
-    return {
-      actionLabel: 'เพิ่มประเภทลา',
-      filters: ['บริษัท', 'ประเภทลา', 'ใช้งาน'],
-      policies: [
-        { title: 'โควตาตามอายุงาน', description: 'กำหนดสิทธิ์วันลาตามประเภทพนักงาน อายุงาน และบริษัท', value: 'เปิด' },
-        { title: 'ยกยอดวันลา', description: 'รองรับวันลาพักร้อนสะสม หมดอายุ และวันลาติดลบ', value: 'กำหนดได้' },
-      ],
-      headers: ['ประเภทลา', 'สิทธิ์ต่อปี', 'ต้องแนบเอกสาร', 'ต้องอนุมัติ', 'สถานะ'],
-      rows: [
-        ['ลาป่วย', '30 วัน', 'เมื่อเกิน 3 วัน', 'หัวหน้างาน', 'ใช้งาน'],
-        ['ลากิจ', '6 วัน', 'ไม่บังคับ', 'หัวหน้างาน', 'ใช้งาน'],
-        ['ลาพักร้อน', '6 วันขึ้นไป', 'ไม่บังคับ', 'หัวหน้างาน', 'ใช้งาน'],
+        ['สำนักงานใหญ่ กรุงเทพ', 'GPS · รัศมี 150 เมตร\nพนักงาน 24 คน', 'เมื่อ 5 นาทีก่อน • 17/06/2569 09:48', 'ใช้งาน'],
+        ['IOMO Lobby ชั้น 1', 'IOMO · IOMO-BKK-001\nพนักงาน 18 คน', 'เมื่อ 5 นาทีก่อน • 17/06/2569 09:48', 'ใช้งาน'],
+        ['ทางเข้าหลัก สำนักงาน', 'QR Code Station · QR-MAIN\nพนักงาน 8 คน', 'เมื่อ 5 นาทีก่อน • 17/06/2569 09:48', 'ใช้งาน'],
+        ['สาขาเชียงใหม่', 'GPS · รัศมี 200 เมตร\nพนักงาน 12 คน', 'เมื่อ 1 วันก่อน • 16/06/2569 14:22', 'ใช้งาน'],
+        ['Warehouse Gate', 'QR Code Station · QR-WH-01\nพนักงาน 0 คน', 'เมื่อ 1 สัปดาห์ก่อน', 'ไม่ใช้งาน'],
       ],
     };
   }
@@ -1523,34 +1783,52 @@ function FieldBox({ label, value }: { label: string; value: string }) {
 function SettingsTable({
   headers,
   rows,
-  accent,
 }: {
   headers: string[];
   rows: string[][];
-  accent: string;
+  accent?: string;
 }) {
   return (
-    <div className="mt-4 overflow-x-auto rounded-lg border border-gray-200">
-      <table className="w-full min-w-[760px] border-collapse text-sm">
+    <div className="hr-settings-table-wrap mt-4">
+      <table className="hr-settings-table">
         <thead>
-          <tr className="bg-gray-100 text-left text-xs font-medium text-gray-600">
+          <tr>
             {headers.map((header) => (
-              <th key={header} className="px-4 py-3">{header}</th>
+              <th key={header}>{header}</th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody>
           {rows.map((row) => (
-            <tr key={row.join('-')} className="transition hover:bg-gray-50">
-              {row.map((cell, index) => (
-                <td key={`${cell}-${index}`} className="px-4 py-4 font-normal text-gray-800">
-                  {index === row.length - 1 && cell === 'ใช้งาน' ? (
-                    <span className="rounded-full px-3 py-1 text-xs font-medium text-white" style={{ backgroundColor: accent }}>
-                      {cell}
-                    </span>
-                  ) : cell}
-                </td>
-              ))}
+            <tr key={row.join('-')}>
+              {row.map((cell, index) => {
+                const lines = cell.split('\n');
+                const isStatusCell = index === row.length - 1;
+                const disabled = cell.startsWith('ไม่');
+
+                return (
+                  <td key={`${cell}-${index}`}>
+                    {isStatusCell ? (
+                      <span
+                        className={`hr-settings-status ${
+                          disabled ? 'hr-settings-status--disabled' : 'hr-settings-status--enabled'
+                        }`}
+                      >
+                        {cell}
+                      </span>
+                    ) : lines.length > 1 ? (
+                      <span className="block">
+                        <span className="hr-settings-table__primary block">{lines[0]}</span>
+                        <span className="hr-settings-table__secondary mt-1 block">{lines.slice(1).join(' ')}</span>
+                      </span>
+                    ) : index === 0 ? (
+                      <span className="hr-settings-table__primary">{cell}</span>
+                    ) : (
+                      <span className="hr-settings-table__detail">{cell}</span>
+                    )}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>
@@ -1699,7 +1977,7 @@ function getProgress(progress: string) {
 }
 
 function getFallbackTabs(groupKey: GroupKey) {
-  if (groupKey === 'time') return ['กะทำงาน', 'เทมเพลตกะ'];
+  if (groupKey === 'time') return [];
   if (groupKey === 'payroll') return ['ล่วงเวลา', 'สาย', 'ขาดงาน', 'ลืมลงเวลา'];
   if (groupKey === 'system') return ['ข้อมูลผู้ใช้', 'บทบาท', 'กลุ่ม', 'สิทธิ์การทำเงินเดือน'];
   return ['ทั่วไป', 'ปรับแต่งหน้าเข้าสู่ระบบ', 'ความปลอดภัยและความเป็นส่วนตัว'];

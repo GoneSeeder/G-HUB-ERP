@@ -79,7 +79,7 @@ const appHrefByCode: Record<string, string | undefined> = {
   'information-name-list': '/information/name-list',
   'information-lecture-room': '/information/lecture-room',
   'information-report': '/information/report',
-  humansource: '/humansource/dashboard',
+  humansource: '/humansource/home',
 };
 
 const appMetaByCode: Record<string, HubAppMeta> = {

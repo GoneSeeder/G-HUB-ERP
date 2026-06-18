@@ -287,6 +287,8 @@ export function HrShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     closeSubmenu(true);
+    // closeSubmenu reads transient animation state; route/pin changes are the intended triggers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, pinned]);
 
   useEffect(() => {
@@ -349,12 +351,14 @@ export function HrShell({ children }: { children: ReactNode }) {
   const userSub = me?.username ?? me?.sub ?? '';
   const ThemeIcon = theme === 'dark' ? MoonIcon : SunIcon;
   const settingsItem = NAV.find((item) => item.key === 'settings');
+  const isHolidayCalendarPage = pathname.includes('/humansource/time/holiday-calendar');
+  const visibleNav = NAV.filter((item) => !isHolidayCalendarPage || item.key !== 'dashboard');
   const settingsActive =
     pathname.startsWith('/humansource/settings') ||
     SETTINGS_PATHS.some((path) => pathname.startsWith(path));
 
   return (
-    <div className={cn('hr-shell relative h-screen overflow-hidden bg-gray-50', theme === 'dark' && 'hr-theme-dark')}>
+    <div className={cn('hr-shell hr-page relative h-screen overflow-hidden', theme === 'dark' && 'hr-theme-dark')}>
       <aside
         onMouseEnter={onEnter}
         onMouseLeave={onLeave}
@@ -403,7 +407,7 @@ export function HrShell({ children }: { children: ReactNode }) {
 
         {/* Nav items */}
         <div className="hr-nav-scroll flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden py-3">
-          {NAV.filter((item) => item.key !== 'settings').map((item) => {
+          {visibleNav.filter((item) => item.key !== 'settings').map((item) => {
             const Icon = item.icon;
             const activeByPath = item.path
               ? pathname === item.path || (item.key === 'home' && pathname === '/humansource')

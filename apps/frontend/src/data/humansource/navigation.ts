@@ -48,124 +48,27 @@ export const hrNavigation: HrNavigationItem[] = [
   },
   {
     key: 'organization',
-    label: 'ข้อมูลพนักงาน',
+    label: 'พนักงาน',
+    description: 'ข้อมูลพนักงานขององค์กร',
     color: '#0ea5e9',
     icon: 'organization',
-    sections: [
-      {
-        label: 'ทะเบียนพนักงาน',
-        items: [
-          { label: 'ข้อมูลพนักงาน', path: '/humansource/organization/employees', description: 'ประวัติ สถานะ และข้อมูลการจ้างงาน' },
-          { label: 'การโยกย้ายและประวัติงาน', path: '/humansource/organization/movements', description: 'ย้ายบริษัท สาขา หน่วยงาน หรือตำแหน่ง' },
-          { label: 'เอกสารพนักงาน', path: '/humansource/organization/documents', description: 'สัญญา เอกสารส่วนบุคคล และวันหมดอายุ' },
-        ],
-      },
-    ],
-  },
-  {
-    key: 'time',
-    label: 'เวลาและการลา',
-    color: '#14b8a6',
-    icon: 'time',
-    sections: [
-      {
-        label: 'งานประจำวัน',
-        items: [
-          { label: 'ภาพรวมการลงเวลา', path: '/humansource/time/attendance', description: 'เวลาเข้าออก สาย ขาด และสถานะวันนี้' },
-          { label: 'ตารางงานของทีม', path: '/humansource/time/team-schedule', description: 'จัดและตรวจสอบตารางงานพนักงาน' },
-          { label: 'แก้ไขเวลาทำงาน', path: '/humansource/time/time-adjustments', description: 'ตรวจคำขอและอนุมัติการแก้ไขเวลา' },
-        ],
-      },
-      {
-        label: 'คำขอและการอนุมัติ',
-        items: [
-          { label: 'คำขอลา', path: '/humansource/time/leave-requests', description: 'ตรวจสิทธิ์และอนุมัติคำขอลา' },
-          { label: 'คำขอล่วงเวลา', path: '/humansource/time/overtime-requests', description: 'ตรวจและอนุมัติรายการ OT' },
-        ],
-      },
-    ],
+    path: '/humansource/organization/employees',
   },
   {
     key: 'payroll',
     label: 'เงินเดือน',
+    description: 'อยู่ในระหว่างพัฒนา',
     color: '#10b981',
     icon: 'payroll',
-    sections: [
-      {
-        label: 'ประมวลผลเงินเดือน',
-        items: [
-          { label: 'เตรียมและคำนวณเงินเดือน', path: '/humansource/payroll/calculation', description: 'ตรวจเวลา รายการปรับ และคำนวณ Payroll' },
-          { label: 'ปรับเงินเดือนและย้อนหลัง', path: '/humansource/payroll/salary-adjustment', description: 'บันทึกการปรับค่าจ้างและรายการย้อนหลัง' },
-          { label: 'จ่ายเงินและสลิป', path: '/humansource/payroll/payment-payslips', description: 'ไฟล์ธนาคาร สลิป และสถานะการจ่าย' },
-        ],
-      },
-    ],
-  },
-  {
-    key: 'recruitment',
-    label: 'สรรหาและเริ่มงาน',
-    color: '#8b5cf6',
-    icon: 'recruitment',
-    sections: [
-      {
-        label: 'สรรหาพนักงาน',
-        items: [
-          { label: 'คำขอเปิดตำแหน่ง', path: '/humansource/recruitment/requisitions', description: 'ขออนุมัติอัตราและงบประมาณ' },
-          { label: 'ประกาศรับสมัครงาน', path: '/humansource/recruitment/job-posting', description: 'จัดการตำแหน่งและช่องทางประกาศงาน' },
-          { label: 'ผู้สมัครและ Talent pool', path: '/humansource/recruitment/applicants', description: 'ติดตาม Pipeline และฐานผู้สมัคร' },
-          { label: 'สัมภาษณ์และข้อเสนอ', path: '/humansource/recruitment/interview', description: 'นัดสัมภาษณ์ คะแนน และ Offer' },
-        ],
-      },
-      {
-        label: 'เริ่มงาน',
-        items: [
-          { label: 'Onboarding', path: '/humansource/recruitment/onboarding', description: 'Checklist เอกสาร บัญชี และอุปกรณ์' },
-          { label: 'ติดตามทดลองงาน', path: '/humansource/recruitment/probation', description: 'วันครบกำหนดและผลประเมินทดลองงาน' },
-        ],
-      },
-    ],
-  },
-  {
-    key: 'performance',
-    label: 'ผลงานและพัฒนา',
-    color: '#f59e0b',
-    icon: 'performance',
-    sections: [
-      {
-        label: 'บริหารผลงาน',
-        items: [
-          { label: 'รอบการประเมิน', path: '/humansource/performance/review-cycle', description: 'ติดตามสถานะการประเมินแต่ละรอบ' },
-          { label: 'KPI และเป้าหมาย', path: '/humansource/performance/individual-kpi', description: 'เป้าหมายองค์กร ทีม และรายบุคคล' },
-          { label: 'ผลประเมิน', path: '/humansource/performance/results', description: 'สรุปผลและปรับเทียบคะแนน' },
-        ],
-      },
-      {
-        label: 'พัฒนาพนักงาน',
-        items: [
-          { label: 'ฝึกอบรม', path: '/humansource/performance/training', description: 'หลักสูตร แผนอบรม และประวัติการเรียนรู้' },
-          { label: 'แผนพัฒนา', path: '/humansource/performance/development', description: 'Skill gap และแผนพัฒนารายบุคคล' },
-        ],
-      },
-    ],
+    path: '/humansource/payroll',
   },
   {
     key: 'reports',
     label: 'รายงาน',
+    description: 'อยู่ในระหว่างพัฒนา',
     color: '#ef4444',
     icon: 'reports',
-    sections: [
-      {
-        label: 'รายงาน HR',
-        items: [
-          { label: 'ประวัติและกำลังคน', path: '/humansource/reports/employee-history', description: 'ทะเบียนพนักงานและความเคลื่อนไหว' },
-          { label: 'เวลาและการลา', path: '/humansource/reports/work-time', description: 'เวลา OT ขาดลา และสิทธิ์คงเหลือ' },
-          { label: 'เงินเดือนและต้นทุน', path: '/humansource/reports/payroll-calculation', description: 'Payroll รายได้ รายหัก และต้นทุน' },
-          { label: 'ภาษีและประกันสังคม', path: '/humansource/reports/tax', description: 'รายงานนำส่งและตรวจสอบข้อมูล' },
-          { label: 'ผลงานและการพัฒนา', path: '/humansource/reports/performance', description: 'ผลประเมิน KPI และการอบรม' },
-          { label: 'Custom Report', path: '/humansource/reports/custom', description: 'สร้างรายงานตามเงื่อนไของค์กร' },
-        ],
-      },
-    ],
+    path: '/humansource/reports',
   },
   {
     key: 'settings',
@@ -271,8 +174,13 @@ export const hrSettingsGroups: HrSettingsGroup[] = [
     title: 'ตั้งค่าเวลาการทำงาน',
     description: 'รูปแบบเวลาทำงาน กะ วิธีลงเวลา และนโยบายการลา',
     color: '#2563eb',
-    progress: '3 / 3 พร้อมใช้งาน',
+    progress: '4 / 4 พร้อมใช้งาน',
     items: [
+      {
+        label: 'การตั้งค่าทั่วไป',
+        path: '/humansource/time/general',
+        description: 'กะ/วันหยุดพื้นฐาน ป้องกันสแกนซ้ำ และนโยบายเมื่อสแกนไม่ครบ',
+      },
       {
         label: 'ตั้งค่ากะ',
         path: '/humansource/time/work-schedules',
@@ -281,12 +189,12 @@ export const hrSettingsGroups: HrSettingsGroup[] = [
       {
         label: 'สถานที่และวิธีลงเวลา',
         path: '/humansource/time/attendance-locations',
-        description: 'เครื่องสแกน แอป พิกัด และเครือข่าย',
-        children: [
-          { label: 'เครื่องสแกนและ Device', path: '/humansource/time/devices', description: 'ผูกอุปกรณ์และรหัสเครื่อง' },
-          { label: 'พิกัด GPS', path: '/humansource/time/gps-locations', description: 'รัศมีที่อนุญาตให้ลงเวลา' },
-          { label: 'Wi-Fi และ IP', path: '/humansource/time/network-rules', description: 'เงื่อนไขเครือข่ายที่อนุญาต' },
-        ],
+        description: 'ลงทะเบียนสถานที่และวิธีลงเวลาเข้าทำงาน แยกตามประเภทอุปกรณ์ในขั้นตอนสร้าง',
+      },
+      {
+        label: 'ปฏิทินวันหยุด',
+        path: '/humansource/time/holiday-calendar',
+        description: 'ปฏิทินวันหยุดประจำปี วันหยุดบริษัท และวันหยุดเฉพาะสาขา',
       },
       {
         label: 'ตั้งค่าการลา',
@@ -385,3 +293,4 @@ export const allHrNavigationItems = [
     description: 'จัดการรหัสผ่านสำหรับเข้าใช้งาน G-HUB',
   },
 ];
+
