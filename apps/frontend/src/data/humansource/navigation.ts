@@ -200,11 +200,6 @@ export const hrSettingsGroups: HrSettingsGroup[] = [
         label: 'ตั้งค่าการลา',
         path: '/humansource/time/leave-types',
         description: 'ประเภทการลา นโยบายสิทธิ์ โควตา และการอนุมัติ',
-        children: [
-          { label: 'ประเภทการลา', path: '/humansource/time/leave-types', description: 'ลาป่วย ลากิจ ลาพักร้อน และลาอื่น ๆ' },
-          { label: 'นโยบายและโควตาการลา', path: '/humansource/time/leave-policies', description: 'สิทธิ์ตามอายุงานและกลุ่มพนักงาน' },
-          { label: 'รอบสะสมและยกยอด', path: '/humansource/time/leave-carry-over', description: 'เงื่อนไขสะสมสิทธิ์ ยกยอด และหมดอายุ' },
-        ],
       },
     ],
   },

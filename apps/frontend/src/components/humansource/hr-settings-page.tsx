@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { type CSSProperties, type FormEvent, useEffect, useRef, useState } from 'react';
 import {
   hrSettingsGroups,
@@ -14,6 +14,7 @@ import { HolidayYearCalendar as HolidayYearCalendarCrud } from './hr-holiday-yea
 import { CUSTOM_SHIFTS_STORAGE_KEY, type HrShiftGroupKey, type HrShiftRow } from './hr-shifts';
 import { AddWorkInLocationModal } from './hr-workin-modal';
 import { TimeGeneralSettings } from './hr-time-general';
+import { LeaveSettings } from './hr-leave-settings';
 
 type GroupKey = HrSettingsGroup['key'];
 
@@ -142,10 +143,13 @@ function getAccentVars(accent: string): CSSProperties {
   } as CSSProperties;
 }
 
-export function HrSettingsPage() {
+export function HrSettingsPage({ activePathOverride }: { activePathOverride?: string }) {
   const pathname = usePathname();
   const router = useRouter();
-  const activeGroup = getActiveSettingsGroup(pathname);
+  const searchParams = useSearchParams();
+  const queryPath = searchParams.get('path');
+  const activePath = activePathOverride ?? (pathname === SETTINGS_ROOT && queryPath ? queryPath : pathname);
+  const activeGroup = getActiveSettingsGroup(activePath);
   const activeGroupOrder = activeGroup
     ? hrSettingsGroups.findIndex((group) => group.key === activeGroup.key) + 1
     : 0;
@@ -157,11 +161,11 @@ export function HrSettingsPage() {
           <FocusPage
             group={activeGroup}
             order={activeGroupOrder}
-            pathname={pathname}
-            onSelectTopic={(item) => router.push(getSettingsPath(activeGroup, item))}
+            pathname={activePath}
+            onSelectTopic={(item) => router.push(getSettingsRouteHref(getSettingsPath(activeGroup, item)))}
           />
         ) : (
-          <SetupCards onOpenGroup={(group) => router.push(getSettingsPath(group, group.items[0]))} />
+          <SetupCards onOpenGroup={(group) => router.push(getSettingsRouteHref(getSettingsPath(group, group.items[0])))} />
         )}
       </div>
     </div>
@@ -274,7 +278,11 @@ function FocusPage({
   const activeTopicIndex = Math.max(0, group.items.findIndex((item) => item.path === activeTopic.path));
   const activeItem = getActiveSettingsItem(group, pathname);
   const activePath = normalizePath(pathname);
-  const showTabs = activeTopic.path !== '/humansource/time/work-schedules';
+  const hideAutoTabsPaths = [
+    '/humansource/time/work-schedules',
+    '/humansource/time/leave-types',
+  ];
+  const showTabs = !hideAutoTabsPaths.includes(activeTopic.path);
   const tabs: Array<{ label: string; path?: string }> = activeTopic.children?.length
     ? activeTopic.children.slice(0, 6).map((child) => ({
         label: child.label,
@@ -354,7 +362,7 @@ function FocusPage({
                   return (
                     <Link
                       key={tab.path ?? tab.label}
-                      href={tab.path ?? getSettingsPath(group, activeTopic)}
+                      href={getSettingsRouteHref(tab.path ?? getSettingsPath(group, activeTopic))}
                       className={`hr-settings-focus__tab -mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
                         tabActive ? 'hr-settings-focus__tab--active' : 'border-transparent text-gray-500 hover:text-gray-700'
                       }`}
@@ -413,41 +421,34 @@ function OrganizationSettings({ topic, accent }: { topic: HrNavChild; accent: st
   ];
 
   return (
-    <div className="space-y-4 p-5">
+    <div className="divide-y divide-gray-100 px-6 py-1">
       {cards.map((card, index) => (
-        <section key={card[0]} className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex min-w-0 gap-3">
-              <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-sm font-semibold text-white" style={{ backgroundColor: accent }}>
-                {index + 1}
-              </span>
-              <div className="min-w-0">
-                <h3 className="text-sm font-semibold text-gray-950">{card[0]}</h3>
-                <p className="mt-1 text-xs text-gray-500">{index === 0 ? topic.description : card[1]}</p>
+        <div key={card[0]} className="flex flex-wrap items-start justify-between gap-4 py-5">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-gray-800">{card[0]}</h3>
+            <p className="mt-0.5 max-w-xl text-xs leading-5 text-gray-500">{index === 0 ? topic.description : card[1]}</p>
+            {index === 1 ? (
+              <div className="mt-3 divide-y divide-gray-100">
+                {['รูปแบบการยืนยันตัวตน', 'เปิดใช้งานรายงานประจำวัน', 'ได้รับเหรียญเมื่อทำรายงาน', 'เปิดใช้งาน emoji'].map((label, rowIndex) => (
+                  <div key={label} className="flex items-center justify-between py-2">
+                    <span className="text-xs text-gray-600">{label}</span>
+                    <span className="text-[11px] font-medium" style={{ color: rowIndex > 1 ? accent : undefined }}>
+                      {rowIndex > 1 ? 'ปลดล็อก' : rowIndex === 0 ? 'ไม่ยืนยันตัวตน' : 'เปิด'}
+                    </span>
+                  </div>
+                ))}
               </div>
-            </div>
-            <button
-              type="button"
-              aria-pressed={index !== 2}
-              className={`relative h-6 w-11 rounded-full transition ${index !== 2 ? '' : 'bg-gray-200'}`}
-              style={index !== 2 ? { backgroundColor: accent } : undefined}
-            >
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition ${index !== 2 ? 'right-0.5' : 'left-0.5'}`} />
-            </button>
+            ) : null}
           </div>
-          {index === 1 ? (
-            <div className="mt-4 grid gap-3 border-t border-gray-100 pt-4 sm:grid-cols-2">
-              {['รูปแบบการยืนยันตัวตน', 'เปิดใช้งานรายงานประจำวัน', 'ได้รับเหรียญเมื่อทำรายงาน', 'เปิดใช้งาน emoji'].map((label, rowIndex) => (
-                <div key={label} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-3">
-                  <span className="text-xs font-medium text-gray-700">{label}</span>
-                  <span className="text-[11px] font-medium" style={{ color: rowIndex > 1 ? accent : undefined }}>
-                    {rowIndex > 1 ? 'ปลดล็อก' : rowIndex === 0 ? 'ไม่ยืนยันตัวตน' : 'เปิด'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </section>
+          <button
+            type="button"
+            aria-pressed={index !== 2}
+            className="relative h-6 w-11 flex-shrink-0 rounded-full transition"
+            style={{ backgroundColor: index !== 2 ? accent : '#e2e8f0' }}
+          >
+            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition ${index !== 2 ? 'right-0.5' : 'left-0.5'}`} />
+          </button>
+        </div>
       ))}
     </div>
   );
@@ -477,15 +478,7 @@ function TimeSettingsTable({
   }
 
   if (activeItem.path.includes('leave')) {
-    // Old leave UI removed — replaced in Phase 2+ by hr-leave-settings.tsx.
-    return (
-      <div className="p-5">
-        <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
-          <p className="text-sm font-medium text-gray-600">ตั้งค่าการลา</p>
-          <p className="mt-1 text-xs text-gray-400">กำลังพัฒนาในเฟสถัดไป</p>
-        </div>
-      </div>
-    );
+    return <LeaveSettings accent={accent} />;
   }
 
   const view = getTimeSettingsView(activeItem);
@@ -1616,17 +1609,17 @@ function TimePolicyCard({
   accent?: string;
 }) {
   return (
-    <section className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
-          <p className="mt-1 text-xs leading-5 text-gray-400">{description}</p>
+          <h3 className="text-[13px] font-medium text-gray-800">{title}</h3>
+          <p className="mt-0.5 text-xs leading-5 text-gray-500">{description}</p>
         </div>
-        <span className="shrink-0 rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
+        <span className="shrink-0 rounded bg-white px-1.5 py-0.5 text-[10px] font-medium text-gray-600 shadow-sm">
           {value}
         </span>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -1837,6 +1830,11 @@ function SettingsTable({
   );
 }
 
+
+function countSettingsItems(items: HrNavChild[]): number {
+  return items.reduce((total, item) => total + 1 + (item.children ? countSettingsItems(item.children) : 0), 0);
+}
+
 function CardIllustration({ groupKey }: { groupKey: GroupKey }) {
   if (groupKey === 'company') {
     return (
@@ -1945,6 +1943,10 @@ function getSettingsPath(group: HrSettingsGroup, item: HrNavChild): string {
   return normalizePath([SETTINGS_ROOT, group.key, sourceSection, ...rest].filter(Boolean).join('/'));
 }
 
+function getSettingsRouteHref(path: string): string {
+  return `${SETTINGS_ROOT}?path=${encodeURIComponent(normalizePath(path))}`;
+}
+
 function getSettingsParts(pathname: string): string[] {
   const cleanPath = normalizePath(pathname);
   if (cleanPath === SETTINGS_ROOT || cleanPath === `${SETTINGS_ROOT}/setup-center`) return [];
@@ -1961,9 +1963,6 @@ function normalizePath(path: string): string {
   return clean.length > 1 ? clean.replace(/\/+$/, '') : clean;
 }
 
-function countSettingsItems(items: HrNavChild[]): number {
-  return items.reduce((total, item) => total + 1 + (item.children ? countSettingsItems(item.children) : 0), 0);
-}
 
 function getProgress(progress: string) {
   const match = progress.match(/(\d+)\s*\/\s*(\d+)/);

@@ -80,7 +80,6 @@ export function TimeGeneralSettings({ accent }: { accent: string }) {
       {/* Section 1 — Weekly calendar */}
       <section className="hr-time-section">
         <header className="hr-time-section__header">
-          <span className="hr-time-section__number" style={{ backgroundColor: accent }}>1</span>
           <div>
             <h3 className="hr-time-section__title">ตั้งค่ากะการทำงาน / วันหยุด</h3>
             <p className="hr-time-section__description">
@@ -146,7 +145,6 @@ export function TimeGeneralSettings({ accent }: { accent: string }) {
       {/* Section 2 — Duplicate scan prevention */}
       <section className="hr-time-section">
         <header className="hr-time-section__header">
-          <span className="hr-time-section__number" style={{ backgroundColor: accent }}>2</span>
           <div>
             <h3 className="hr-time-section__title">ป้องกันการบันทึกเวลาซ้ำ</h3>
             <p className="hr-time-section__description">
@@ -185,7 +183,6 @@ export function TimeGeneralSettings({ accent }: { accent: string }) {
       {/* Section 3 — Partial scan policy */}
       <section className="hr-time-section">
         <header className="hr-time-section__header">
-          <span className="hr-time-section__number" style={{ backgroundColor: accent }}>3</span>
           <div>
             <h3 className="hr-time-section__title">ถ้าสแกนนิ้วไม่ครบ</h3>
             <p className="hr-time-section__description">

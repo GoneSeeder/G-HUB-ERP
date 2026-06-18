@@ -15,7 +15,7 @@ This keeps the route tree readable like `information`, while still avoiding huge
 
 ## Explicit Routes Added
 
-The active HR routes now have explicit folders:
+Only currently approved/active HR routes should have explicit folders:
 
 - `/humansource/home`
   - `app/(protected)/humansource/home/page.tsx`
@@ -36,13 +36,17 @@ The active HR routes now have explicit folders:
   - `app/(protected)/humansource/reports/page.tsx`
   - UI: `components/humansource/hr-under-development-page.tsx`
 
-## Legacy Fallback
+## Legacy Fallback Removed
 
-`app/(protected)/humansource/[[...slug]]/page.tsx` still exists.
+`app/(protected)/humansource/[[...slug]]/page.tsx` has been removed.
 
-Keep it temporarily as a fallback for older/generic HR paths that have not been split yet, such as some dashboard, organization setup, and settings detail routes.
+Do not recreate a catch-all HR route. Phase 2 should add explicit route folders only when that page is actually approved/used.
 
-Do not add new UI into this file. For phase 2, migrate remaining sections out gradually into `components/humansource/` and add explicit route folders.
+Do not generate route folders just because a path exists in config.
+
+Shared dashboard UI was moved into:
+
+- `components/humansource/hr-dashboard-page.tsx`
 
 ## Sidebar State
 
@@ -81,4 +85,4 @@ Validated after refactor:
 - `npm run lint`
 - `npm run build`
 
-Build confirmed explicit HR routes and no conflict with `[[...slug]]`.
+Build confirmed the approved explicit HR routes and confirmed `[[...slug]]` is no longer present.
