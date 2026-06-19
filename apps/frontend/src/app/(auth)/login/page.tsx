@@ -15,6 +15,12 @@ const API_URL = getApiBaseUrl();
 const LOGIN_TRANSITION_MS = 1700;
 const HUB_LOADING_GRACE_MS = 2000;
 
+function wait(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
 interface LoginResponse {
   accessToken: string;
 }
@@ -108,12 +114,14 @@ export default function LoginPage() {
         setShowHubLoading(true);
       }, LOGIN_TRANSITION_MS + HUB_LOADING_GRACE_MS);
 
+      const transitionReady = wait(LOGIN_TRANSITION_MS);
       const hubDataReady = Promise.all([
         queryClient.prefetchQuery(queryOptions.me),
         queryClient.prefetchQuery(queryOptions.apps),
       ]);
 
       await hubDataReady;
+      await transitionReady;
       if (hubLoadingTimer) {
         window.clearTimeout(hubLoadingTimer);
       }
