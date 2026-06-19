@@ -120,19 +120,27 @@ useMemo dep) is known and tolerated; new warnings are not.
   create modal. Complete.
 - **Attendance locations** (work-in modal) — complete.
 - **Time general (2.1)** — complete.
-- **Leave settings (2.5)** — Phases 1–3 done:
+- **Leave settings (2.5)** — Phases 1–4 + 7 done (all tabs functional):
   - Phase 1: data model + statutory seed (7 leave types).
-  - Phase 2: nav + routing hook + explicit route file.
+  - Phase 2: nav + routing hook (rendered via `LeaveSettings` branch in `TimeSettingsTable`).
   - Phase 3: list view + fullscreen modal + Tab 1 (Rules) functional.
-    Tabs 2 (สิทธิ์การลา) and 3 (เงื่อนไขการอนุมัติ) are placeholders.
-- **Approval workflows (system group)** — data model only (`data/humansource/approval-workflows.ts`).
-  UI not started.
+  - Phase 4: Tab 2 (สิทธิ์การลา) — eligibility (gender/probation/tenure, `MultiCheckSelect`
+    for positions/departments, `ChipTextInput` for per-person) + quota (fixed / tenure-tier
+    editable table / unlimited / medical) + per-employee-type override + prorate + cutoff.
+  - Phase 7: Tab 3 (เงื่อนไขการอนุมัติ) — reads `leave` doc-config summary via
+    `describeApproval`, toggle use-default vs override, override step selector, link to
+    approval-workflows page.
+- **Approval workflows (system group, `hr-approval-workflows.tsx`)** — Phases 5–6 done:
+  - Page 1 (ลำดับขั้นการอนุมัติ): per-doc-type mechanism + step segmented controls, persisted.
+  - Page 2 (ผู้อนุมัติรายบุคคล): employee → approver table with `HrCustomSelect`, search,
+    disabled .xlsx import placeholder, persisted.
+  - Rendered via `ApprovalWorkflowSettings` branch in `SettingsWorkbench` (path includes
+    `approval-workflows`).
 
-**Next phases in `LEAVE_SETTINGS_PLAN.md`:**
-- Phase 4: Tab 2 — eligibility + quota (tenure-tier table + per-employee-type).
-- Phase 5: Approval workflows page 1 (doc-type config).
-- Phase 6: Approval workflows page 2 (person → approver map).
-- Phase 7: Tab 3 — link approval template + per-leave override.
+**`LEAVE_SETTINGS_PLAN.md` — all 7 phases complete.** localStorage keys live:
+`g-hub.hr.leave-types`, `g-hub.hr.approval-doc-configs`, `g-hub.hr.approval-person-map`.
+Out of scope (per plan §7): leave-request runtime, quota balance engine, approval chain
+traversal, real .xlsx import, backend/API.
 
 ---
 

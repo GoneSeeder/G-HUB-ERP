@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import { CalendarIcon, PlusIcon, TrashIcon, XIcon } from '@/components/ui/icons';
 import { DatePicker } from '@/components/ui/date-picker';
 import { HrCustomSelect } from './hr-ui';
@@ -28,6 +30,16 @@ type OfficialOverride = {
   deleted?: boolean;
 };
 
+type HoverTip = {
+  date: string;
+  holidays: HolidayEntry[];
+  left: number;                  // clamped card left edge (viewport px)
+  top: number;                   // card anchor top (viewport px)
+  arrowLeft: number;             // arrow x within the card, points at the cell
+  placement: 'above' | 'below';
+  pinned: boolean;
+};
+
 type HolidayCalendar = {
   id: string;
   name: string;
@@ -43,6 +55,52 @@ const CALENDARS_STORAGE_KEY = 'g-hub.hr.holiday-calendars';
 const ACTIVE_CALENDAR_STORAGE_KEY = 'g-hub.hr.holiday-active-calendar';
 
 const CALENDAR_COLORS = ['#ef4444', '#f97316', '#f59e0b', '#10b981', '#0ea5e9', '#6366f1', '#a855f7', '#ec4899'];
+
+type SeedType = 'none' | 'official' | 'private';
+
+// Thai private-sector statutory holidays (min. 13 days under Labour Protection Act).
+// Differs from government calendar: includes วันแรงงาน (May 1), excludes some public-service-only days.
+// Buddhist holidays are fixed per year; fixed-date ones repeat annually.
+const PRIVATE_SECTOR_SEED: Record<number, Omit<HolidayEntry, 'id'>[]> = {
+  2026: [
+    { date: '2026-01-01', title: 'วันขึ้นปีใหม่', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันขึ้นปีใหม่', source: 'seed' },
+    { date: '2026-03-03', title: 'วันมาฆบูชา', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันเพ็ญขึ้น 15 ค่ำ เดือน 3', source: 'seed' },
+    { date: '2026-04-06', title: 'วันจักรี', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันระลึกพระบาทสมเด็จพระพุทธยอดฟ้าจุฬาโลก', source: 'seed' },
+    { date: '2026-04-13', title: 'วันสงกรานต์ (มหาสงกรานต์)', type: 'company', country: 'TH', appliesTo: 'all', description: 'วันสงกรานต์', source: 'seed' },
+    { date: '2026-04-14', title: 'วันสงกรานต์ (วันเนา)', type: 'company', country: 'TH', appliesTo: 'all', description: 'วันสงกรานต์', source: 'seed' },
+    { date: '2026-04-15', title: 'วันสงกรานต์ (วันพระร่วง)', type: 'company', country: 'TH', appliesTo: 'all', description: 'วันสงกรานต์', source: 'seed' },
+    { date: '2026-05-01', title: 'วันแรงงานแห่งชาติ', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันหยุดนักขัตฤกษ์เฉพาะภาคเอกชนตาม พ.ร.บ. คุ้มครองแรงงาน มาตรา 29', source: 'seed' },
+    { date: '2026-05-04', title: 'วันฉัตรมงคล', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันพระราชพิธีบรมราชาภิเษก รัชกาลที่ 10', source: 'seed' },
+    { date: '2026-05-31', title: 'วันวิสาขบูชา', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันเพ็ญขึ้น 15 ค่ำ เดือน 6', source: 'seed' },
+    { date: '2026-07-28', title: 'วันเฉลิมพระชนมพรรษา รัชกาลที่ 10', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันเฉลิมพระชนมพรรษาพระบาทสมเด็จพระเจ้าอยู่หัว', source: 'seed' },
+    { date: '2026-07-30', title: 'วันอาสาฬหบูชา', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันเพ็ญขึ้น 15 ค่ำ เดือน 8', source: 'seed' },
+    { date: '2026-07-31', title: 'วันเข้าพรรษา', type: 'company', country: 'TH', appliesTo: 'all', description: 'วันแรม 1 ค่ำ เดือน 8', source: 'seed' },
+    { date: '2026-08-12', title: 'วันแม่แห่งชาติ', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันเฉลิมพระชนมพรรษา สมเด็จพระบรมราชชนนีพันปีหลวง', source: 'seed' },
+    { date: '2026-10-23', title: 'วันปิยมหาราช', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันคล้ายวันสวรรคต รัชกาลที่ 5', source: 'seed' },
+    { date: '2026-12-05', title: 'วันพ่อแห่งชาติ', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันคล้ายวันพระบรมราชสมภพ รัชกาลที่ 9', source: 'seed' },
+    { date: '2026-12-10', title: 'วันรัฐธรรมนูญ', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันพระราชทานรัฐธรรมนูญ พ.ศ. 2475', source: 'seed' },
+    { date: '2026-12-31', title: 'วันสิ้นปี', type: 'company', country: 'TH', appliesTo: 'all', description: 'วันสิ้นสุดปีปฏิทิน', source: 'seed' },
+  ],
+  2027: [
+    { date: '2027-01-01', title: 'วันขึ้นปีใหม่', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันขึ้นปีใหม่', source: 'seed' },
+    { date: '2027-02-21', title: 'วันมาฆบูชา', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันเพ็ญขึ้น 15 ค่ำ เดือน 3', source: 'seed' },
+    { date: '2027-04-06', title: 'วันจักรี', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันระลึกพระบาทสมเด็จพระพุทธยอดฟ้าจุฬาโลก', source: 'seed' },
+    { date: '2027-04-13', title: 'วันสงกรานต์ (มหาสงกรานต์)', type: 'company', country: 'TH', appliesTo: 'all', description: 'วันสงกรานต์', source: 'seed' },
+    { date: '2027-04-14', title: 'วันสงกรานต์ (วันเนา)', type: 'company', country: 'TH', appliesTo: 'all', description: 'วันสงกรานต์', source: 'seed' },
+    { date: '2027-04-15', title: 'วันสงกรานต์ (วันพระร่วง)', type: 'company', country: 'TH', appliesTo: 'all', description: 'วันสงกรานต์', source: 'seed' },
+    { date: '2027-05-01', title: 'วันแรงงานแห่งชาติ', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันหยุดนักขัตฤกษ์เฉพาะภาคเอกชนตาม พ.ร.บ. คุ้มครองแรงงาน มาตรา 29', source: 'seed' },
+    { date: '2027-05-04', title: 'วันฉัตรมงคล', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันพระราชพิธีบรมราชาภิเษก รัชกาลที่ 10', source: 'seed' },
+    { date: '2027-05-20', title: 'วันวิสาขบูชา', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันเพ็ญขึ้น 15 ค่ำ เดือน 6', source: 'seed' },
+    { date: '2027-07-19', title: 'วันอาสาฬหบูชา', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันเพ็ญขึ้น 15 ค่ำ เดือน 8', source: 'seed' },
+    { date: '2027-07-20', title: 'วันเข้าพรรษา', type: 'company', country: 'TH', appliesTo: 'all', description: 'วันแรม 1 ค่ำ เดือน 8', source: 'seed' },
+    { date: '2027-07-28', title: 'วันเฉลิมพระชนมพรรษา รัชกาลที่ 10', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันเฉลิมพระชนมพรรษาพระบาทสมเด็จพระเจ้าอยู่หัว', source: 'seed' },
+    { date: '2027-08-12', title: 'วันแม่แห่งชาติ', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันเฉลิมพระชนมพรรษา สมเด็จพระบรมราชชนนีพันปีหลวง', source: 'seed' },
+    { date: '2027-10-23', title: 'วันปิยมหาราช', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันคล้ายวันสวรรคต รัชกาลที่ 5', source: 'seed' },
+    { date: '2027-12-05', title: 'วันพ่อแห่งชาติ', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันคล้ายวันพระบรมราชสมภพ รัชกาลที่ 9', source: 'seed' },
+    { date: '2027-12-10', title: 'วันรัฐธรรมนูญ', type: 'announcement', country: 'TH', appliesTo: 'all', description: 'วันพระราชทานรัฐธรรมนูญ พ.ศ. 2475', source: 'seed' },
+    { date: '2027-12-31', title: 'วันสิ้นปี', type: 'company', country: 'TH', appliesTo: 'all', description: 'วันสิ้นสุดปีปฏิทิน', source: 'seed' },
+  ],
+};
 
 const DEFAULT_CALENDARS: HolidayCalendar[] = [
   { id: DEFAULT_CALENDAR_ID, name: 'วันหยุด', color: '#ef4444', isDefault: true },
@@ -148,7 +206,7 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
   const [newCalendarName, setNewCalendarName] = useState('');
   const [newCalendarColor, setNewCalendarColor] = useState(CALENDAR_COLORS[1]);
   const [newCalendarError, setNewCalendarError] = useState('');
-  const [newCalendarSeedFromOfficial, setNewCalendarSeedFromOfficial] = useState(false);
+  const [newCalendarSeedType, setNewCalendarSeedType] = useState<SeedType>('none');
   const [confirmDeleteCalendar, setConfirmDeleteCalendar] = useState<HolidayCalendar | null>(null);
   const [selectedYear, setSelectedYear] = useState(String(currentYear));
   const [modalOpen, setModalOpen] = useState(false);
@@ -159,7 +217,8 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
   const [formDescription, setFormDescription] = useState('');
   const [formErrors, setFormErrors] = useState<{ title?: string; date?: string }>({});
   const [confirmDelete, setConfirmDelete] = useState<HolidayEntry | null>(null);
-  const [pinnedDate, setPinnedDate] = useState<string | null>(null);
+  const [tip, setTip] = useState<HoverTip | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const year = Number(selectedYear);
 
   const isDefaultCalendar = activeCalendarId === DEFAULT_CALENDAR_ID;
@@ -277,13 +336,15 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
 
   // Close pinned hover card on outside-click or Escape.
   useEffect(() => {
-    if (!pinnedDate) return;
+    if (!tip?.pinned) return;
     const closeOnOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
-      if (!target?.closest('.hr-holiday-day')) setPinnedDate(null);
+      if (!target?.closest('.hr-holiday-day') && !target?.closest('.hr-holiday-hover-card')) {
+        setTip(null);
+      }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setPinnedDate(null);
+      if (event.key === 'Escape') setTip(null);
     };
     document.addEventListener('mousedown', closeOnOutside);
     document.addEventListener('keydown', closeOnEscape);
@@ -291,7 +352,7 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
       document.removeEventListener('mousedown', closeOnOutside);
       document.removeEventListener('keydown', closeOnEscape);
     };
-  }, [pinnedDate]);
+  }, [tip?.pinned]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -329,6 +390,32 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
     setModalOpen(true);
   };
 
+  // Build a portal tooltip anchored to a day-cell rect. Prefer rendering above the
+  // cell (the arrow points down). Flip below only when there isn't room above the
+  // sticky page header, and clamp horizontally so corner cells never overflow the
+  // viewport — the arrow tracks the cell center so it still points at the right day.
+  const CARD_W = 256; // 16rem
+  const computeTip = (
+    date: string,
+    holidays: HolidayEntry[],
+    rect: DOMRect,
+    pinned: boolean,
+  ): HoverTip => {
+    const MARGIN = 8;
+    const SAFE_TOP = 64; // page header height (h-14 = 56px) + small margin
+    const estHeight = 52 + holidays.length * 78;
+    const placement: 'above' | 'below' =
+      rect.top - estHeight - MARGIN < SAFE_TOP ? 'below' : 'above';
+    const centerX = rect.left + rect.width / 2;
+    const left = Math.max(
+      MARGIN,
+      Math.min(centerX - CARD_W / 2, window.innerWidth - CARD_W - MARGIN),
+    );
+    const arrowLeft = centerX - left;
+    const top = placement === 'above' ? rect.top - MARGIN : rect.bottom + MARGIN;
+    return { date, holidays, left, top, arrowLeft, placement, pinned };
+  };
+
   const openEditHoliday = (holiday: HolidayEntry) => {
     setEditingHolidayId(holiday.id);
     setFormDate(holiday.date);
@@ -337,6 +424,7 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
     setFormDescription(holiday.description);
     setFormErrors({});
     setModalOpen(true);
+    setTip(null);
   };
 
   const deleteHoliday = (holidayId: string) => {
@@ -427,6 +515,7 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
     }
     setEditingHolidayId(null);
     setModalOpen(false);
+    setTip(null);
   };
 
   const createCalendar = () => {
@@ -442,8 +531,7 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
     const id = `cal-${Date.now()}`;
     setCalendars((current) => [...current, { id, name, color: newCalendarColor }]);
 
-    // Optionally seed the new calendar with the current default-calendar holiday set (including overrides).
-    if (newCalendarSeedFromOfficial) {
+    if (newCalendarSeedType === 'official') {
       const cloneByYear: Record<number, HolidayEntry[]> = {};
       for (const targetYear of availableYears) {
         const list = officialHolidayYears[targetYear] ?? [];
@@ -464,6 +552,16 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
         cloneByYear[targetYear] = cloned;
       }
       setCustomHolidayYears((current) => ({ ...current, [id]: cloneByYear }));
+    } else if (newCalendarSeedType === 'private') {
+      const cloneByYear: Record<number, HolidayEntry[]> = {};
+      for (const targetYear of availableYears) {
+        const list = PRIVATE_SECTOR_SEED[targetYear] ?? [];
+        cloneByYear[targetYear] = list.map((entry, index) => ({
+          ...entry,
+          id: `private-${id}-${targetYear}-${index}`,
+        }));
+      }
+      setCustomHolidayYears((current) => ({ ...current, [id]: cloneByYear }));
     }
 
     setActiveCalendarId(id);
@@ -471,7 +569,7 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
     setNewCalendarName('');
     setNewCalendarColor(CALENDAR_COLORS[1]);
     setNewCalendarError('');
-    setNewCalendarSeedFromOfficial(false);
+    setNewCalendarSeedType('none');
   };
 
   const removeCalendar = (calendarId: string) => {
@@ -537,6 +635,7 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
             setNewCalendarName('');
             setNewCalendarColor(CALENDAR_COLORS[1]);
             setNewCalendarError('');
+            setNewCalendarSeedType('none');
             setShowCreateCalendar(true);
           }}
           className="hr-holiday-calendar-card hr-holiday-calendar-card--add"
@@ -604,7 +703,7 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
                   const dayHolidays = cell.muted ? [] : (holidaysByDate[cell.date] ?? []);
                   const primaryHoliday = dayHolidays[0];
                   const meta = primaryHoliday ? TYPE_META[primaryHoliday.type] : null;
-                  const pinned = !cell.muted && pinnedDate === cell.date;
+                  const pinned = !cell.muted && tip?.date === cell.date && !!tip.pinned;
                   const hasHolidays = dayHolidays.length > 0;
                   if (cell.muted) {
                     return <span key={cell.date} className="hr-holiday-day hr-holiday-day--empty" aria-hidden="true" />;
@@ -613,12 +712,30 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
                     <span
                       key={cell.date}
                       className={`hr-holiday-day ${hasHolidays ? 'hr-holiday-day--holiday' : ''} ${pinned ? 'hr-holiday-day--pinned' : ''}`}
+                      onMouseEnter={hasHolidays ? (e) => {
+                        if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+                        if (tip?.date === cell.date && tip.pinned) return;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setTip(computeTip(cell.date, dayHolidays, rect, false));
+                      } : undefined}
+                      onMouseLeave={hasHolidays ? () => {
+                        if (tip?.pinned) return;
+                        closeTimerRef.current = setTimeout(() => setTip(null), 160);
+                      } : undefined}
                     >
                       {hasHolidays ? (
                         <button
                           type="button"
                           className="hr-holiday-day__button"
-                          onClick={() => setPinnedDate(pinned ? null : cell.date)}
+                          onClick={(e) => {
+                            if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+                            if (tip?.date === cell.date && tip.pinned) {
+                              setTip(null);
+                              return;
+                            }
+                            const rect = e.currentTarget.closest('.hr-holiday-day')!.getBoundingClientRect();
+                            setTip(computeTip(cell.date, dayHolidays, rect, true));
+                          }}
                           aria-expanded={pinned}
                           aria-label={`ดูวันหยุดวันที่ ${cell.day}`}
                         >
@@ -634,34 +751,6 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
                           <span className="hr-holiday-day__number">{cell.day}</span>
                         </span>
                       )}
-                      {dayHolidays.length ? (
-                        <span className="hr-holiday-hover-card" role="tooltip">
-                          <b>{formatLongDate(cell.date)}</b>
-                          {dayHolidays.map((holiday) => (
-                            <span key={holiday.id} className="hr-holiday-hover-card__item">
-                              <span className="hr-holiday-dot" style={{ backgroundColor: TYPE_META[holiday.type].color }} />
-                              <span>
-                                <strong>{holiday.title}</strong>
-                                <small>{TYPE_META[holiday.type].label}</small>
-                                <small className="hr-holiday-hover-card__description">{holiday.description}</small>
-                                <span className="hr-holiday-hover-card__actions">
-                                  <button type="button" onClick={() => openEditHoliday(holiday)}>
-                                    แก้ไข
-                                  </button>
-                                  {officialOverrides[holiday.id] && holiday.source !== 'custom' ? (
-                                    <button type="button" onClick={() => resetOfficialHoliday(holiday.id)}>
-                                      รีเซต
-                                    </button>
-                                  ) : null}
-                                  <button type="button" className="hr-holiday-hover-card__delete" onClick={() => setConfirmDelete(holiday)}>
-                                    ลบ
-                                  </button>
-                                </span>
-                              </span>
-                            </span>
-                          ))}
-                        </span>
-                      ) : null}
                     </span>
                   );
                 })}
@@ -673,6 +762,58 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
           );
         })}
       </div>
+
+      {tip && typeof window !== 'undefined' && createPortal(
+        <div
+          key={`${tip.date}-${tip.placement}`}
+          className={`hr-holiday-hover-card${tip.placement === 'below' ? ' hr-holiday-hover-card--below' : ''}`}
+          role="tooltip"
+          style={{
+            position: 'fixed',
+            top: `${tip.top}px`,
+            left: `${tip.left}px`,
+            bottom: 'auto',
+            width: `${CARD_W}px`,
+            pointerEvents: 'auto',
+            zIndex: 9999,
+            ['--hr-arrow-left' as string]: `${tip.arrowLeft}px`,
+          } as CSSProperties}
+          onMouseEnter={() => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); }}
+          onMouseLeave={() => {
+            if (tip.pinned) return;
+            closeTimerRef.current = setTimeout(() => setTip(null), 160);
+          }}
+        >
+          <b>{formatLongDate(tip.date)}</b>
+          {tip.holidays.map((holiday) => (
+            <span key={holiday.id} className="hr-holiday-hover-card__item">
+              <span className="hr-holiday-dot" style={{ backgroundColor: TYPE_META[holiday.type].color }} />
+              <span>
+                <strong>{holiday.title}</strong>
+                <small>{TYPE_META[holiday.type].label}</small>
+                <small className="hr-holiday-hover-card__description">{holiday.description}</small>
+                <span className="hr-holiday-hover-card__actions">
+                  <button type="button" onClick={() => openEditHoliday(holiday)}>
+                    แก้ไข
+                  </button>
+                  {officialOverrides[holiday.id] && holiday.source !== 'custom' ? (
+                    <button type="button" onClick={() => resetOfficialHoliday(holiday.id)}>
+                      รีเซต
+                    </button>
+                  ) : null}
+                  <button type="button" className="hr-holiday-hover-card__delete" onClick={() => setConfirmDelete(holiday)}>
+                    ลบ
+                  </button>
+                </span>
+              </span>
+            </span>
+          ))}
+        </div>,
+        // Portal into the HR shell (not document.body) so the card inherits the
+        // --hr-* theme variables and dark-mode class. The shell has no transform/
+        // will-change, so position:fixed stays anchored to the viewport.
+        document.querySelector('.hr-shell') ?? document.body,
+      )}
 
       {modalOpen ? (
         <div className="hr-holiday-modal-backdrop" role="presentation" onClick={() => setModalOpen(false)}>
@@ -811,7 +952,7 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
       {showCreateCalendar ? (
         <div className="hr-holiday-modal-backdrop" role="presentation" onClick={() => setShowCreateCalendar(false)}>
           <section
-            className="hr-holiday-modal"
+            className="hr-holiday-modal hr-holiday-modal--create-calendar"
             role="dialog"
             aria-modal="true"
             aria-label="สร้างปฏิทินวันหยุดใหม่"
@@ -854,25 +995,52 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
                   ))}
                 </div>
               </div>
-              <label className="hr-holiday-seed-toggle">
-                <input
-                  type="checkbox"
-                  checked={newCalendarSeedFromOfficial}
-                  onChange={(event) => setNewCalendarSeedFromOfficial(event.target.checked)}
-                />
-                <span>
-                  <strong>คัดลอกวันหยุดราชการเป็นค่าเริ่มต้น</strong>
-                  <small>คัดลอกวันหยุดจากปฏิทิน &quot;วันหยุด&quot; ปัจจุบัน ({calendarCounts[DEFAULT_CALENDAR_ID] ?? 0} วัน) — แก้ไข/ลบเพิ่มเติมได้อิสระ</small>
-                </span>
-              </label>
+              <div className="hr-holiday-field">
+                <span>ข้อมูลวันหยุดเริ่มต้น <small style={{ fontWeight: 400, color: 'var(--hr-text-muted)' }}>(ไม่เลือก = ปฏิทินเปล่า)</small></span>
+                <div className="hr-holiday-seed-options">
+                  {(
+                    [
+                      {
+                        value: 'official' as SeedType,
+                        title: 'วันหยุดราชการ',
+                        desc: 'คัดจากปฏิทินหลัก แก้ไข/ลบได้อิสระ',
+                        badge: `${calendarCounts[DEFAULT_CALENDAR_ID] ?? 0} วัน`,
+                      },
+                      {
+                        value: 'private' as SeedType,
+                        title: 'วันหยุดเอกชน',
+                        desc: 'ตาม พ.ร.บ. คุ้มครองแรงงาน รวมวันแรงงาน 1 พ.ค.',
+                        badge: `${(PRIVATE_SECTOR_SEED[currentYear] ?? []).length} วัน`,
+                      },
+                    ] satisfies { value: SeedType; title: string; desc: string; badge: string }[]
+                  ).map((opt) => {
+                    const selected = newCalendarSeedType === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`hr-holiday-seed-option${selected ? ' hr-holiday-seed-option--selected' : ''}`}
+                        onClick={() => setNewCalendarSeedType(selected ? 'none' : opt.value)}
+                        aria-pressed={selected}
+                      >
+                        <span className="hr-holiday-seed-option__header">
+                          <strong className="hr-holiday-seed-option__title">{opt.title}</strong>
+                          <span className="hr-holiday-seed-option__badge">{opt.badge}</span>
+                        </span>
+                        <small className="hr-holiday-seed-option__desc">{opt.desc}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
             <footer>
-              <button type="button" className="hr-settings-filter" onClick={() => setShowCreateCalendar(false)}>
+              <button type="button" className="hr-holiday-modal__cancel" onClick={() => setShowCreateCalendar(false)}>
                 ยกเลิก
               </button>
               <button
                 type="button"
-                className="hr-button hr-button--primary"
+                className="hr-holiday-modal__submit"
                 style={{ backgroundColor: accent, borderColor: accent }}
                 onClick={createCalendar}
               >
@@ -963,6 +1131,7 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
                 onClick={() => {
                   deleteHoliday(confirmDelete.id);
                   setConfirmDelete(null);
+                  setTip(null);
                 }}
               >
                 ยืนยันการลบ

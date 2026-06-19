@@ -4,13 +4,49 @@ import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { CheckIcon } from '@/components/ui/icons';
+import { LoginCodeSliceBackground } from '@/components/ui/login-code-slice-background';
+import { LoadingState } from '@/components/ui/loading-state';
+import { SvgPageTransition } from '@/components/ui/svg-page-transition';
 import { getApiBaseUrl } from '@/lib/api';
 import { setAuthTokenCookie } from '@/lib/auth';
+import { queryOptions } from '@/lib/queries';
 
 const API_URL = getApiBaseUrl();
+const LOGIN_TRANSITION_MS = 1700;
+const HUB_LOADING_GRACE_MS = 2000;
 
 interface LoginResponse {
   accessToken: string;
+}
+
+type ApiErrorResponse = {
+  message?: string | string[];
+  error?: string;
+};
+
+function getLoginErrorMessage(response: Response, data?: ApiErrorResponse) {
+  const rawMessage = Array.isArray(data?.message)
+    ? data?.message[0]
+    : data?.message;
+  const message = rawMessage?.trim();
+
+  if (message && !message.includes('เธ')) {
+    return message;
+  }
+
+  if (response.status === 401) {
+    return 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+  }
+
+  if (response.status === 400) {
+    return 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน';
+  }
+
+  return data?.error ?? 'ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่อีกครั้ง';
+}
+
+function isLoginResponse(data: LoginResponse | ApiErrorResponse | null): data is LoginResponse {
+  return Boolean(data && 'accessToken' in data && data.accessToken);
 }
 
 export default function LoginPage() {
@@ -19,50 +55,97 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showTransition, setShowTransition] = useState(false);
+  const [showHubLoading, setShowHubLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const showPassword = username.trim().length > 0;
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const loginUsername = username.trim();
+    const loginPassword = password.trim();
+
+    if (!loginUsername) {
+      setError('กรุณากรอกชื่อผู้ใช้');
+      return;
+    }
+
+    if (!loginPassword) {
+      setError('กรุณากรอกรหัสผ่าน');
+      return;
+    }
+
     setError(null);
     setLoading(true);
+    setShowHubLoading(false);
+    let hubLoadingTimer: number | undefined;
 
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: loginUsername, password: loginPassword }),
       });
+      const data = (await response.json().catch(() => null)) as
+        | LoginResponse
+        | ApiErrorResponse
+        | null;
 
       if (!response.ok) {
-        throw new Error('Invalid credentials');
+        throw new Error(getLoginErrorMessage(response, data && !isLoginResponse(data) ? data : undefined));
       }
 
-      const data = (await response.json()) as LoginResponse;
+      if (!isLoginResponse(data)) {
+        throw new Error('ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่อีกครั้ง');
+      }
+
       setAuthTokenCookie(data.accessToken);
       queryClient.clear();
+      setLoading(false);
+      setShowTransition(true);
+      hubLoadingTimer = window.setTimeout(() => {
+        setShowTransition(false);
+        setShowHubLoading(true);
+      }, LOGIN_TRANSITION_MS + HUB_LOADING_GRACE_MS);
+
+      const hubDataReady = Promise.all([
+        queryClient.prefetchQuery(queryOptions.me),
+        queryClient.prefetchQuery(queryOptions.apps),
+      ]);
+
+      await hubDataReady;
+      if (hubLoadingTimer) {
+        window.clearTimeout(hubLoadingTimer);
+      }
       router.push('/hub');
       router.refresh();
     } catch (submitError) {
+      if (hubLoadingTimer) {
+        window.clearTimeout(hubLoadingTimer);
+      }
       setError(
         submitError instanceof Error ? submitError.message : 'Login failed',
       );
-    } finally {
+      setShowTransition(false);
+      setShowHubLoading(false);
       setLoading(false);
     }
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#f5f8fc] px-4 py-8 text-slate-950">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-[-22rem] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-[#1478ff]/10 blur-3xl" />
-        <div className="absolute bottom-[-18rem] right-[-8rem] h-[32rem] w-[32rem] rounded-full bg-[#22b7f5]/10 blur-3xl" />
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#1478ff]/30 to-transparent" />
-      </div>
-      <div className="erp-fade-in relative w-full max-w-[420px]">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black px-4 py-8 text-slate-950">
+      {showTransition ? <SvgPageTransition /> : null}
+      {showHubLoading ? (
+        <div className="absolute inset-0 z-[90] flex items-center justify-center bg-white">
+          <LoadingState label="Loading hub..." className="min-h-0" />
+        </div>
+      ) : null}
+      <LoginCodeSliceBackground />
+      {!showTransition ? <div className="erp-fade-in relative z-20 w-full max-w-[420px]">
         <form
+          noValidate
           onSubmit={onSubmit}
-          className="w-full rounded-2xl border border-slate-200 bg-white/92 px-6 py-7 shadow-[0_18px_48px_rgba(15,23,42,0.08)] backdrop-blur sm:px-8"
+          className="w-full rounded-2xl border border-slate-200 bg-white px-6 py-7 shadow-[0_24px_70px_rgba(15,23,42,0.16)] sm:px-8"
         >
           <div className="mb-7 text-center">
             <img
@@ -134,9 +217,9 @@ export default function LoginPage() {
             </p>
           ) : null}
 
-          <button type="submit" disabled={loading} className="toolbar-btn-primary mt-6 h-11 w-full rounded-lg">
+          <button type="submit" disabled={loading || showTransition} className="toolbar-btn-primary mt-6 h-11 w-full rounded-lg">
             <CheckIcon className="h-4 w-4" />
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading && !showTransition ? 'Signing in...' : 'Sign in'}
           </button>
 
           <div className="mt-5 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
@@ -144,7 +227,7 @@ export default function LoginPage() {
             <span className="font-medium text-slate-700">G-HUB</span>
           </div>
         </form>
-      </div>
+      </div> : null}
     </main>
   );
 }

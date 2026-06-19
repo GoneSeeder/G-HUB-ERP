@@ -15,6 +15,7 @@ import { CUSTOM_SHIFTS_STORAGE_KEY, type HrShiftGroupKey, type HrShiftRow } from
 import { AddWorkInLocationModal } from './hr-workin-modal';
 import { TimeGeneralSettings } from './hr-time-general';
 import { LeaveSettings } from './hr-leave-settings';
+import { ApprovalWorkflowSettings } from './hr-approval-workflows';
 
 type GroupKey = HrSettingsGroup['key'];
 
@@ -407,6 +408,10 @@ function SettingsWorkbench({
 
   if (group.key === 'payroll') {
     return <PayrollSettingsForm topic={topic} accent={accent} />;
+  }
+
+  if (activeItem.path.includes('approval-workflows')) {
+    return <ApprovalWorkflowSettings accent={accent} />;
   }
 
   return <SystemUsersTable accent={accent} />;

@@ -373,15 +373,15 @@ export function HrShell({ children }: { children: ReactNode }) {
       >
         {/* Module mark */}
         <div className="relative flex h-[60px] items-center overflow-hidden border-b border-gray-100">
-          <div
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-white shadow-[0_4px_12px_rgba(99,102,241,0.3)]"
+          <img
+            src="/hr-logo.png"
+            alt=""
+            aria-hidden="true"
+            className="h-8 w-8 flex-shrink-0 rounded-xl object-cover shadow-[0_8px_18px_rgba(147,51,234,0.22)]"
             style={{
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
               marginLeft: (COLLAPSED_W - 28) / 2, // 12px — centers 28px button in 52px bar
             }}
-          >
-            <span className="text-base font-light leading-none">+</span>
-          </div>
+          />
           {expanded && (
             <div
               className="ml-3 overflow-hidden whitespace-nowrap pr-10"
@@ -773,7 +773,7 @@ export function HrShell({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable]">{children}</main>
+        <main className="hr-custom-scrollbar min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable]">{children}</main>
       </div>
     </div>
   );

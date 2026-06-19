@@ -320,9 +320,12 @@ export default function HubPage() {
             description="จัดการข้อมูลพนักงาน เงินเดือน การประเมิน และรายงาน HR ครบวงจร"
             code="HR"
             icon={
-              <HubIconBadge accent={humansourceCard.accent}>
-                <HubIcon type={humansourceCard.icon} />
-              </HubIconBadge>
+              <img
+                src="/hr-logo.png"
+                alt=""
+                aria-hidden="true"
+                className="h-10 w-10 shrink-0 rounded-xl object-cover shadow-[0_8px_20px_rgba(147,51,234,0.18)]"
+              />
             }
           />
         </div>

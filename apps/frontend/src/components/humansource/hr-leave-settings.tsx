@@ -5,12 +5,24 @@ import { ArrowLeftIcon, EditIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from 
 import {
   LEAVE_TYPE_SEED,
   LEAVE_TYPES_STORAGE_KEY,
+  type LeaveCountBasis,
+  type LeaveCutoffBasis,
+  type LeaveGender,
   type LeavePayType,
+  type LeaveQuotaByEmployeeType,
+  type LeaveQuotaMode,
+  type LeaveRounding,
   type LeaveType,
   type LeaveUnit,
-  type LeaveCountBasis,
-  type LeaveRounding,
+  type TenureTier,
 } from '@/data/humansource/leave-types';
+import { employees, employeeTypes } from '@/data/humansource/mock';
+import {
+  APPROVAL_DOC_CONFIGS_STORAGE_KEY,
+  DOCUMENT_TYPES_SEED,
+  describeApproval,
+  type DocumentApprovalConfig,
+} from '@/data/humansource/approval-workflows';
 import { HrCustomSelect } from './hr-ui';
 
 // List view + fullscreen modal pattern (matches ShiftSettingsBoard / empeo).
@@ -51,6 +63,62 @@ const TABS: { value: LeaveTab; label: string }[] = [
   { value: 'eligibility', label: 'สิทธิ์การลา' },
   { value: 'approval',    label: 'เงื่อนไขการอนุมัติ' },
 ];
+
+const GENDER_OPTIONS: { value: LeaveGender; label: string }[] = [
+  { value: 'all',    label: 'ลาได้ทุกเพศ' },
+  { value: 'male',   label: 'เฉพาะชาย' },
+  { value: 'female', label: 'เฉพาะหญิง' },
+];
+
+const QUOTA_MODE_OPTIONS: { value: LeaveQuotaMode; label: string }[] = [
+  { value: 'fixed',       label: 'คงที่ (กำหนดจำนวนวัน)' },
+  { value: 'tenure-tier', label: 'ตามอายุงาน (ตาราง tier)' },
+  { value: 'unlimited',   label: 'ไม่จำกัด' },
+  { value: 'medical',     label: 'ตามแพทย์กำหนด' },
+];
+
+const CUTOFF_OPTIONS: { value: LeaveCutoffBasis; label: string }[] = [
+  { value: 'fiscal-year', label: 'ตามปีงบประมาณ' },
+  { value: 'hire-date',   label: 'ตามวันเริ่มงาน' },
+];
+
+// Override steps for a single leave type (Tab 3). Value stored as number | 'hr'.
+const STEP_OVERRIDE_OPTIONS: { value: string; label: string }[] = [
+  { value: '1',  label: 'อนุมัติ 1 ขั้น' },
+  { value: '2',  label: 'อนุมัติ 2 ขั้น' },
+  { value: '3',  label: 'อนุมัติ 3 ขั้น' },
+  { value: '4',  label: 'อนุมัติ 4 ขั้น' },
+  { value: '5',  label: 'อนุมัติ 5 ขั้น' },
+  { value: 'hr', label: 'ส่งตรงถึง HR' },
+];
+
+const ACTIVE_EMPLOYEE_TYPES = employeeTypes.filter((et) => et.active);
+
+// ─── Org tree (company → department → employee) ─────────────────────────────
+// Built from mock employees. Replace with API/org-chart data when backend is ready.
+// Selection model on eligibility:
+//   departments[] = department names selected as a whole (everyone in them)
+//   employees[]   = individual employee ids selected when their dept isn't whole
+type OrgEmployee = { id: string; name: string; code: string; position: string };
+type OrgDept = { name: string; employees: OrgEmployee[] };
+
+const ORG_TREE: OrgDept[] = (() => {
+  const byDept = new Map<string, OrgEmployee[]>();
+  for (const emp of employees) {
+    if (!emp.active) continue; // skip resigned/inactive for eligibility picking
+    if (!byDept.has(emp.department)) byDept.set(emp.department, []);
+    byDept.get(emp.department)!.push({
+      id: emp.id,
+      name: emp.name,
+      code: emp.code,
+      position: emp.position,
+    });
+  }
+  return Array.from(byDept.entries()).map(([name, emps]) => ({ name, employees: emps }));
+})();
+
+const ALL_DEPT_NAMES = ORG_TREE.map((d) => d.name);
+const uniq = (arr: string[]) => Array.from(new Set(arr));
 
 function emptyLeave(seedColor: string): LeaveType {
   return {
@@ -338,6 +406,12 @@ function LeaveFormModal({
   const update = (patch: Partial<LeaveType>) => setDraft((current) => ({ ...current, ...patch }));
   const updateRules = (patch: Partial<LeaveType['rules']>) =>
     setDraft((current) => ({ ...current, rules: { ...current.rules, ...patch } }));
+  const updateEligibility = (patch: Partial<LeaveType['eligibility']>) =>
+    setDraft((current) => ({ ...current, eligibility: { ...current.eligibility, ...patch } }));
+  const updateQuota = (patch: Partial<LeaveType['quota']>) =>
+    setDraft((current) => ({ ...current, quota: { ...current.quota, ...patch } }));
+  const updateApproval = (patch: Partial<LeaveType['approval']>) =>
+    setDraft((current) => ({ ...current, approval: { ...current.approval, ...patch } }));
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -420,10 +494,23 @@ function LeaveFormModal({
         <div className="hr-leave-modal-body">
           <div className="hr-leave-modal-body__inner">
             {tab === 'rules' ? (
-              <RulesForm draft={draft} onChange={update} onRulesChange={updateRules} />
+              <RulesForm
+                draft={draft}
+                onChange={update}
+                onRulesChange={updateRules}
+                onEligibilityChange={updateEligibility}
+              />
             ) : null}
-            {tab === 'eligibility' ? <ComingSoon label="สิทธิ์การลา" phase="เฟส 4" /> : null}
-            {tab === 'approval' ? <ComingSoon label="เงื่อนไขการอนุมัติ" phase="เฟส 7" /> : null}
+            {tab === 'eligibility' ? (
+              <EligibilityForm
+                draft={draft}
+                onEligibilityChange={updateEligibility}
+                onQuotaChange={updateQuota}
+              />
+            ) : null}
+            {tab === 'approval' ? (
+              <ApprovalForm draft={draft} onApprovalChange={updateApproval} />
+            ) : null}
             {error ? <p className="hr-leave-modal-error">{error}</p> : null}
           </div>
         </div>
@@ -445,21 +532,25 @@ function LeaveFormModal({
   );
 }
 
-// ─── Tab 1 form (flat empeo-style — no card sections, headings only) ──────
+// ─── Tab 1 form (empeo-style — clear sections, essentials first) ──────────
+// v1 priority: define a leave type that feeds payroll (pay type, day counting)
+// and quota. Workflow/edge rules live in a collapsed "advanced" section.
 
 function RulesForm({
   draft,
   onChange,
   onRulesChange,
+  onEligibilityChange,
 }: {
   draft: LeaveType;
   onChange: (patch: Partial<LeaveType>) => void;
   onRulesChange: (patch: Partial<LeaveType['rules']>) => void;
+  onEligibilityChange: (patch: Partial<LeaveType['eligibility']>) => void;
 }) {
   const r = draft.rules;
   return (
     <div className="hr-leave-form">
-      {/* Group: ข้อมูลพื้นฐาน */}
+      {/* ① ข้อมูลพื้นฐาน */}
       <div className="hr-leave-form__grid">
         <Field label="ชื่อประเภทการลา" required>
           <input
@@ -505,9 +596,26 @@ function RulesForm({
             label="หน่วยการลา"
           />
         </Field>
+        <Field label="เพศที่ใช้สิทธิ์ได้">
+          <HrCustomSelect
+            value={draft.eligibility.gender}
+            options={GENDER_OPTIONS}
+            onChange={(value) => onEligibilityChange({ gender: value as LeaveGender })}
+            label="เพศที่ใช้สิทธิ์ได้"
+          />
+        </Field>
+        <ToggleField
+          label="อนุญาตให้ลาครึ่งวัน"
+          checked={r.allowHalfDay}
+          onChange={(checked) => onRulesChange({ allowHalfDay: checked })}
+        />
       </div>
 
-      <GroupHeading>การจ่ายค่าจ้างและการนับวัน</GroupHeading>
+      {/* ② ค่าจ้าง & การนับวัน — ป้อนข้อมูลให้การคำนวณเงินเดือน */}
+      <GroupHeading>
+        ค่าจ้าง &amp; การนับวัน
+        <span className="hr-leave-form__heading-hint"> — ใช้คำนวณเงินเดือน</span>
+      </GroupHeading>
       <div className="hr-leave-form__grid">
         <Field label="การจ่ายค่าจ้าง">
           <HrCustomSelect
@@ -545,137 +653,156 @@ function RulesForm({
         />
       </div>
 
-      <GroupHeading>เงื่อนไขการยื่นเรื่อง</GroupHeading>
-      <div className="hr-leave-form__grid">
-        <Field label="ขั้นต่ำต่อครั้ง" suffix="นาที">
-          <input
-            type="number"
-            min={0}
-            value={r.minMinutes}
-            onChange={(event) => onRulesChange({ minMinutes: numberOr(event.target.value, 0) })}
-            className="hr-leave-input hr-leave-input--num"
-          />
-        </Field>
-        <Field label="ลาล่วงหน้าได้ก่อน" suffix="วัน">
-          <input
-            type="number"
-            min={0}
-            value={r.advanceDays}
-            onChange={(event) => onRulesChange({ advanceDays: numberOr(event.target.value, 0) })}
-            className="hr-leave-input hr-leave-input--num"
-          />
-        </Field>
-        <Field label="ลาย้อนหลังได้ภายใน" suffix="วัน">
-          <input
-            type="number"
-            min={0}
-            value={r.backdateDays}
-            onChange={(event) => onRulesChange({ backdateDays: numberOr(event.target.value, 0) })}
-            className="hr-leave-input hr-leave-input--num"
-          />
-        </Field>
-        <Field label="ลาติดต่อกันสูงสุด" suffix={r.maxConsecutiveDays === null ? undefined : 'วัน'}>
-          <div className="hr-leave-input-row">
+      {/* ③ เงื่อนไขเพิ่มเติม — พับเก็บไว้ ไม่จำเป็นสำหรับการตั้งค่าเบื้องต้น */}
+      <CollapsibleSection title="เงื่อนไขเพิ่มเติม (ขั้นสูง)">
+        <div className="hr-leave-form__grid">
+          <Field label="ขั้นต่ำต่อครั้ง" suffix="นาที">
             <input
               type="number"
               min={0}
-              disabled={r.maxConsecutiveDays === null}
-              value={r.maxConsecutiveDays ?? ''}
-              onChange={(event) =>
-                onRulesChange({ maxConsecutiveDays: numberOr(event.target.value, 0) })
-              }
-              className="hr-leave-input hr-leave-input--num"
-            />
-            <label className="hr-leave-mini-check">
-              <input
-                type="checkbox"
-                checked={r.maxConsecutiveDays === null}
-                onChange={(event) =>
-                  onRulesChange({ maxConsecutiveDays: event.target.checked ? null : 0 })
-                }
-              />
-              <span>ไม่จำกัด</span>
-            </label>
-          </div>
-        </Field>
-        <ToggleField
-          label="อนุญาตให้ลาครึ่งวัน"
-          checked={r.allowHalfDay}
-          onChange={(checked) => onRulesChange({ allowHalfDay: checked })}
-        />
-        <ToggleField
-          label="ต้องแนบไฟล์ประกอบเมื่อยื่นเรื่อง"
-          checked={r.requireAttachment}
-          onChange={(checked) =>
-            onRulesChange({
-              requireAttachment: checked,
-              requireAttachmentOverDays: checked ? r.requireAttachmentOverDays ?? 0 : null,
-            })
-          }
-        />
-        {r.requireAttachment ? (
-          <Field label="บังคับแนบเมื่อลา ≥" suffix="วัน">
-            <input
-              type="number"
-              min={0}
-              value={r.requireAttachmentOverDays ?? 0}
-              onChange={(event) =>
-                onRulesChange({ requireAttachmentOverDays: numberOr(event.target.value, 0) })
-              }
+              value={r.minMinutes}
+              onChange={(event) => onRulesChange({ minMinutes: numberOr(event.target.value, 0) })}
               className="hr-leave-input hr-leave-input--num"
             />
           </Field>
-        ) : null}
-      </div>
-
-      <GroupHeading>การปัดเศษและสะสมข้ามปี</GroupHeading>
-      <div className="hr-leave-form__grid">
-        <Field label="วิธีปัดเศษ">
-          <HrCustomSelect
-            value={r.rounding}
-            options={ROUNDING_OPTIONS}
-            onChange={(value) => onRulesChange({ rounding: value as LeaveRounding })}
-            label="วิธีปัดเศษ"
+          <Field label="ลาล่วงหน้าได้ก่อน" suffix="วัน">
+            <input
+              type="number"
+              min={0}
+              value={r.advanceDays}
+              onChange={(event) => onRulesChange({ advanceDays: numberOr(event.target.value, 0) })}
+              className="hr-leave-input hr-leave-input--num"
+            />
+          </Field>
+          <Field label="ลาย้อนหลังได้ภายใน" suffix="วัน">
+            <input
+              type="number"
+              min={0}
+              value={r.backdateDays}
+              onChange={(event) => onRulesChange({ backdateDays: numberOr(event.target.value, 0) })}
+              className="hr-leave-input hr-leave-input--num"
+            />
+          </Field>
+          <Field label="ลาติดต่อกันสูงสุด" suffix={r.maxConsecutiveDays === null ? undefined : 'วัน'}>
+            <div className="hr-leave-input-row">
+              <input
+                type="number"
+                min={0}
+                disabled={r.maxConsecutiveDays === null}
+                value={r.maxConsecutiveDays ?? ''}
+                onChange={(event) =>
+                  onRulesChange({ maxConsecutiveDays: numberOr(event.target.value, 0) })
+                }
+                className="hr-leave-input hr-leave-input--num"
+              />
+              <label className="hr-leave-mini-check">
+                <input
+                  type="checkbox"
+                  checked={r.maxConsecutiveDays === null}
+                  onChange={(event) =>
+                    onRulesChange({ maxConsecutiveDays: event.target.checked ? null : 0 })
+                  }
+                />
+                <span>ไม่จำกัด</span>
+              </label>
+            </div>
+          </Field>
+          <Field label="วิธีปัดเศษ">
+            <HrCustomSelect
+              value={r.rounding}
+              options={ROUNDING_OPTIONS}
+              onChange={(value) => onRulesChange({ rounding: value as LeaveRounding })}
+              label="วิธีปัดเศษ"
+            />
+          </Field>
+          <ToggleField
+            label="ต้องแนบไฟล์ประกอบเมื่อยื่นเรื่อง"
+            checked={r.requireAttachment}
+            onChange={(checked) =>
+              onRulesChange({
+                requireAttachment: checked,
+                requireAttachmentOverDays: checked ? r.requireAttachmentOverDays ?? 0 : null,
+              })
+            }
           />
-        </Field>
-        <ToggleField
-          label="ยกยอดวันลาไปปีถัดไปได้"
-          checked={r.carryOver}
-          onChange={(checked) =>
-            onRulesChange({
-              carryOver: checked,
-              carryOverCap: checked ? r.carryOverCap ?? 0 : null,
-              carryOverExpiryMonths: checked ? r.carryOverExpiryMonths ?? 12 : null,
-            })
-          }
-        />
-        {r.carryOver ? (
-          <>
-            <Field label="ยกยอดสูงสุด" suffix="วัน">
+          {r.requireAttachment ? (
+            <Field label="บังคับแนบเมื่อลา ≥" suffix="วัน">
               <input
                 type="number"
                 min={0}
-                value={r.carryOverCap ?? 0}
+                value={r.requireAttachmentOverDays ?? 0}
                 onChange={(event) =>
-                  onRulesChange({ carryOverCap: numberOr(event.target.value, 0) })
+                  onRulesChange({ requireAttachmentOverDays: numberOr(event.target.value, 0) })
                 }
                 className="hr-leave-input hr-leave-input--num"
               />
             </Field>
-            <Field label="วันที่หมดอายุ" suffix="เดือน">
-              <input
-                type="number"
-                min={0}
-                value={r.carryOverExpiryMonths ?? 0}
-                onChange={(event) =>
-                  onRulesChange({ carryOverExpiryMonths: numberOr(event.target.value, 0) })
-                }
-                className="hr-leave-input hr-leave-input--num"
-              />
-            </Field>
-          </>
-        ) : null}
-      </div>
+          ) : null}
+          <ToggleField
+            label="ยกยอดวันลาไปปีถัดไปได้"
+            checked={r.carryOver}
+            onChange={(checked) =>
+              onRulesChange({
+                carryOver: checked,
+                carryOverCap: checked ? r.carryOverCap ?? 0 : null,
+                carryOverExpiryMonths: checked ? r.carryOverExpiryMonths ?? 12 : null,
+              })
+            }
+          />
+          {r.carryOver ? (
+            <>
+              <Field label="ยกยอดสูงสุด" suffix="วัน">
+                <input
+                  type="number"
+                  min={0}
+                  value={r.carryOverCap ?? 0}
+                  onChange={(event) =>
+                    onRulesChange({ carryOverCap: numberOr(event.target.value, 0) })
+                  }
+                  className="hr-leave-input hr-leave-input--num"
+                />
+              </Field>
+              <Field label="วันที่หมดอายุ" suffix="เดือน">
+                <input
+                  type="number"
+                  min={0}
+                  value={r.carryOverExpiryMonths ?? 0}
+                  onChange={(event) =>
+                    onRulesChange({ carryOverExpiryMonths: numberOr(event.target.value, 0) })
+                  }
+                  className="hr-leave-input hr-leave-input--num"
+                />
+              </Field>
+            </>
+          ) : null}
+        </div>
+      </CollapsibleSection>
+    </div>
+  );
+}
+
+// Collapsible "advanced" section — closed by default to keep the form light.
+function CollapsibleSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="hr-leave-collapse">
+      <button
+        type="button"
+        className="hr-leave-collapse__head"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <svg
+          className={`hr-leave-collapse__chevron ${open ? 'hr-leave-collapse__chevron--open' : ''}`}
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path fillRule="evenodd" d="M7.21 5.23a.75.75 0 011.06.02L12.5 9.47a.75.75 0 010 1.06l-4.23 4.22a.75.75 0 01-1.06-1.06L10.94 10 7.19 6.29a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
+        <span>{title}</span>
+      </button>
+      {open ? <div className="hr-leave-collapse__body">{children}</div> : null}
     </div>
   );
 }
@@ -763,12 +890,542 @@ function ColorSwatchPicker({ value, onChange }: { value: string; onChange: (colo
   );
 }
 
-function ComingSoon({ label, phase }: { label: string; phase: string }) {
+// ─── Tab 3 — Approval (links to central approval module) ───────────────────
+
+const APPROVAL_WORKFLOWS_HREF =
+  '/humansource/settings?path=' + encodeURIComponent('/humansource/settings/approval-workflows');
+
+function readLeaveDocConfig(): DocumentApprovalConfig {
+  const seed =
+    DOCUMENT_TYPES_SEED.find((d) => d.docType === 'leave') ?? DOCUMENT_TYPES_SEED[0];
+  try {
+    const raw = window.localStorage.getItem(APPROVAL_DOC_CONFIGS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as DocumentApprovalConfig[];
+      if (Array.isArray(parsed)) {
+        return parsed.find((d) => d.docType === 'leave') ?? seed;
+      }
+    }
+  } catch {
+    /* fall through to seed */
+  }
+  return seed;
+}
+
+function ApprovalForm({
+  draft,
+  onApprovalChange,
+}: {
+  draft: LeaveType;
+  onApprovalChange: (patch: Partial<LeaveType['approval']>) => void;
+}) {
+  // Doc config is read once on mount — it lives in another module/localStorage.
+  const [docConfig, setDocConfig] = useState<DocumentApprovalConfig | null>(null);
+  useEffect(() => {
+    setDocConfig(readLeaveDocConfig());
+  }, []);
+
+  const a = draft.approval;
+  const overriding = !a.useDefaultTemplate;
+  const stepValue = a.steps === undefined ? '' : String(a.steps);
+
   return (
-    <div className="hr-leave-coming">
-      <p className="hr-leave-coming__title">{label}</p>
-      <p className="hr-leave-coming__desc">หน้านี้จะเปิดใช้งานใน {phase}</p>
+    <div className="hr-leave-form">
+      <GroupHeading>สายการอนุมัติของการลานี้</GroupHeading>
+
+      <div className="hr-leave-approval-summary">
+        <div className="hr-leave-approval-summary__row">
+          <span className="hr-leave-approval-summary__label">เอกสารอ้างอิง</span>
+          <span className="hr-leave-approval-summary__value">เอกสารลางาน</span>
+        </div>
+        <div className="hr-leave-approval-summary__row">
+          <span className="hr-leave-approval-summary__label">ค่ามาตรฐาน</span>
+          <span className="hr-leave-approval-summary__value">
+            {docConfig ? describeApproval(docConfig) : 'กำลังโหลด…'}
+          </span>
+        </div>
+        <a
+          href={APPROVAL_WORKFLOWS_HREF}
+          className="hr-leave-approval-summary__link"
+        >
+          ไปตั้งค่าลำดับการอนุมัติ →
+        </a>
+      </div>
+
+      <div className="hr-leave-form__grid">
+        <ToggleField
+          label="ใช้ค่ามาตรฐานของเอกสารลางาน"
+          checked={a.useDefaultTemplate}
+          onChange={(checked) =>
+            onApprovalChange({
+              useDefaultTemplate: checked,
+              steps: checked ? undefined : (docConfig?.steps ?? 2),
+            })
+          }
+        />
+      </div>
+
+      {overriding ? (
+        <>
+          <GroupHeading>
+            กำหนดเองเฉพาะการลานี้
+            <span className="hr-leave-form__heading-hint"> — แทนค่ามาตรฐานด้านบน</span>
+          </GroupHeading>
+          <div className="hr-leave-form__grid">
+            <Field label="จำนวนขั้นการอนุมัติ">
+              <HrCustomSelect
+                value={stepValue}
+                options={STEP_OVERRIDE_OPTIONS}
+                onChange={(v) => onApprovalChange({ steps: v === 'hr' ? 'hr' : Number(v) })}
+                label="จำนวนขั้นการอนุมัติ"
+              />
+            </Field>
+          </div>
+        </>
+      ) : null}
     </div>
+  );
+}
+
+// ─── Tab 2 — Eligibility + Quota ──────────────────────────────────────────
+
+function EligibilityForm({
+  draft,
+  onEligibilityChange,
+  onQuotaChange,
+}: {
+  draft: LeaveType;
+  onEligibilityChange: (patch: Partial<LeaveType['eligibility']>) => void;
+  onQuotaChange: (patch: Partial<LeaveType['quota']>) => void;
+}) {
+  const q = draft.quota;
+  const splitPerType = q.perEmployeeType !== undefined;
+
+  return (
+    <div className="hr-leave-form">
+      {/* ─── ใครได้สิทธิ์การลานี้ (ผังองค์กร) ─── */}
+      <GroupHeading>
+        ใครได้สิทธิ์การลานี้
+        <span className="hr-leave-form__heading-hint"> — ไม่เลือก = ทุกคนในบริษัท</span>
+      </GroupHeading>
+      <OrgTreeSelect
+        departments={draft.eligibility.departments}
+        employees={draft.eligibility.employees}
+        onChange={(departments, employees) => onEligibilityChange({ departments, employees })}
+      />
+
+      {/* ─── โควตาการลา ─── */}
+      <GroupHeading>โควตาการลา</GroupHeading>
+      <div className="hr-leave-form__grid">
+        <Field label="โหมดโควตา">
+          <HrCustomSelect
+            value={q.mode}
+            options={QUOTA_MODE_OPTIONS}
+            onChange={(v) => onQuotaChange({ mode: v as LeaveQuotaMode })}
+            label="โหมดโควตา"
+          />
+        </Field>
+        {q.mode === 'fixed' ? (
+          <Field label="จำนวนวันต่อปี" suffix="วัน">
+            <input
+              type="number"
+              min={0}
+              value={q.fixedDays ?? 0}
+              onChange={(ev) => onQuotaChange({ fixedDays: numberOr(ev.target.value, 0) })}
+              className="hr-leave-input hr-leave-input--num"
+            />
+          </Field>
+        ) : null}
+        {q.mode === 'unlimited' ? (
+          <div className="hr-leave-quota-desc">
+            ลาได้ไม่จำกัดวัน — ใช้สำหรับการลาที่ไม่กำหนดเพดาน
+          </div>
+        ) : null}
+        {q.mode === 'medical' ? (
+          <div className="hr-leave-quota-desc">
+            จำนวนวันที่ได้รับขึ้นอยู่กับใบรับรองแพทย์ ไม่มีเพดานคงที่
+          </div>
+        ) : null}
+      </div>
+      {q.mode === 'tenure-tier' ? (
+        <TenureTierTable
+          tiers={q.tiers ?? []}
+          onChange={(tiers) => onQuotaChange({ tiers })}
+        />
+      ) : null}
+
+      {/* ─── ตัวเลือกเพิ่มเติม ─── */}
+      <GroupHeading>ตัวเลือกเพิ่มเติม</GroupHeading>
+      <div className="hr-leave-form__grid">
+        <ToggleField
+          label="โพรเรตปีแรก (เฉลี่ยตามวันที่เริ่มงาน)"
+          checked={q.prorateFirstYear}
+          onChange={(checked) => onQuotaChange({ prorateFirstYear: checked })}
+        />
+        <Field label="วันตัดรอบ">
+          <HrCustomSelect
+            value={q.cutoffBasis}
+            options={CUTOFF_OPTIONS}
+            onChange={(v) => onQuotaChange({ cutoffBasis: v as LeaveCutoffBasis })}
+            label="วันตัดรอบ"
+          />
+        </Field>
+        <ToggleField
+          label="แยกโควตาตามประเภทพนักงาน"
+          checked={splitPerType}
+          onChange={(checked) => {
+            onQuotaChange({ perEmployeeType: checked ? {} : undefined });
+          }}
+        />
+      </div>
+      {splitPerType ? (
+        <PerEmployeeTypeQuota quota={q} onQuotaChange={onQuotaChange} />
+      ) : null}
+    </div>
+  );
+}
+
+// ─── Tenure tier editable table ────────────────────────────────────────────
+
+function TenureTierTable({
+  tiers,
+  onChange,
+}: {
+  tiers: TenureTier[];
+  onChange: (tiers: TenureTier[]) => void;
+}) {
+  const updateTier = (index: number, patch: Partial<TenureTier>) => {
+    onChange(tiers.map((tier, i) => (i === index ? { ...tier, ...patch } : tier)));
+  };
+
+  const removeTier = (index: number) => {
+    onChange(tiers.filter((_, i) => i !== index));
+  };
+
+  const addTier = () => {
+    if (tiers.length === 0) {
+      onChange([{ minMonths: 0, maxMonths: 12, days: 0 }]);
+      return;
+    }
+    const last = tiers[tiers.length - 1];
+    const newMin = last.maxMonths ?? last.minMonths + 12;
+    const updatedLast = last.maxMonths === null ? { ...last, maxMonths: newMin } : last;
+    onChange([...tiers.slice(0, -1), updatedLast, { minMonths: newMin, maxMonths: null, days: 0 }]);
+  };
+
+  return (
+    <div className="hr-leave-tier">
+      <div className="hr-leave-tier__head">
+        <span>อายุงานตั้งแต่ (เดือน)</span>
+        <span>ถึง (เดือน)</span>
+        <span>วันลา</span>
+        <span />
+      </div>
+      {tiers.map((tier, index) => (
+        <div key={index} className="hr-leave-tier__row">
+          <input
+            type="number"
+            min={0}
+            value={tier.minMonths}
+            onChange={(ev) => updateTier(index, { minMonths: numberOr(ev.target.value, 0) })}
+            className="hr-leave-input hr-leave-input--num"
+          />
+          {tier.maxMonths === null ? (
+            <span className="hr-leave-tier__unlimited">ไม่จำกัด</span>
+          ) : (
+            <input
+              type="number"
+              min={0}
+              value={tier.maxMonths}
+              onChange={(ev) => updateTier(index, { maxMonths: numberOr(ev.target.value, 0) })}
+              className="hr-leave-input hr-leave-input--num"
+            />
+          )}
+          <input
+            type="number"
+            min={0}
+            value={tier.days}
+            onChange={(ev) => updateTier(index, { days: numberOr(ev.target.value, 0) })}
+            className="hr-leave-input hr-leave-input--num"
+          />
+          <button
+            type="button"
+            className="hr-leave-tier__remove"
+            onClick={() => removeTier(index)}
+            aria-label="ลบแถวนี้"
+          >
+            <TrashIcon className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ))}
+      <button type="button" className="hr-leave-tier__add" onClick={addTier}>
+        <PlusIcon className="h-3.5 w-3.5" />
+        เพิ่มแถว
+      </button>
+    </div>
+  );
+}
+
+// ─── Per employee type quota ───────────────────────────────────────────────
+
+function PerEmployeeTypeQuota({
+  quota,
+  onQuotaChange,
+}: {
+  quota: LeaveType['quota'];
+  onQuotaChange: (patch: Partial<LeaveType['quota']>) => void;
+}) {
+  const perType = quota.perEmployeeType ?? {};
+
+  const getEtQuota = (etId: string): LeaveQuotaByEmployeeType =>
+    perType[etId] ?? { mode: quota.mode, fixedDays: quota.fixedDays, tiers: quota.tiers };
+
+  const updateEtQuota = (etId: string, patch: Partial<LeaveQuotaByEmployeeType>) => {
+    onQuotaChange({
+      perEmployeeType: { ...perType, [etId]: { ...getEtQuota(etId), ...patch } },
+    });
+  };
+
+  return (
+    <div className="hr-leave-per-et">
+      {ACTIVE_EMPLOYEE_TYPES.map((et) => {
+        const etQ = getEtQuota(et.id);
+        return (
+          <div key={et.id} className="hr-leave-per-et__row">
+            <span className="hr-leave-per-et__name">{et.nameTh}</span>
+            <div className="hr-leave-per-et__quota">
+              <HrCustomSelect
+                value={etQ.mode}
+                options={QUOTA_MODE_OPTIONS}
+                onChange={(v) => updateEtQuota(et.id, { mode: v as LeaveQuotaMode })}
+                label={`โหมดโควตา ${et.nameTh}`}
+              />
+              {etQ.mode === 'fixed' ? (
+                <div className="hr-leave-per-et__days">
+                  <input
+                    type="number"
+                    min={0}
+                    value={etQ.fixedDays ?? 0}
+                    onChange={(ev) =>
+                      updateEtQuota(et.id, { fixedDays: numberOr(ev.target.value, 0) })
+                    }
+                    className="hr-leave-input hr-leave-input--num"
+                  />
+                  <span className="hr-leave-field__suffix">วัน</span>
+                </div>
+              ) : etQ.mode === 'tenure-tier' ? (
+                <TenureTierTable
+                  tiers={etQ.tiers ?? []}
+                  onChange={(tiers) => updateEtQuota(et.id, { tiers })}
+                />
+              ) : (
+                <span className="hr-leave-per-et__desc">
+                  {etQ.mode === 'unlimited' ? 'ไม่จำกัด' : 'ตามแพทย์กำหนด'}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Org tree select (company → department → employee) ─────────────────────
+// Cascading multi-select over the org chart. Selecting a department selects
+// everyone in it; expanding it lets you pick individuals instead. Picking every
+// employee of a department auto-promotes to "whole department". Empty = ทุกคน.
+
+type TriState = 'all' | 'some' | 'none';
+
+function OrgTreeSelect({
+  departments,
+  employees: selectedEmps,
+  onChange,
+}: {
+  departments: string[];
+  employees: string[];
+  onChange: (departments: string[], employees: string[]) => void;
+}) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [companyOpen, setCompanyOpen] = useState(true);
+
+  const deptIsWhole = (dept: string) => departments.includes(dept);
+  const deptEmpIds = (dept: string) =>
+    (ORG_TREE.find((d) => d.name === dept)?.employees ?? []).map((emp) => emp.id);
+  const isEmpSelected = (dept: string, id: string) =>
+    deptIsWhole(dept) || selectedEmps.includes(id);
+
+  const deptState = (dept: string): TriState => {
+    if (deptIsWhole(dept)) return 'all';
+    const ids = deptEmpIds(dept);
+    const picked = ids.filter((id) => selectedEmps.includes(id)).length;
+    if (picked === 0) return 'none';
+    return picked === ids.length ? 'all' : 'some';
+  };
+
+  const companyState: TriState = (() => {
+    const states = ALL_DEPT_NAMES.map(deptState);
+    if (states.length && states.every((s) => s === 'all')) return 'all';
+    if (states.every((s) => s === 'none')) return 'none';
+    return 'some';
+  })();
+
+  const toggleDept = (dept: string) => {
+    const ids = deptEmpIds(dept);
+    const others = selectedEmps.filter((id) => !ids.includes(id));
+    if (deptState(dept) === 'all') {
+      onChange(departments.filter((d) => d !== dept), others);
+    } else {
+      onChange(uniq([...departments, dept]), others);
+    }
+  };
+
+  const toggleEmp = (dept: string, id: string) => {
+    const ids = deptEmpIds(dept);
+    if (deptIsWhole(dept)) {
+      // Whole dept was selected; unchecking one expands the rest to individuals.
+      onChange(
+        departments.filter((d) => d !== dept),
+        uniq([...selectedEmps, ...ids.filter((x) => x !== id)]),
+      );
+      return;
+    }
+    if (selectedEmps.includes(id)) {
+      onChange(departments, selectedEmps.filter((x) => x !== id));
+      return;
+    }
+    const nextEmps = uniq([...selectedEmps, id]);
+    if (ids.every((x) => nextEmps.includes(x))) {
+      // Everyone individually picked → promote to whole department.
+      onChange(uniq([...departments, dept]), nextEmps.filter((x) => !ids.includes(x)));
+    } else {
+      onChange(departments, nextEmps);
+    }
+  };
+
+  const toggleCompany = () => {
+    if (companyState === 'all') onChange([], []);
+    else onChange([...ALL_DEPT_NAMES], []);
+  };
+
+  // Removable summary chips for the current selection.
+  const chips: { key: string; label: string; onRemove: () => void }[] = [];
+  for (const dept of departments) {
+    chips.push({ key: `d:${dept}`, label: `${dept} (ทั้งแผนก)`, onRemove: () => toggleDept(dept) });
+  }
+  for (const dept of ORG_TREE) {
+    if (departments.includes(dept.name)) continue;
+    for (const emp of dept.employees) {
+      if (selectedEmps.includes(emp.id)) {
+        chips.push({ key: `e:${emp.id}`, label: emp.name, onRemove: () => toggleEmp(dept.name, emp.id) });
+      }
+    }
+  }
+
+  return (
+    <div className="hr-leave-tree">
+      <div className="hr-leave-tree__summary">
+        {chips.length === 0 ? (
+          <span className="hr-leave-tree__summary-empty">ทุกคนในบริษัท (ไม่จำกัด)</span>
+        ) : (
+          chips.map((chip) => (
+            <span key={chip.key} className="hr-leave-chip">
+              {chip.label}
+              <button
+                type="button"
+                className="hr-leave-chip__remove"
+                onClick={chip.onRemove}
+                aria-label={`เอาออก ${chip.label}`}
+              >
+                ×
+              </button>
+            </span>
+          ))
+        )}
+      </div>
+
+      <div className="hr-leave-tree__list" role="tree">
+        <div className="hr-leave-tree__row hr-leave-tree__row--company">
+          <button
+            type="button"
+            className={`hr-leave-tree__caret ${companyOpen ? 'hr-leave-tree__caret--open' : ''}`}
+            onClick={() => setCompanyOpen((o) => !o)}
+            aria-label={companyOpen ? 'ยุบ' : 'ขยาย'}
+          >
+            <CaretIcon />
+          </button>
+          <TriCheck state={companyState} onClick={toggleCompany} />
+          <span className="hr-leave-tree__label hr-leave-tree__label--company">ทั้งบริษัท</span>
+          <span className="hr-leave-tree__count">{ALL_DEPT_NAMES.length} แผนก</span>
+        </div>
+
+        {companyOpen
+          ? ORG_TREE.map((dept) => {
+              const open = expanded[dept.name] ?? false;
+              return (
+                <div key={dept.name} className="hr-leave-tree__group">
+                  <div className="hr-leave-tree__row hr-leave-tree__row--dept">
+                    <button
+                      type="button"
+                      className={`hr-leave-tree__caret ${open ? 'hr-leave-tree__caret--open' : ''}`}
+                      onClick={() => setExpanded((m) => ({ ...m, [dept.name]: !open }))}
+                      aria-label={open ? 'ยุบ' : 'ขยาย'}
+                    >
+                      <CaretIcon />
+                    </button>
+                    <TriCheck state={deptState(dept.name)} onClick={() => toggleDept(dept.name)} />
+                    <span className="hr-leave-tree__label">{dept.name}</span>
+                    <span className="hr-leave-tree__count">{dept.employees.length} คน</span>
+                  </div>
+                  {open
+                    ? dept.employees.map((emp) => (
+                        <div key={emp.id} className="hr-leave-tree__row hr-leave-tree__row--emp">
+                          <TriCheck
+                            state={isEmpSelected(dept.name, emp.id) ? 'all' : 'none'}
+                            onClick={() => toggleEmp(dept.name, emp.id)}
+                          />
+                          <span className="hr-leave-tree__label">{emp.name}</span>
+                          <span className="hr-leave-tree__meta">{emp.position} · {emp.code}</span>
+                        </div>
+                      ))
+                    : null}
+                </div>
+              );
+            })
+          : null}
+      </div>
+    </div>
+  );
+}
+
+function TriCheck({ state, onClick }: { state: TriState; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`hr-leave-treecheck hr-leave-treecheck--${state}`}
+      onClick={onClick}
+      role="checkbox"
+      aria-checked={state === 'all' ? true : state === 'some' ? 'mixed' : false}
+    >
+      {state === 'all' ? (
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M13 4.5l-6 6L3 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : state === 'some' ? (
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4 8h8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      ) : null}
+    </button>
+  );
+}
+
+function CaretIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+      <path fillRule="evenodd" d="M7.21 5.23a.75.75 0 011.06.02L12.5 9.47a.75.75 0 010 1.06l-4.23 4.22a.75.75 0 01-1.06-1.06L10.94 10 7.19 6.29a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+    </svg>
   );
 }
 
