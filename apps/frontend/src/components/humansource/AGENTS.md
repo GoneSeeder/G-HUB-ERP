@@ -12,6 +12,12 @@ Do not apply these rules to other G-HUB modules unless the user explicitly asks 
 
 ## UI Style
 
+- **Must NOT look AI-generated.** Follow `DESIGN.md` → "HR UI Standard". Concretely, never ship:
+  tinted "example/ตัวอย่าง" callout boxes, a descriptive sentence under every control,
+  fill-in-the-blank sentence inputs, emoji-as-icons, repeated identical cards/rows, or
+  gradient/glow/numbered-badge cards. Prefer flat forms and the **settings-row** pattern
+  (`hr-setting-row`: label left, control/value right, hairline dividers). Keep microcopy terse and
+  copy the rhythm of an already-approved board when unsure.
 - HR must use its own semantic classes with the `hr-*` prefix.
 - Put reusable HR visual rules in `apps/frontend/src/app/globals.css`.
 - Avoid long repeated Tailwind class chains for repeated HR UI elements.

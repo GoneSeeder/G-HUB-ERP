@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { type CSSProperties, type FormEvent, useEffect, useRef, useState } from 'react';
+import { type CSSProperties, type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react';
 import {
   hrSettingsGroups,
   type HrNavChild,
@@ -16,6 +16,10 @@ import { AddWorkInLocationModal } from './hr-workin-modal';
 import { TimeGeneralSettings } from './hr-time-general';
 import { LeaveSettings } from './hr-leave-settings';
 import { ApprovalWorkflowSettings } from './hr-approval-workflows';
+import { OrgStructureBoard } from './hr-org-structure';
+import { BasicSettingsBoard } from './hr-basic-settings';
+import { PositionsBoard } from './hr-positions-board';
+import { AnnouncementsBoard } from './hr-announcements-board';
 
 type GroupKey = HrSettingsGroup['key'];
 
@@ -282,6 +286,8 @@ function FocusPage({
   const hideAutoTabsPaths = [
     '/humansource/time/work-schedules',
     '/humansource/time/leave-types',
+    '/humansource/organization/structure',
+    '/humansource/payroll/income-items',
   ];
   const showTabs = !hideAutoTabsPaths.includes(activeTopic.path);
   const tabs: Array<{ label: string; path?: string }> = activeTopic.children?.length
@@ -315,7 +321,7 @@ function FocusPage({
             </div>
           </div>
 
-          <nav className="hr-settings-focus__nav flex-1 p-2">
+          <nav className="hr-settings-focus__nav flex-1 overflow-y-auto p-2">
             {group.items.map((item, index) => {
               const active = item.path === activeTopic.path;
               return (
@@ -399,7 +405,18 @@ function SettingsWorkbench({
   accent: string;
 }) {
   if (group.key === 'company') {
-    return <OrganizationSettings topic={topic} accent={accent} />;
+    if (activeItem.path.includes('organization/structure'))    return <OrgStructureBoard accent={accent} />;
+    if (activeItem.path.includes('organization/job-levels'))   return <PositionsBoard sub="job-levels" accent={accent} />;
+    if (activeItem.path.includes('organization/positions'))    return <PositionsBoard sub="positions"  accent={accent} />;
+    if (activeItem.path.includes('company/employee-defaults')) return <BasicSettingsBoard sub="employee-defaults" accent={accent} />;
+    if (activeItem.path.includes('company/running-number'))    return <BasicSettingsBoard sub="running-number"    accent={accent} />;
+    if (activeItem.path.includes('organization/employee-type')) return <BasicSettingsBoard sub="employee-type"   accent={accent} />;
+    if (activeItem.path.includes('master-personal'))           return <BasicSettingsBoard sub="master-personal"  accent={accent} />;
+    if (activeItem.path.includes('company/general'))                    return <BasicSettingsBoard sub="employee-type"    accent={accent} />;
+    if (activeItem.path.includes('settings/announcement-categories')) return <AnnouncementsBoard sub="categories" accent={accent} />;
+    if (activeItem.path.includes('settings/announcement-audience'))   return <AnnouncementsBoard sub="audience"   accent={accent} />;
+    if (activeItem.path.includes('settings/announcements'))           return <AnnouncementsBoard sub="list"       accent={accent} />;
+    return null;
   }
 
   if (group.key === 'time') {
@@ -407,7 +424,7 @@ function SettingsWorkbench({
   }
 
   if (group.key === 'payroll') {
-    return <PayrollSettingsForm topic={topic} accent={accent} />;
+    return <PayrollSettingsForm topic={topic} activeItem={activeItem} accent={accent} />;
   }
 
   if (activeItem.path.includes('approval-workflows')) {
@@ -415,48 +432,6 @@ function SettingsWorkbench({
   }
 
   return <SystemUsersTable accent={accent} />;
-}
-
-function OrganizationSettings({ topic, accent }: { topic: HrNavChild; accent: string }) {
-  const cards = [
-    ['กำหนดรหัสพนักงานให้อัตโนมัติ', 'ระบบจะสร้างรหัสพนักงานจากรูปแบบที่กำหนดไว้'],
-    ['การลงเวลางาน', 'ให้พนักงานบันทึกเวลาและรายงานประจำวัน'],
-    ['การมองเห็นข้อมูลหน้าบอร์ด', 'กำหนดขอบเขตการมองเห็นตามบริษัท'],
-    ['ค่าใช้จ่าย', 'เปิดใช้งานรายการเบิกย้อนหลังและรอบตัดจ่าย'],
-  ];
-
-  return (
-    <div className="divide-y divide-gray-100 px-6 py-1">
-      {cards.map((card, index) => (
-        <div key={card[0]} className="flex flex-wrap items-start justify-between gap-4 py-5">
-          <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold text-gray-800">{card[0]}</h3>
-            <p className="mt-0.5 max-w-xl text-xs leading-5 text-gray-500">{index === 0 ? topic.description : card[1]}</p>
-            {index === 1 ? (
-              <div className="mt-3 divide-y divide-gray-100">
-                {['รูปแบบการยืนยันตัวตน', 'เปิดใช้งานรายงานประจำวัน', 'ได้รับเหรียญเมื่อทำรายงาน', 'เปิดใช้งาน emoji'].map((label, rowIndex) => (
-                  <div key={label} className="flex items-center justify-between py-2">
-                    <span className="text-xs text-gray-600">{label}</span>
-                    <span className="text-[11px] font-medium" style={{ color: rowIndex > 1 ? accent : undefined }}>
-                      {rowIndex > 1 ? 'ปลดล็อก' : rowIndex === 0 ? 'ไม่ยืนยันตัวตน' : 'เปิด'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            aria-pressed={index !== 2}
-            className="relative h-6 w-11 flex-shrink-0 rounded-full transition"
-            style={{ backgroundColor: index !== 2 ? accent : '#e2e8f0' }}
-          >
-            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition ${index !== 2 ? 'right-0.5' : 'left-0.5'}`} />
-          </button>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 function TimeSettingsTable({
@@ -1681,60 +1656,805 @@ function isShiftSettingsPath(path: string) {
   ].some((segment) => path.includes(segment));
 }
 
-function PayrollSettingsForm({ topic, accent }: { topic: HrNavChild; accent: string }) {
-  const types = ['รายวัน', 'ฝึกงาน', 'รายเดือน', 'รายชั่วโมง'];
+type PayrollPracticalPage = {
+  paths: string[];
+  title: string;
+  description: string;
+  primaryAction: string;
+  filters: string[];
+  setup: Array<{
+    label: string;
+    value: string;
+    detail: string;
+  }>;
+  tableTitle: string;
+  tableDescription: string;
+  headers: string[];
+  rows: string[][];
+  ruleTitle: string;
+  rules: string[];
+  fieldTitle: string;
+  fields: string[][];
+};
+
+const PAYROLL_PRACTICAL_PAGES: PayrollPracticalPage[] = [
+  {
+    paths: ['employment-types'],
+    title: 'ประเภทการจ้างงาน',
+    description: 'กำหนดประเภทพนักงานและฐานการคิดค่าจ้าง เพื่อให้ระบบรู้ว่าจะคำนวณเงินเดือนจากฐานรายเดือน รายวัน หรือรายชั่วโมง',
+    primaryAction: 'เพิ่มประเภทการจ้าง',
+    filters: ['บริษัท', 'สถานะ', 'ประเภทค่าจ้าง'],
+    setup: [
+      { label: 'ใช้กับ Multi Company', value: 'แยกตามบริษัทได้', detail: 'ประเภทเดียวกันใช้ร่วมกันได้ แต่สูตรและฐานวันทำงาน override รายบริษัทได้' },
+      { label: 'ฐานวันมาตรฐาน', value: '30 / 26 / ตามจริง', detail: 'ใช้ตอน prorate เข้าออกกลางงวดและลาไม่รับค่าจ้าง' },
+      { label: 'ฐานชั่วโมง', value: '8 ชม./วัน', detail: 'ใช้คิดรายชั่วโมง OT และรายการหักจากเวลา' },
+    ],
+    tableTitle: 'รายการประเภทการจ้าง',
+    tableDescription: 'เป็น master ที่ผูกกับพนักงานแต่ละคนตอนบันทึกข้อมูลการจ้าง',
+    headers: ['รหัส', 'ประเภทการจ้าง', 'ฐานคำนวณ', 'สูตรหลัก', 'สถานะ'],
+    rows: [
+      ['MONTHLY', 'รายเดือน', 'เงินเดือนประจำ', 'เงินเดือน x วันได้รับค่าจ้าง / วันฐาน', 'ใช้งาน'],
+      ['DAILY', 'รายวัน', 'ค่าแรงต่อวัน', 'ค่าแรง x จำนวนวันทำงานที่อนุมัติ', 'ใช้งาน'],
+      ['HOURLY', 'รายชั่วโมง', 'อัตราต่อชั่วโมง', 'ชั่วโมงทำงาน x อัตราต่อชั่วโมง', 'ต้องกำหนด'],
+      ['PARTTIME', 'Part-time', 'ชั่วโมง/กะ', 'ชั่วโมงอนุมัติ + OT ตาม policy', 'ร่าง'],
+      ['CONTRACT', 'สัญญาจ้าง', 'ยอดเหมาจ่าย', 'ตามงวดสัญญาหรือ milestone', 'ร่าง'],
+    ],
+    ruleTitle: 'ค่าที่ต้องมีในฟอร์ม',
+    rules: ['ชื่อประเภทการจ้าง TH/EN', 'ฐานการจ่ายเงิน', 'จำนวนวัน/ชั่วโมงมาตรฐาน', 'สูตร prorate', 'สิทธิ์เข้า SSO/ภาษี/กองทุน'],
+    fieldTitle: 'ตัวอย่าง field',
+    fields: [
+      ['Company', 'เลือกบริษัทหรือทุกบริษัท'],
+      ['Pay basis', 'Monthly / Daily / Hourly / Contract'],
+      ['Prorate method', '30 วัน / วันทำงาน / วันตามปฏิทิน'],
+    ],
+  },
+  {
+    paths: ['pay-periods'],
+    title: 'งวดเงินเดือนและรอบจ่าย',
+    description: 'สร้างตารางงวดเงินเดือนรายปี เช่น ปี 2569 จ่าย 12 ครั้ง 24 ครั้ง หรือกำหนดเอง พร้อมวันตัดรอบและวันจ่าย',
+    primaryAction: 'สร้างงวดเงินเดือน',
+    filters: ['บริษัท', 'ปี', 'รูปแบบรอบจ่าย'],
+    setup: [
+      { label: 'จ่ายรายเดือน', value: '12 ครั้ง/ปี', detail: 'สร้างงวด ม.ค.-ธ.ค. อัตโนมัติ' },
+      { label: 'จ่ายเดือนละ 2 ครั้ง', value: '24 ครั้ง/ปี', detail: 'แบ่งต้นเดือน/ปลายเดือน พร้อม cut-off แยก' },
+      { label: 'กำหนดเอง', value: 'Custom', detail: 'เหมาะกับรายวัน รายสัปดาห์ หรือรอบพิเศษ' },
+    ],
+    tableTitle: 'รูปแบบงวดเงินเดือนปี 2569',
+    tableDescription: 'ตอนสร้างจริงให้เลือกบริษัท ปี และจำนวนครั้งที่จ่ายต่อปี แล้วระบบ generate งวดเงินเดือนตามรูปแบบนี้',
+    headers: ['ปีเงินเดือน', 'รูปแบบรอบจ่าย', 'จ่ายกี่ครั้ง/ปี', 'ตัวอย่างงวดที่สร้าง', 'วันที่จ่าย', 'สถานะ'],
+    rows: [
+      ['2569', 'รายเดือน', '12 ครั้ง', '2569-01 ถึง 2569-12', 'สิ้นเดือน', 'ใช้งาน'],
+      ['2569', 'เดือนละ 2 ครั้ง', '24 ครั้ง', '2569-01A / 2569-01B ถึง 2569-12A / 2569-12B', '15 และสิ้นเดือน', 'ร่าง'],
+      ['2569', 'รายสัปดาห์', '52 ครั้ง', '2569-W01 ถึง 2569-W52', 'ทุกวันศุกร์', 'ร่าง'],
+      ['2569', 'กำหนดเอง', 'Custom', 'กำหนดชื่อและช่วงวันที่เอง', 'กำหนดเอง', 'ร่าง'],
+    ],
+    ruleTitle: 'ตัวเลือกตอนสร้าง',
+    rules: ['ปีเงินเดือน', 'บริษัท/สาขา', 'จำนวนครั้งที่จ่ายต่อปี', 'วันจ่ายประจำ', 'ถ้าวันจ่ายตรงวันหยุดให้เลื่อนก่อนหรือหลัง'],
+    fieldTitle: 'ตัวอย่าง field',
+    fields: [
+      ['Pay frequency', 'Monthly 12 / Semi-monthly 24 / Weekly 52 / Custom'],
+      ['Cut-off day', 'วันที่ตัดข้อมูลเวลา รายได้ และรายการหัก'],
+      ['Pay date rule', 'วันที่จ่ายจริงและกฎเลื่อนวันหยุด'],
+    ],
+  },
+  {
+    paths: ['income-items'],
+    title: 'รายได้',
+    description: 'ตั้งรายการเงินได้ทั้งหมดที่เอาไปคำนวณ gross pay และแสดงในสลิป',
+    primaryAction: 'เพิ่มรายได้',
+    filters: ['บริษัท', 'ประเภทเงินได้', 'คิดภาษี'],
+    setup: [],
+    tableTitle: 'รายการรายได้ของ G-HUB Enterprise',
+    tableDescription: 'ใช้เป็น master list ตอนสร้าง payroll run และแสดงในสลิปเงินเดือนของบริษัทที่เลือก',
+    headers: ['รหัส', 'รายได้', 'ประเภท', 'คำนวณภาษี', 'ออกงวด', 'งวดก่อนหน้า', 'ทำจ่าย', 'ประเภทบัญชี', 'คำนวณกับ', 'สวัสดิการ', 'สถานะ'],
+    rows: [
+      ['I01', 'เงินเดือน / ค่าจ้างรายวัน', '40 (1)', 'ทั้งปี', '-', '-', 'ทุกงวด', '-', 'ภาษี, SSO, กองทุน', '-', 'ใช้งาน'],
+      ['I02', 'ค่าล่วงเวลา', '40 (1)', 'ครั้งเดียว', '-', '-', 'งวดสิ้นเดือน', '-', 'ภาษี', '-', 'ใช้งาน'],
+      ['I03', 'ค่าวิชาชีพ', '40 (1)', 'ทั้งปี', '-', '-', 'งวดสิ้นเดือน', '-', 'ภาษี', '-', 'ใช้งาน'],
+      ['I04', 'โบนัส', '40 (1)', 'ครั้งเดียว', '-', '-', 'ทุกงวด', '-', 'ภาษี', '-', 'ใช้งาน'],
+      ['I05', 'ค่ากะ', '40 (1)', 'ทั้งปี', '-', '-', 'งวดสิ้นเดือน', '-', 'ภาษี', 'สวัสดิการ', 'ใช้งาน'],
+      ['I06', 'ค่ากะพิเศษ (OT)', '40 (1)', 'ทั้งปี', '-', '-', 'งวดสิ้นเดือน', '-', 'ภาษี', 'สวัสดิการ', 'ใช้งาน'],
+      ['I07', 'ค่ากะพิเศษ (วันหยุด)', '40 (1)', 'ทั้งปี', '-', '-', 'งวดสิ้นเดือน', '-', 'ภาษี', 'สวัสดิการ', 'ใช้งาน'],
+      ['I08', 'ค่ากะพิเศษจากเวลาทำงาน', '40 (1)', 'ครั้งเดียว', '-', '-', 'งวดสิ้นเดือน', '-', 'ภาษี', 'สวัสดิการ', 'ใช้งาน'],
+      ['I09', 'เบี้ยขยัน', '40 (1)', 'ครั้งเดียว', '-', '-', 'งวดสิ้นเดือน', '-', 'ภาษี', 'สวัสดิการ', 'ใช้งาน'],
+      ['I10', 'เบี้ยขยันพิเศษ', '40 (1)', 'ครั้งเดียว', '-', '-', 'งวดสิ้นเดือน', '-', 'ภาษี', 'สวัสดิการ', 'ใช้งาน'],
+      ['I11', 'เงินสวัสดิการรักษาพยาบาล', '40 (1)', 'ทั้งปี', '-', '-', 'งวดสิ้นเดือน', '-', '-', 'สวัสดิการ', 'ใช้งาน'],
+      ['I12', 'ค่าคอมฯ', '40 (1)', 'ครั้งเดียว', '-', '-', 'งวดสิ้นเดือน', '-', 'ภาษี', '-', 'ใช้งาน'],
+      ['I13', 'ค่าขนมขบเคี้ยวคงเหลือ', '40 (1)', 'ครั้งเดียว', '-', '-', 'งวดสิ้นเดือน', '-', 'ภาษี, SSO', '-', 'ใช้งาน'],
+      ['I14', 'เงินชดเชย', '40 (1) (2)', 'ครั้งเดียว', '-', '-', 'ทุกงวด', '-', 'ภาษี', '-', 'ใช้งาน'],
+    ],
+    ruleTitle: '',
+    rules: [],
+    fieldTitle: '',
+    fields: [],
+  },
+  {
+    paths: ['deduction-items'],
+    title: 'รายหัก',
+    description: 'ตั้งรายการหักทั้งหมดที่ใช้จริง เช่น ภาษี ประกันสังคม กองทุน เงินกู้ สาย ขาด ลาไม่รับค่าจ้าง และรายการหักอื่นๆ',
+    primaryAction: 'เพิ่มรายหัก',
+    filters: ['บริษัท', 'ประเภทหัก', 'หักอัตโนมัติ'],
+    setup: [],
+    tableTitle: 'รายการรายหักของ G-HUB Enterprise',
+    tableDescription: 'ภาษี ประกันสังคม และรายการหักอื่นๆ อยู่เป็น row ใน master list นี้ เพื่อเลือกใช้ตอนคำนวณเงินเดือน',
+    headers: ['รหัส', 'รายหัก', 'ประเภท', 'คำนวณภาษี', 'ออกงวด', 'งวดก่อนหน้า', 'ทำจ่าย', 'ประเภทบัญชี', 'คำนวณกับ', 'สวัสดิการ', 'สถานะ'],
+    rows: [
+      ['D01', 'ภาษีเงินได้หัก ณ ที่จ่าย', 'กฎหมาย', 'ไม่คิดภาษี', '-', '-', 'ทุกงวด', '-', 'รายได้ที่คิดภาษี', '-', 'ใช้งาน'],
+      ['D02', 'ประกันสังคมพนักงาน', 'กฎหมาย', 'ไม่คิดภาษี', '-', '-', 'ทุกงวด', '-', 'ฐาน SSO', '-', 'ใช้งาน'],
+      ['D03', 'กองทุนสำรองเลี้ยงชีพ', 'กองทุน', 'ลดหย่อนภาษี', '-', '-', 'งวดสิ้นเดือน', '-', 'เงินเดือน', 'กองทุน', 'ใช้งาน'],
+      ['D04', 'เงินกู้พนักงาน', 'หักเฉพาะราย', 'ไม่คิดภาษี', '-', '-', 'งวดสิ้นเดือน', '-', 'ยอดคงเหลือ', '-', 'ใช้งาน'],
+      ['D05', 'กยศ.', 'หักเฉพาะราย', 'ไม่คิดภาษี', '-', '-', 'งวดสิ้นเดือน', '-', 'ยอดแจ้งหัก', '-', 'ใช้งาน'],
+      ['D06', 'หักมาสาย', 'เวลา', 'ไม่คิดภาษี', '-', '-', 'งวดสิ้นเดือน', '-', 'เวลาเข้างาน', '-', 'ใช้งาน'],
+      ['D07', 'หักขาดงาน', 'เวลา', 'ไม่คิดภาษี', '-', '-', 'งวดสิ้นเดือน', '-', 'ตารางงาน', '-', 'ใช้งาน'],
+      ['D08', 'ลาไม่รับค่าจ้าง', 'เวลา', 'ไม่คิดภาษี', '-', '-', 'งวดสิ้นเดือน', '-', 'ใบลา', '-', 'ใช้งาน'],
+      ['D09', 'เบิกล่วงหน้า', 'หักเฉพาะราย', 'ไม่คิดภาษี', '-', '-', 'งวดที่เลือก', '-', 'ยอดเบิก', '-', 'ใช้งาน'],
+      ['D10', 'หักอื่นๆ', 'Manual', 'ไม่คิดภาษี', '-', '-', 'งวดที่เลือก', '-', 'Manual', '-', 'ร่าง'],
+    ],
+    ruleTitle: '',
+    rules: [],
+    fieldTitle: '',
+    fields: [],
+  },
+  {
+    paths: ['accounting-items'],
+    title: 'ข้อมูลบัญชี',
+    description: 'ผูกบัญชีเดบิต/เครดิตของรายการรายได้และรายหัก เพื่อส่งต่อบัญชีหลังปิดงวดเงินเดือน',
+    primaryAction: 'เพิ่มผังบัญชี',
+    filters: ['บริษัท', 'ประเภทบัญชี', 'สถานะ'],
+    setup: [],
+    tableTitle: 'ข้อมูลบัญชี Payroll ของ G-HUB Enterprise',
+    tableDescription: 'ใช้ map รายการรายได้/รายหักไปยังบัญชีที่ต้องบันทึกเมื่อปิดงวด',
+    headers: ['รหัส', 'รายการ', 'ชนิด', 'เดบิต', 'เครดิต', 'ใช้กับ', 'สถานะ'],
+    rows: [
+      ['ACC01', 'เงินเดือน / ค่าจ้าง', 'รายได้', 'ค่าใช้จ่ายเงินเดือน', 'เจ้าหนี้เงินเดือน', 'I01', 'ใช้งาน'],
+      ['ACC02', 'ค่าล่วงเวลา', 'รายได้', 'ค่าใช้จ่าย OT', 'เจ้าหนี้เงินเดือน', 'I02', 'ใช้งาน'],
+      ['ACC03', 'โบนัส', 'รายได้', 'ค่าใช้จ่ายโบนัส', 'เจ้าหนี้เงินเดือน', 'I04', 'ใช้งาน'],
+      ['ACC04', 'ภาษีหัก ณ ที่จ่าย', 'รายหัก', 'เจ้าหนี้เงินเดือน', 'ภาษีหัก ณ ที่จ่ายค้างจ่าย', 'D01', 'ใช้งาน'],
+      ['ACC05', 'ประกันสังคมพนักงาน', 'รายหัก', 'เจ้าหนี้เงินเดือน', 'ประกันสังคมค้างจ่าย', 'D02', 'ใช้งาน'],
+      ['ACC06', 'กองทุนสำรองเลี้ยงชีพ', 'รายหัก', 'เจ้าหนี้เงินเดือน', 'กองทุนสำรองเลี้ยงชีพค้างจ่าย', 'D03', 'ใช้งาน'],
+      ['ACC07', 'เงินกู้พนักงาน', 'รายหัก', 'เจ้าหนี้เงินเดือน', 'ลูกหนี้เงินกู้พนักงาน', 'D04', 'ร่าง'],
+    ],
+    ruleTitle: '',
+    rules: [],
+    fieldTitle: '',
+    fields: [],
+  },
+  {
+    paths: ['statutory-settings'],
+    title: 'ภาษีและประกันสังคม',
+    description: 'ตั้งค่า statutory ที่ระบบใช้คำนวณอัตโนมัติ เช่น ตารางภาษี ค่าลดหย่อน อัตราประกันสังคม และเลขทะเบียนนายจ้าง',
+    primaryAction: 'เพิ่มอัตรา/ตาราง',
+    filters: ['บริษัท', 'ปีภาษี', 'วันที่มีผล'],
+    setup: [
+      { label: 'ภาษี', value: 'ตามปีภาษี', detail: 'ขั้นภาษี ค่าลดหย่อน และวิธีเฉลี่ยภาษีต่อเดือน' },
+      { label: 'ประกันสังคม', value: 'ตามวันที่มีผล', detail: 'อัตราสมทบ ฐานขั้นต่ำ/ขั้นสูง และการปัดเศษ' },
+      { label: 'ทะเบียนนายจ้าง', value: 'แยกบริษัท', detail: 'เลขบัญชีนายจ้างและสาขาประกันสังคมของแต่ละบริษัท' },
+    ],
+    tableTitle: 'ค่า statutory ที่ระบบต้องใช้',
+    tableDescription: 'ควรเก็บเป็น version เพื่อไม่ให้การเปลี่ยนอัตรากระทบงวดเก่า',
+    headers: ['รหัส', 'รายการ', 'ค่า/สูตร', 'มีผลตั้งแต่', 'สถานะ'],
+    rows: [
+      ['TAX-2569', 'ตารางภาษีปี 2569', 'คำนวณแบบขั้นบันไดรายปี', '1 ม.ค. 2569', 'ใช้งาน'],
+      ['ALLOWANCE', 'ค่าลดหย่อนพนักงาน', 'ข้อมูลรายคน + เอกสารยืนยัน', 'ตามปีภาษี', 'ใช้งาน'],
+      ['SSO-M33', 'ประกันสังคมมาตรา 33', 'ฐานค่าจ้าง x อัตรา ตามเพดาน', 'ตามประกาศ', 'ใช้งาน'],
+      ['SSO-EMPLOYER', 'เงินสมทบนายจ้าง', 'ใช้ฐานเดียวกับพนักงาน', 'ตามประกาศ', 'ต้องกำหนด'],
+      ['WCF', 'กองทุนเงินทดแทน', 'อัตราตามรหัสกิจการ', 'รายปี', 'ร่าง'],
+    ],
+    ruleTitle: 'หลักการใช้งาน',
+    rules: ['เลือก version ตามวันที่ในงวดเงินเดือน', 'คำนวณภาษีจากรายได้สะสมและรายได้คาดการณ์ทั้งปี', 'คำนวณ SSO จาก pay item ที่เข้าฐาน', 'รายงานแยกตามนิติบุคคล'],
+    fieldTitle: 'ตัวอย่าง field',
+    fields: [
+      ['Effective date', 'วันที่เริ่มใช้อัตรา'],
+      ['Wage base cap', 'ฐานค่าจ้างขั้นต่ำ/ขั้นสูง'],
+      ['Employer account', 'เลขบัญชีนายจ้างแยกบริษัท'],
+    ],
+  },
+  {
+    paths: ['calculation-rules'],
+    title: 'สูตรคำนวณเงินเดือน',
+    description: 'รวมสูตรที่ใช้แปลงข้อมูลพนักงาน เวลา และรายการรายได้/หัก ให้เป็นยอดสุทธิที่จ่ายจริง',
+    primaryAction: 'เพิ่มสูตรคำนวณ',
+    filters: ['บริษัท', 'ประเภทการจ้าง', 'สถานะ'],
+    setup: [
+      { label: 'รายเดือน', value: 'Prorate', detail: 'เข้าออกกลางงวด ปรับเงินเดือนกลางงวด และลาไม่รับค่าจ้าง' },
+      { label: 'รายวัน/ชั่วโมง', value: 'ตามเวลาอนุมัติ', detail: 'นับวันหรือชั่วโมงจากตารางเวลา' },
+      { label: 'OT/วันหยุด', value: 'ตัวคูณ', detail: 'กำหนดตัวคูณ 1.5, 2, 3 หรือสูตรบริษัท' },
+    ],
+    tableTitle: 'สูตรหลักที่ควรมี',
+    tableDescription: 'สูตรเหล่านี้ถูกเรียกใช้จากประเภทการจ้าง รายได้ และรายการหัก',
+    headers: ['รหัสสูตร', 'ชื่อสูตร', 'ใช้กับ', 'สูตรตัวอย่าง', 'สถานะ'],
+    rows: [
+      ['BASE_MONTH', 'เงินเดือนรายเดือน', 'MONTHLY', 'เงินเดือน x วันจ่าย / วันฐาน', 'ใช้งาน'],
+      ['BASE_DAY', 'ค่าแรงรายวัน', 'DAILY', 'ค่าแรงต่อวัน x วันทำงาน', 'ใช้งาน'],
+      ['OT_15', 'OT วันทำงาน', 'OT', 'อัตราชั่วโมง x ชั่วโมง OT x 1.5', 'ใช้งาน'],
+      ['LATE_MIN', 'หักมาสาย', 'LATE', 'นาทีสาย x อัตราต่อนาที', 'ต้องกำหนด'],
+      ['ROUND_NET', 'ปัดเศษยอดสุทธิ', 'NET PAY', 'ปัดเศษ 2 ตำแหน่ง/บาทเต็ม', 'ใช้งาน'],
+    ],
+    ruleTitle: 'หลักการคำนวณ',
+    rules: ['ดึงประเภทการจ้างและเงินเดือนพนักงาน', 'ดึงเวลา/ลา/OT ที่อนุมัติแล้ว', 'สร้างรายได้และรายการหักตามสูตร', 'คำนวณภาษี SSO และยอดสุทธิ', 'ล็อกผลคำนวณเมื่อปิดงวด'],
+    fieldTitle: 'ตัวอย่าง field',
+    fields: [
+      ['Formula code', 'รหัสสูตรที่ pay item เรียกใช้'],
+      ['Rounding', 'ปัดเศษรายรายการหรือยอดสุทธิ'],
+      ['Priority', 'ลำดับคำนวณก่อนหลัง'],
+    ],
+  },
+  {
+    paths: ['payment-payslip', 'payment-closing'],
+    title: 'ธนาคารและสลิป',
+    description: 'ตั้งค่าบัญชีจ่ายเงิน ไฟล์ธนาคาร และรูปแบบสลิปเงินเดือนของแต่ละบริษัท',
+    primaryAction: 'เพิ่มการตั้งค่า',
+    filters: ['บริษัท', 'ธนาคาร', 'สถานะ'],
+    setup: [
+      { label: 'บัญชีจ่ายเงิน', value: 'แยกบริษัท', detail: 'กำหนดบัญชีต้นทางและผู้อนุมัติ' },
+      { label: 'ไฟล์ธนาคาร', value: 'SCB/KBank/BBL/KTB', detail: 'รูปแบบไฟล์ payroll bank transfer' },
+      { label: 'ปิดงวด', value: 'ตรวจ > อนุมัติ > จ่าย', detail: 'ล็อกงวดหลังอนุมัติและ export ไฟล์' },
+    ],
+    tableTitle: 'รายการตั้งค่าธนาคารและสลิป',
+    tableDescription: 'ใช้ตอนสร้างไฟล์โอนเงินและเผยแพร่สลิปหลัง payroll run อนุมัติแล้ว',
+    headers: ['รหัส', 'รายการ', 'ใช้กับ', 'รายละเอียด', 'สถานะ'],
+    rows: [
+      ['BANK-GHE', 'บัญชีจ่ายเงินเดือน G-HUB', 'G-HUB Enterprise', 'บัญชีต้นทางสำหรับ payroll', 'ใช้งาน'],
+      ['FMT-SCB', 'ไฟล์โอน SCB', 'SCB', 'รูปแบบ TXT/CSV ตามธนาคาร', 'ต้องกำหนด'],
+      ['FMT-KBANK', 'ไฟล์โอน KBank', 'KBank', 'รูปแบบ TXT/CSV ตามธนาคาร', 'ใช้งาน'],
+      ['PS-STD', 'สลิปเงินเดือนมาตรฐาน', 'ทุกบริษัท', 'รายได้ รายหัก ภาษี SSO ยอดสุทธิ', 'ใช้งาน'],
+      ['PS-EXEC', 'สลิปผู้บริหาร', 'G-HUB Enterprise', 'ซ่อน field ภายในตามสิทธิ์ผู้ดูแล', 'ร่าง'],
+    ],
+    ruleTitle: '',
+    rules: [],
+    fieldTitle: 'ตัวอย่าง field',
+    fields: [
+      ['Payment account', 'บัญชีต้นทางแยกบริษัท'],
+      ['Bank format', 'รูปแบบไฟล์โอนเงิน'],
+      ['Payslip publish date', 'เผยแพร่วันจ่ายหรือหลังอนุมัติ'],
+    ],
+  },
+  {
+    paths: ['closing-approval'],
+    title: 'อนุมัติและปิดงวด',
+    description: 'ตั้งขั้นตอนตรวจสอบ อนุมัติ จ่ายเงิน ล็อกงวด และการเปิดงวดแก้ไขหลังปิดงวด',
+    primaryAction: 'เพิ่มขั้นตอน',
+    filters: ['บริษัท', 'งวดเงินเดือน', 'สถานะ'],
+    setup: [],
+    tableTitle: 'ขั้นตอนอนุมัติและปิดงวด Payroll',
+    tableDescription: 'กำหนดลำดับงานหลังคำนวณเงินเดือน ตั้งแต่ตรวจยอดจนถึงล็อกงวด',
+    headers: ['รหัส', 'ขั้นตอน', 'ผู้รับผิดชอบ', 'เงื่อนไข', 'สถานะ'],
+    rows: [
+      ['WF01', 'ตรวจข้อมูลพนักงานและเวลา', 'HR Payroll', 'ต้องตรวจรายการผิดปกติก่อนคำนวณ', 'ใช้งาน'],
+      ['WF02', 'ตรวจผลคำนวณเงินเดือน', 'HR Manager', 'ยอดสุทธิและรายการหักต้องผ่าน validation', 'ใช้งาน'],
+      ['WF03', 'อนุมัติจ่ายเงินเดือน', 'Finance Manager', 'อนุมัติก่อนสร้างไฟล์ธนาคาร', 'ใช้งาน'],
+      ['WF04', 'เผยแพร่สลิปเงินเดือน', 'HR Payroll', 'หลังอนุมัติหรือวันจ่ายจริง', 'ใช้งาน'],
+      ['WF05', 'ล็อกงวดหลังจ่าย', 'System', 'แก้ไขได้เฉพาะ reopen พร้อมเหตุผล', 'ใช้งาน'],
+      ['WF06', 'เปิดงวดแก้ไข', 'HR Director', 'ต้องบันทึกเหตุผลและ audit log', 'ร่าง'],
+    ],
+    ruleTitle: '',
+    rules: [],
+    fieldTitle: '',
+    fields: [],
+  },
+];
+
+const PAYROLL_PAY_ITEM_TABS = [
+  { label: 'รายได้', path: '/humansource/payroll/income-items' },
+  { label: 'รายหัก', path: '/humansource/payroll/deduction-items' },
+  { label: 'ข้อมูลบัญชี', path: '/humansource/payroll/accounting-items' },
+];
+
+const PAYROLL_COMPANY_OPTIONS = ['ใช้กับทุกบริษัท', 'G-HUB Enterprise', 'Operations', 'ฝ่ายขาย', 'คลังสินค้า'];
+const PAYROLL_STATUS_OPTIONS = ['ทั้งหมด', 'ใช้งาน', 'ร่าง', 'ต้องกำหนด'];
+
+type PayrollDraftForm = {
+  code: string;
+  name: string;
+  type: string;
+  taxMode: string;
+  payTiming: string;
+  calculationBase: string;
+  benefit: string;
+  detail: string;
+  status: string;
+};
+
+function PayrollSettingsForm({
+  activeItem,
+  accent,
+}: {
+  topic: HrNavChild;
+  activeItem: HrNavChild;
+  accent: string;
+}) {
+  const normalizedPath = normalizePath(activeItem.path);
+  const isGeneralStub = normalizedPath.includes('payroll/general');
+
+  const page = getPracticalPayrollPage(activeItem.path);
+  const isPayItemsPage = isPayrollPayItemsPath(normalizedPath);
+  const [selectedCompany, setSelectedCompany] = useState('G-HUB Enterprise');
+  const [statusFilter, setStatusFilter] = useState('ทั้งหมด');
+  const [typeFilter, setTypeFilter] = useState('ทั้งหมด');
+  const [query, setQuery] = useState('');
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createdRows, setCreatedRows] = useState<Record<string, string[][]>>({});
+  const [toast, setToast] = useState('');
+  const [draftForm, setDraftForm] = useState<PayrollDraftForm>(() => getEmptyPayrollForm(page, normalizedPath));
+  const searchPlaceholder = getPayrollSearchPlaceholder(normalizedPath);
+  const storageKey = getPayrollStorageKey(normalizedPath, selectedCompany);
+  const baseRows = getPayrollRowsForCompany(page, normalizedPath, selectedCompany);
+  const workingRows = [...baseRows, ...(createdRows[storageKey] ?? [])];
+  const typeOptions = getPayrollTypeOptions(page.headers, workingRows, normalizedPath);
+  const normalizedQuery = query.trim().toLocaleLowerCase('th-TH');
+  const filteredRows = workingRows.filter((row) => {
+    const rowStatus = row[row.length - 1] ?? '';
+    const typeIndex = getPayrollTypeIndex(page.headers, normalizedPath);
+    const rowType = typeIndex >= 0 ? row[typeIndex] : '';
+    const matchesStatus = statusFilter === 'ทั้งหมด' || rowStatus === statusFilter;
+    const matchesType = typeFilter === 'ทั้งหมด' || rowType === typeFilter;
+    const matchesQuery = !normalizedQuery || row.join(' ').toLocaleLowerCase('th-TH').includes(normalizedQuery);
+    return matchesStatus && matchesType && matchesQuery;
+  });
+
+  useEffect(() => {
+    setQuery('');
+    setTypeFilter('ทั้งหมด');
+    setStatusFilter('ทั้งหมด');
+    setDraftForm(getEmptyPayrollForm(page, normalizedPath));
+  }, [normalizedPath, page]);
+
+  useEffect(() => {
+    if (!typeOptions.includes(typeFilter)) setTypeFilter('ทั้งหมด');
+  }, [typeFilter, typeOptions]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(''), 2400);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  if (isGeneralStub) {
+    return (
+      <div className="p-6 text-sm text-gray-400">กำลังพัฒนา — การตั้งค่าทั่วไปของระบบเงินเดือน</div>
+    );
+  }
+
+  const saveDraftRow = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const nextRow = buildPayrollRowFromForm(page.headers, draftForm, normalizedPath, selectedCompany);
+    setCreatedRows((current) => ({
+      ...current,
+      [storageKey]: [...(current[storageKey] ?? []), nextRow],
+    }));
+    setShowCreateForm(false);
+    setToast(`เพิ่ม ${draftForm.name} แล้ว`);
+    setDraftForm(getEmptyPayrollForm(page, normalizedPath));
+  };
 
   return (
-    <div className="grid min-h-[560px] lg:grid-cols-[310px_minmax(0,1fr)]">
-      <aside className="border-b border-gray-200 p-5 lg:border-b-0 lg:border-r">
-        <button type="button" className="mb-4 h-11 w-full rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-700">
-          + เพิ่มประเภทการจ้าง
-        </button>
-        <div className="space-y-2">
-          {types.map((type, index) => (
-            <button
-              key={type}
-              type="button"
-              className={`h-12 w-full rounded-lg border px-4 text-left text-sm transition ${index === 0 ? 'bg-white font-semibold' : 'border-transparent bg-gray-50 font-medium text-gray-700 hover:bg-white'}`}
-              style={index === 0 ? { borderColor: accent, color: accent } : undefined}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-      </aside>
-      <main className="p-5">
-        <h3 className="text-base font-semibold text-gray-950">{topic.label}</h3>
-        <div className="mt-5 grid gap-5 md:grid-cols-2">
-          <FieldBox label="ชื่อประเภทการจ้าง*" value="รายวัน" />
-          <FieldBox label="ชื่อประเภทการจ้าง (EN)" value="Daily Payment" />
-        </div>
-        <div className="mt-5">
-          <p className="text-sm font-semibold text-gray-950">เงื่อนไขการคำนวณรายได้รายหัก</p>
-          <div className="mt-4 flex flex-wrap gap-4">
-            {['ล่วงเวลา', 'สาย', 'ขาดงาน', 'ลืมลงเวลา', 'กลับก่อน', 'คำนวณสถานะช่วงพัก'].map((tab, index) => (
-              <button
-                key={tab}
-                type="button"
-                className={`pb-2 text-sm ${index === 0 ? 'font-semibold' : 'font-medium text-gray-500'}`}
-                style={index === 0 ? { color: accent, borderBottom: `2px solid ${accent}` } : undefined}
+    <div className="hr-position-page p-5">
+      {isPayItemsPage ? (
+        <div className="mb-4 flex flex-wrap gap-1 border-b border-gray-200">
+          {PAYROLL_PAY_ITEM_TABS.map((tab) => {
+            const active = normalizePath(tab.path) === normalizedPath;
+            const count = getPayrollRowsForCompany(getPracticalPayrollPage(tab.path), normalizePath(tab.path), selectedCompany).length;
+            return (
+              <Link
+                key={tab.path}
+                href={getSettingsRouteHref(tab.path)}
+                className={`-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2 text-xs font-semibold transition ${
+                  active ? '' : 'border-transparent text-gray-500 hover:text-gray-900'
+                }`}
+                style={active ? { borderColor: accent, color: accent } : undefined}
               >
-                {tab}
-              </button>
-            ))}
-          </div>
-          <SettingsTable
-            headers={['ช่วงเวลาที่ทำงาน', 'รหัส']}
-            rows={[
-              ['OT1: ทำงานในวันหยุด', 'OT1'],
-              ['OT2: ล่วงเวลาในวันทำงาน', 'OT2'],
-              ['OT3: ทำงานในวันหยุด (รายวัน)', 'OT3'],
-            ]}
-            accent={accent}
-          />
+                <span>{tab.label}</span>
+                <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">{count}</span>
+              </Link>
+            );
+          })}
         </div>
-      </main>
+      ) : null}
+
+      <div className="hr-settings-toolbar">
+        <div className="hr-settings-toolbar__filters">
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={searchPlaceholder}
+            className="hr-settings-search hr-position-search"
+          />
+          <div className="hr-position-filter-select">
+            <HrCustomSelect
+              label="บริษัท"
+              value={selectedCompany}
+              options={PAYROLL_COMPANY_OPTIONS}
+              onChange={setSelectedCompany}
+            />
+          </div>
+          {typeOptions.length > 2 ? (
+            <div className="hr-position-filter-select">
+              <HrCustomSelect
+                label="ประเภท"
+                value={typeFilter}
+                options={typeOptions}
+                onChange={setTypeFilter}
+              />
+            </div>
+          ) : null}
+          <div className="hr-position-filter-select">
+            <HrCustomSelect
+              label="สถานะ"
+              value={statusFilter}
+              options={PAYROLL_STATUS_OPTIONS}
+              onChange={setStatusFilter}
+            />
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCreateForm(true)}
+          className="hr-settings-primary-action"
+          style={{ backgroundColor: accent }}
+        >
+          <PlusIcon className="h-4 w-4" />
+          {page.primaryAction}
+        </button>
+      </div>
+
+      <p className="hr-settings-count">
+        {filteredRows.length} รายการ · {selectedCompany}
+      </p>
+
+      {filteredRows.length ? (
+        <SettingsTable
+          headers={page.headers}
+          rows={filteredRows}
+          accent={accent}
+        />
+      ) : (
+        <div className="mt-6 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-8 text-center">
+          <p className="text-sm font-semibold text-gray-900">ไม่พบรายการที่ตรงกับตัวกรอง</p>
+          <p className="mt-1 text-xs text-gray-500">ลองเปลี่ยนเงื่อนไขการค้นหา หรือเพิ่มรายการใหม่</p>
+          <button
+            type="button"
+            onClick={() => setShowCreateForm(true)}
+            className="mt-4 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-semibold text-white"
+            style={{ backgroundColor: accent }}
+          >
+            <PlusIcon className="h-4 w-4" />
+            {page.primaryAction}
+          </button>
+        </div>
+      )}
+
+      {showCreateForm ? (
+        <PayrollCreateModal
+          page={page}
+          form={draftForm}
+          accent={accent}
+          selectedCompany={selectedCompany}
+          onClose={() => setShowCreateForm(false)}
+          onSubmit={saveDraftRow}
+          onChange={setDraftForm}
+        />
+      ) : null}
+
+      {toast ? (
+        <div className="fixed bottom-5 right-5 z-[90] rounded-lg border border-gray-200 bg-white px-4 py-3 text-xs font-semibold text-gray-700 shadow-lg">
+          {toast}
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function PayrollCreateModal({
+  page,
+  form,
+  accent,
+  selectedCompany,
+  onClose,
+  onSubmit,
+  onChange,
+}: {
+  page: PayrollPracticalPage;
+  form: PayrollDraftForm;
+  accent: string;
+  selectedCompany: string;
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onChange: (form: PayrollDraftForm) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/40 p-4" role="dialog" aria-modal="true" aria-labelledby="payroll-create-title">
+      <form onSubmit={onSubmit} className="flex max-h-[88vh] w-full max-w-3xl flex-col rounded-lg border border-gray-200 bg-white shadow-2xl">
+        <header className="flex items-start justify-between gap-3 border-b border-gray-200 px-5 py-4">
+          <div>
+            <h4 id="payroll-create-title" className="text-base font-bold text-gray-950">{page.primaryAction}</h4>
+            <p className="mt-0.5 text-xs text-gray-500">{selectedCompany}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-semibold text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+            aria-label="ปิดฟอร์ม"
+          >
+            x
+          </button>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <PayrollFormField label="รหัส*">
+              <input
+                value={form.code}
+                onChange={(event) => onChange({ ...form, code: event.target.value.toUpperCase() })}
+                className="hr-shift-control uppercase"
+                required
+              />
+            </PayrollFormField>
+            <PayrollFormField label="สถานะ">
+              <HrCustomSelect
+                label="สถานะ"
+                value={form.status}
+                options={PAYROLL_STATUS_OPTIONS.filter((option) => option !== 'ทั้งหมด')}
+                onChange={(status) => onChange({ ...form, status })}
+              />
+            </PayrollFormField>
+            <PayrollFormField label="ชื่อรายการ*" className="md:col-span-2">
+              <input
+                value={form.name}
+                onChange={(event) => onChange({ ...form, name: event.target.value })}
+                className="hr-shift-control"
+                placeholder="เช่น ค่าตำแหน่ง, หักเงินกู้, ไฟล์โอนธนาคาร"
+                required
+              />
+            </PayrollFormField>
+            <PayrollFormField label="ประเภท">
+              <input
+                value={form.type}
+                onChange={(event) => onChange({ ...form, type: event.target.value })}
+                className="hr-shift-control"
+              />
+            </PayrollFormField>
+            <PayrollFormField label="คำนวณภาษี / วิธีคิด">
+              <HrCustomSelect
+                label="คำนวณภาษี"
+                value={form.taxMode}
+                options={['ทั้งปี', 'ครั้งเดียว', 'ไม่คิดภาษี', 'ลดหย่อนภาษี']}
+                onChange={(taxMode) => onChange({ ...form, taxMode })}
+              />
+            </PayrollFormField>
+            <PayrollFormField label="ทำจ่าย">
+              <HrCustomSelect
+                label="ทำจ่าย"
+                value={form.payTiming}
+                options={['ทุกงวด', 'งวดสิ้นเดือน', 'งวดที่เลือก', 'กำหนดเอง']}
+                onChange={(payTiming) => onChange({ ...form, payTiming })}
+              />
+            </PayrollFormField>
+            <PayrollFormField label="คำนวณกับ">
+              <input
+                value={form.calculationBase}
+                onChange={(event) => onChange({ ...form, calculationBase: event.target.value })}
+                className="hr-shift-control"
+                placeholder="เช่น เงินเดือน, ฐาน SSO, เวลาเข้างาน"
+              />
+            </PayrollFormField>
+            <PayrollFormField label="สวัสดิการ">
+              <input
+                value={form.benefit}
+                onChange={(event) => onChange({ ...form, benefit: event.target.value })}
+                className="hr-shift-control"
+                placeholder="-"
+              />
+            </PayrollFormField>
+            <PayrollFormField label="รายละเอียด" className="md:col-span-2">
+              <textarea
+                value={form.detail}
+                onChange={(event) => onChange({ ...form, detail: event.target.value })}
+                className="hr-shift-control"
+                placeholder="รายละเอียดสำหรับ HR/Payroll ใช้ตรวจสอบ"
+              />
+            </PayrollFormField>
+          </div>
+        </div>
+
+        <footer className="flex flex-wrap justify-end gap-2 border-t border-gray-200 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-10 rounded-lg border border-gray-200 bg-white px-4 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
+          >
+            ยกเลิก
+          </button>
+          <button
+            type="submit"
+            className="h-10 rounded-lg px-4 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ backgroundColor: accent }}
+            disabled={!form.code.trim() || !form.name.trim()}
+          >
+            บันทึก mock data
+          </button>
+        </footer>
+      </form>
+    </div>
+  );
+}
+
+function PayrollFormField({
+  label,
+  children,
+  className = '',
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <label className={className}>
+      <span className="mb-1.5 block text-xs font-semibold text-gray-700">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function isPayrollPayItemsPath(path: string): boolean {
+  return ['income-items', 'deduction-items', 'accounting-items'].some((segment) => path.includes(segment));
+}
+
+function getPayrollStorageKey(path: string, company: string): string {
+  return `${getPayrollPageKey(path)}::${company}`;
+}
+
+
+function getPayrollPageKey(path: string): string {
+  if (path.includes('income-items')) return 'income';
+  if (path.includes('deduction-items')) return 'deduction';
+  if (path.includes('accounting-items')) return 'accounting';
+  if (path.includes('pay-periods')) return 'period';
+  if (path.includes('calculation-rules')) return 'formula';
+  if (path.includes('payment-payslip')) return 'payment';
+  if (path.includes('closing-approval')) return 'closing';
+  return 'employment';
+}
+
+function getPayrollRowsForCompany(page: PayrollPracticalPage, path: string, company: string): string[][] {
+  if (company === 'ใช้กับทุกบริษัท') return page.rows;
+
+  const allowedIncomeCodes: Record<string, string[]> = {
+    'G-HUB Enterprise': ['I01', 'I02', 'I03', 'I04', 'I05', 'I06', 'I07', 'I08', 'I09', 'I10', 'I11', 'I12', 'I13', 'I14'],
+    Operations: ['I01', 'I02', 'I05', 'I06', 'I07', 'I08', 'I11'],
+    ฝ่ายขาย: ['I01', 'I04', 'I09', 'I10', 'I12', 'I13'],
+    คลังสินค้า: ['I01', 'I02', 'I05', 'I06', 'I07', 'I08', 'I09'],
+  };
+  const allowedDeductionCodes: Record<string, string[]> = {
+    'G-HUB Enterprise': ['D01', 'D02', 'D03', 'D04', 'D05', 'D06', 'D07', 'D08', 'D09', 'D10'],
+    Operations: ['D01', 'D02', 'D06', 'D07', 'D08', 'D09'],
+    ฝ่ายขาย: ['D01', 'D02', 'D03', 'D04', 'D05', 'D09', 'D10'],
+    คลังสินค้า: ['D01', 'D02', 'D06', 'D07', 'D08', 'D10'],
+  };
+
+  if (path.includes('income-items')) {
+    const allowed = allowedIncomeCodes[company] ?? allowedIncomeCodes['G-HUB Enterprise'];
+    return page.rows.filter((row) => allowed.includes(row[0]));
+  }
+
+  if (path.includes('deduction-items')) {
+    const allowed = allowedDeductionCodes[company] ?? allowedDeductionCodes['G-HUB Enterprise'];
+    return page.rows.filter((row) => allowed.includes(row[0]));
+  }
+
+  if (path.includes('accounting-items')) {
+    const allowedIncome = allowedIncomeCodes[company] ?? allowedIncomeCodes['G-HUB Enterprise'];
+    const allowedDeduction = allowedDeductionCodes[company] ?? allowedDeductionCodes['G-HUB Enterprise'];
+    return page.rows.filter((row) => allowedIncome.includes(row[5]) || allowedDeduction.includes(row[5]));
+  }
+
+  if (path.includes('payment-payslip')) {
+    return page.rows.filter((row) => row[2] === company || row[2] === 'ทุกบริษัท' || !row[2]?.includes('G-HUB'));
+  }
+
+  return page.rows;
+}
+
+function getPayrollTypeIndex(headers: string[], path: string): number {
+  if (path.includes('employment-types')) return 1;
+  if (path.includes('pay-periods')) return headers.indexOf('รูปแบบรอบจ่าย');
+  if (path.includes('calculation-rules')) return headers.indexOf('ใช้กับ');
+  if (path.includes('payment-payslip')) return headers.indexOf('ใช้กับ');
+  if (path.includes('closing-approval')) return headers.indexOf('ผู้รับผิดชอบ');
+
+  const preferred = ['ประเภท', 'ชนิด'];
+  const index = headers.findIndex((header) => preferred.includes(header));
+  return index;
+}
+
+function getPayrollTypeOptions(headers: string[], rows: string[][], path: string): string[] {
+  const typeIndex = getPayrollTypeIndex(headers, path);
+  if (typeIndex < 0) return ['ทั้งหมด'];
+  const values = rows.map((row) => row[typeIndex]).filter((value): value is string => Boolean(value && value !== '-'));
+  return ['ทั้งหมด', ...Array.from(new Set(values))];
+}
+
+
+function getEmptyPayrollForm(page: PayrollPracticalPage, path: string): PayrollDraftForm {
+  const prefix = getPayrollDraftPrefix(path);
+  const nextNumber = String(page.rows.length + 1).padStart(2, '0');
+  return {
+    code: `${prefix}${nextNumber}`,
+    name: '',
+    type: getPayrollDefaultType(path),
+    taxMode: path.includes('deduction-items') ? 'ไม่คิดภาษี' : 'ทั้งปี',
+    payTiming: 'งวดสิ้นเดือน',
+    calculationBase: '',
+    benefit: '-',
+    detail: '',
+    status: 'ร่าง',
+  };
+}
+
+function getPayrollDraftPrefix(path: string): string {
+  if (path.includes('income-items')) return 'I';
+  if (path.includes('deduction-items')) return 'D';
+  if (path.includes('accounting-items')) return 'ACC';
+  if (path.includes('pay-periods')) return 'P';
+  if (path.includes('calculation-rules')) return 'F';
+  if (path.includes('payment-payslip')) return 'PAY';
+  if (path.includes('closing-approval')) return 'WF';
+  return 'EMP';
+}
+
+function getPayrollDefaultType(path: string): string {
+  if (path.includes('deduction-items')) return 'หักเฉพาะราย';
+  if (path.includes('accounting-items')) return 'รายได้';
+  if (path.includes('pay-periods')) return 'รายเดือน';
+  if (path.includes('calculation-rules')) return 'MONTHLY';
+  if (path.includes('payment-payslip')) return 'G-HUB Enterprise';
+  if (path.includes('closing-approval')) return 'HR Payroll';
+  if (path.includes('employment-types')) return 'รายเดือน';
+  return '40 (1)';
+}
+
+function buildPayrollRowFromForm(headers: string[], form: PayrollDraftForm, path: string, selectedCompany: string): string[] {
+  return headers.map((header, index) => {
+    if (index === 0) return form.code.trim();
+    if (index === 1) return form.name.trim();
+    if (index === headers.length - 1) return form.status;
+    if (header === 'ประเภท' || header === 'ชนิด' || header === 'รูปแบบรอบจ่าย') return form.type || '-';
+    if (header === 'คำนวณภาษี') return form.taxMode;
+    if (header === 'ทำจ่าย' || header === 'วันที่จ่าย') return form.payTiming;
+    if (header === 'คำนวณกับ') return form.calculationBase || '-';
+    if (header === 'สวัสดิการ') return form.benefit || '-';
+    if (header === 'ใช้กับ') return path.includes('accounting-items') ? form.calculationBase || '-' : selectedCompany;
+    if (header === 'เดบิต') return form.detail || 'ค่าใช้จ่ายเงินเดือน';
+    if (header === 'เครดิต') return form.calculationBase || 'เจ้าหนี้เงินเดือน';
+    if (header === 'ผู้รับผิดชอบ') return form.type || 'HR Payroll';
+    if (header === 'เงื่อนไข' || header === 'รายละเอียด' || header === 'สูตรตัวอย่าง') return form.detail || '-';
+    if (header === 'ฐานคำนวณ') return form.calculationBase || form.type || '-';
+    if (header === 'สูตรหลัก') return form.detail || 'กำหนดเอง';
+    if (header === 'จ่ายกี่ครั้ง/ปี') return form.calculationBase || '12 ครั้ง';
+    if (header === 'ปีเงินเดือน') return '2569';
+    if (header === 'ตัวอย่างงวดที่สร้าง') return form.detail || 'ระบบสร้างตามรูปแบบที่เลือก';
+    if (header === 'ออกงวด' || header === 'งวดก่อนหน้า' || header === 'ประเภทบัญชี') return '-';
+    return form.detail || '-';
+  });
+}
+
+function getPayrollSearchPlaceholder(path: string): string {
+  if (path.includes('deduction-items')) return 'ค้นหาชื่อรายหักหรือรหัสรายหัก';
+  if (path.includes('accounting-items')) return 'ค้นหารหัสบัญชีหรือชื่อรายการ';
+  if (path.includes('pay-periods')) return 'ค้นหางวดเงินเดือนหรือรหัสงวด';
+  if (path.includes('employment-types')) return 'ค้นหาประเภทการจ้างหรือรหัส';
+  if (path.includes('calculation-rules')) return 'ค้นหาสูตรคำนวณหรือรหัสสูตร';
+  return 'ค้นหาชื่อรายได้หรือรหัสรายได้';
+}
+
+function getPracticalPayrollPage(path: string): PayrollPracticalPage {
+  const normalized = normalizePath(path);
+  if (!PAYROLL_PRACTICAL_PAGES.length) {
+    throw new Error('Payroll settings are not configured');
+  }
+  return (
+    PAYROLL_PRACTICAL_PAGES.find((item) => item.paths.some((segment) => normalized.includes(segment))) ??
+    PAYROLL_PRACTICAL_PAGES[0]
   );
 }
 
@@ -1767,28 +2487,24 @@ function SystemUsersTable({ accent }: { accent: string }) {
   );
 }
 
-function FieldBox({ label, value }: { label: string; value: string }) {
-  return (
-    <label className="block">
-      <span className="text-xs font-medium text-gray-700">{label}</span>
-      <span className="mt-2 flex h-11 items-center rounded-lg border border-gray-200 bg-white px-3 text-sm font-normal text-gray-900">
-        {value}
-      </span>
-    </label>
-  );
-}
-
 function SettingsTable({
   headers,
   rows,
+  accent,
+  onRowClick,
+  activeRowKey,
+  getRowKey,
 }: {
   headers: string[];
   rows: string[][];
   accent?: string;
+  onRowClick?: (row: string[]) => void;
+  activeRowKey?: string | null;
+  getRowKey?: (row: string[]) => string;
 }) {
   return (
     <div className="hr-settings-table-wrap mt-4">
-      <table className="hr-settings-table">
+      <table className="hr-settings-table" style={headers.length > 8 ? { minWidth: '82rem' } : undefined}>
         <thead>
           <tr>
             {headers.map((header) => (
@@ -1797,38 +2513,55 @@ function SettingsTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.join('-')}>
-              {row.map((cell, index) => {
-                const lines = cell.split('\n');
-                const isStatusCell = index === row.length - 1;
-                const disabled = cell.startsWith('ไม่');
+          {rows.map((row) => {
+            const rowKey = getRowKey?.(row) ?? row.join('-');
+            const active = activeRowKey === rowKey;
+            return (
+              <tr
+                key={rowKey}
+                role={onRowClick ? 'button' : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                onKeyDown={onRowClick ? (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onRowClick(row);
+                  }
+                } : undefined}
+                className={onRowClick ? 'cursor-pointer outline-none' : undefined}
+                style={active ? { boxShadow: `inset 3px 0 0 ${accent ?? '#4f46e5'}` } : undefined}
+              >
+                {row.map((cell, index) => {
+                  const lines = cell.split('\n');
+                  const isStatusCell = index === row.length - 1;
+                  const disabled = cell.startsWith('ไม่') || cell.startsWith('ต้อง') || cell.startsWith('ร่าง');
 
-                return (
-                  <td key={`${cell}-${index}`}>
-                    {isStatusCell ? (
-                      <span
-                        className={`hr-settings-status ${
-                          disabled ? 'hr-settings-status--disabled' : 'hr-settings-status--enabled'
-                        }`}
-                      >
-                        {cell}
-                      </span>
-                    ) : lines.length > 1 ? (
-                      <span className="block">
-                        <span className="hr-settings-table__primary block">{lines[0]}</span>
-                        <span className="hr-settings-table__secondary mt-1 block">{lines.slice(1).join(' ')}</span>
-                      </span>
-                    ) : index === 0 ? (
-                      <span className="hr-settings-table__primary">{cell}</span>
-                    ) : (
-                      <span className="hr-settings-table__detail">{cell}</span>
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+                  return (
+                    <td key={`${cell}-${index}`}>
+                      {isStatusCell ? (
+                        <span
+                          className={`hr-settings-status ${
+                            disabled ? 'hr-settings-status--disabled' : 'hr-settings-status--enabled'
+                          }`}
+                        >
+                          {cell}
+                        </span>
+                      ) : lines.length > 1 ? (
+                        <span className="block">
+                          <span className="hr-settings-table__primary block">{lines[0]}</span>
+                          <span className="hr-settings-table__secondary mt-1 block">{lines.slice(1).join(' ')}</span>
+                        </span>
+                      ) : index === 0 ? (
+                        <span className="hr-settings-table__primary">{cell}</span>
+                      ) : (
+                        <span className="hr-settings-table__detail">{cell}</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -1982,7 +2715,7 @@ function getProgress(progress: string) {
 
 function getFallbackTabs(groupKey: GroupKey) {
   if (groupKey === 'time') return [];
-  if (groupKey === 'payroll') return ['ล่วงเวลา', 'สาย', 'ขาดงาน', 'ลืมลงเวลา'];
+  if (groupKey === 'payroll') return [];
   if (groupKey === 'system') return ['ข้อมูลผู้ใช้', 'บทบาท', 'กลุ่ม', 'สิทธิ์การทำเงินเดือน'];
   return ['ทั่วไป', 'ปรับแต่งหน้าเข้าสู่ระบบ', 'ความปลอดภัยและความเป็นส่วนตัว'];
 }

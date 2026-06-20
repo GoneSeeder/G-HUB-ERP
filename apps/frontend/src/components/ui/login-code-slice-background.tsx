@@ -63,7 +63,11 @@ type CursorPoint = {
   clientY: number;
 };
 
-export function LoginCodeSliceBackground() {
+type LoginCodeSliceBackgroundProps = {
+  disabled?: boolean;
+};
+
+export function LoginCodeSliceBackground({ disabled = false }: LoginCodeSliceBackgroundProps) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const tileRefs = useRef<Array<HTMLDivElement | null>>([]);
   const { columns, rows } = dialDefaults.grid;
@@ -174,6 +178,11 @@ export function LoginCodeSliceBackground() {
   }, []);
 
   useEffect(() => {
+    if (disabled) {
+      resetTiles();
+      return undefined;
+    }
+
     const handlePointerMove = (event: globalThis.PointerEvent) => updateTiles(event);
     const handlePointerOut = (event: globalThis.PointerEvent) => {
       if (!event.relatedTarget) {
@@ -201,7 +210,7 @@ export function LoginCodeSliceBackground() {
       document.documentElement.removeEventListener('pointerout', handlePointerOut);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [resetTiles, updateTiles]);
+  }, [disabled, resetTiles, updateTiles]);
 
   return (
     <div className="login-code-bg" aria-hidden="true">

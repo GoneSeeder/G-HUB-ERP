@@ -84,78 +84,33 @@ export const hrSettingsGroups: HrSettingsGroup[] = [
   {
     key: 'company',
     title: 'ตั้งค่าบริษัท',
-    description: 'Multi-company ข้อมูลนิติบุคคล สาขา โครงสร้างองค์กร ตำแหน่ง มาสเตอร์ และเอกสารองค์กร',
+    description: 'Multi-company การตั้งค่าพื้นฐาน ข้อมูลบริษัท โครงสร้างองค์กร ตำแหน่ง และประกาศ',
     color: '#f97316',
-    progress: '2 / 8 พร้อมใช้งาน',
+    progress: '2 / 4 พร้อมใช้งาน',
     items: [
       {
-        label: 'ตั้งค่าระดับองค์กร',
+        label: 'การตั้งค่าพื้นฐาน',
         path: '/humansource/settings/company/general',
-        description: 'ค่าเริ่มต้นของระบบ HR ต่อบริษัท',
+        description: 'ค่าเริ่มต้นระบบ HR รหัสพนักงาน และประเภทพนักงาน',
         children: [
           { label: 'ค่าเริ่มต้นพนักงาน', path: '/humansource/settings/company/employee-defaults', description: 'รหัสพนักงาน วันที่เริ่มงาน และค่าเริ่มต้น' },
           { label: 'รหัสเอกสารและ Running No.', path: '/humansource/settings/company/running-number', description: 'รูปแบบเลขเอกสารและเลขอ้างอิง' },
-          { label: 'นโยบายข้อมูลบริษัท', path: '/humansource/settings/company/policies', description: 'ขอบเขตข้อมูลที่ใช้ร่วมกันในบริษัท' },
+          { label: 'ประเภทพนักงาน', path: '/humansource/organization/employee-type', description: 'รายเดือน รายวัน สัญญาจ้าง และ Part-time (ใช้กับ payroll และโควตาลา)' },
+          { label: 'ข้อมูลพื้นฐาน (คำนำหน้า/สัญชาติ/วุฒิ)', path: '/humansource/settings/master-personal', description: 'ตัวเลือกข้อมูลส่วนบุคคลในฟอร์มพนักงาน' },
         ],
       },
       {
-        label: 'ข้อมูลบริษัท',
-        path: '/humansource/organization/companies',
-        description: 'นิติบุคคล เลขภาษี นายจ้าง และข้อมูลทางกฎหมาย',
-        children: [
-          { label: 'นิติบุคคลและนายจ้าง', path: '/humansource/organization/legal-entities', description: 'บริษัทในเครือและนายจ้างตามกฎหมาย' },
-          { label: 'เลขผู้เสียภาษีและประกันสังคม', path: '/humansource/organization/tax-social-accounts', description: 'รหัสสำหรับเอกสารนำส่ง' },
-          { label: 'ผู้มีอำนาจลงนาม', path: '/humansource/organization/authorized-signers', description: 'ผู้ลงนามเอกสารสำคัญ' },
-        ],
-      },
-      {
-        label: 'โครงสร้างองค์กร',
+        label: 'องค์กร',
         path: '/humansource/organization/structure',
-        description: 'สายงาน ฝ่าย แผนก Cost center และสายบังคับบัญชา',
-        children: [
-          { label: 'บริษัทและสาขาในโครงสร้าง', path: '/humansource/organization/structure-companies', description: 'ผูกโครงสร้างกับบริษัทและสาขา' },
-          { label: 'ฝ่าย แผนก และทีม', path: '/humansource/organization/departments', description: 'หน่วยงานตามสายงานจริง' },
-          { label: 'Cost center', path: '/humansource/organization/cost-centers', description: 'ศูนย์ต้นทุนสำหรับ Payroll และบัญชี' },
-          { label: 'สายบังคับบัญชา', path: '/humansource/organization/reporting-lines', description: 'หัวหน้าและลำดับการอนุมัติ' },
-        ],
+        description: 'ผังองค์กร บริษัท สาขา ฝ่าย แผนก ทีม และข้อมูลนิติบุคคล',
       },
       {
         label: 'ตำแหน่ง',
-        path: '/humansource/organization/position-structure',
-        description: 'ตำแหน่ง ระดับงาน Job level และสายอาชีพ',
+        path: '/humansource/organization/positions',
+        description: 'ตำแหน่งงานและระดับงาน (Level/Grade)',
         children: [
           { label: 'ตำแหน่งงาน', path: '/humansource/organization/positions', description: 'ชื่อตำแหน่งและรหัสตำแหน่ง' },
           { label: 'ระดับงาน', path: '/humansource/organization/job-levels', description: 'Level, Grade และช่วงเงินเดือน' },
-          { label: 'สายอาชีพ', path: '/humansource/organization/career-paths', description: 'Career track และการเติบโต' },
-        ],
-      },
-      {
-        label: 'มาสเตอร์',
-        path: '/humansource/settings/master-data',
-        description: 'ข้อมูลกลางที่ใช้ซ้ำในฟอร์มพนักงาน',
-        children: [
-          { label: 'คำนำหน้า', path: '/humansource/settings/master-title', description: 'นาย นาง นางสาว และคำนำหน้าอื่น' },
-          { label: 'สัญชาติ ศาสนา และสถานภาพ', path: '/humansource/settings/master-personal', description: 'ตัวเลือกข้อมูลส่วนบุคคล' },
-          { label: 'วุฒิการศึกษา', path: '/humansource/settings/master-education', description: 'ระดับและสาขาการศึกษา' },
-          { label: 'ประเภทพนักงาน', path: '/humansource/organization/employee-type', description: 'รายเดือน รายวัน สัญญาจ้าง และ Part-time' },
-        ],
-      },
-      {
-        label: 'เวิร์กโฟลว์',
-        path: '/humansource/settings/org-workflows',
-        description: 'เงื่อนไขผู้อนุมัติตามบริษัทและหน่วยงาน',
-        children: [
-          { label: 'ผู้อนุมัติตามหน่วยงาน', path: '/humansource/settings/org-approvers', description: 'หัวหน้า HR และผู้อนุมัติสำรอง' },
-          { label: 'ตัวแทนอนุมัติ', path: '/humansource/settings/delegation', description: 'มอบหมายงานช่วงลาและรักษาการ' },
-        ],
-      },
-      {
-        label: 'เทมเพลตเอกสาร',
-        path: '/humansource/settings/document-templates',
-        description: 'สัญญาจ้าง หนังสือรับรอง และแบบฟอร์มองค์กร',
-        children: [
-          { label: 'สัญญาจ้าง', path: '/humansource/settings/contract-template', description: 'Template สัญญาตามประเภทการจ้าง' },
-          { label: 'หนังสือรับรอง', path: '/humansource/settings/certificate-template', description: 'แบบฟอร์มหนังสือรับรองเงินเดือนและงาน' },
         ],
       },
       {
@@ -205,30 +160,36 @@ export const hrSettingsGroups: HrSettingsGroup[] = [
   },
   {
     key: 'payroll',
-    title: 'ตั้งค่าเงินเดือนและสวัสดิการ',
-    description: 'งวดเงินเดือน โครงสร้างค่าจ้าง รายได้ รายหัก สวัสดิการ ภาษี และประกันสังคม',
+    title: 'ตั้งค่าเงินเดือนและสวัสดิการ (Payroll)',
+    description: 'ตั้งค่า master data ที่ใช้สร้างและคำนวณเงินเดือนจริง แยกข้อมูลตามบริษัทผ่านตัวกรองบริษัท',
     color: '#059669',
-    progress: '1 / 10 พร้อมใช้งาน',
+    progress: '0 / 4 ตั้งค่า',
     items: [
-      { label: 'กลุ่มและงวดเงินเดือน', path: '/humansource/payroll/payroll-groups', description: 'รอบจ่าย Cut-off และวันที่จ่าย' },
-      { label: 'โครงสร้างเงินเดือน', path: '/humansource/payroll/salary-structure', description: 'ฐานเงินเดือน กระบอกเงินเดือน และค่าจ้าง' },
       {
-        label: 'รายได้และรายการหัก',
-        path: '/humansource/payroll/pay-items',
-        description: 'เงินได้ประจำ ไม่ประจำ และรายการหัก',
+        label: 'การตั้งค่าทั่วไป',
+        path: '/humansource/payroll/general',
+        description: 'การตั้งค่าพื้นฐานของระบบเงินเดือน',
+      },
+      {
+        label: 'ประเภทการจ้างงาน',
+        path: '/humansource/payroll/employment-types',
+        description: 'รายเดือน รายวัน รายชั่วโมง Part-time สัญญาจ้าง และฐานคำนวณค่าจ้าง',
+      },
+      {
+        label: 'งวดเงินเดือน',
+        path: '/humansource/payroll/pay-periods',
+        description: 'สร้างตารางงวดรายปี เลือกจ่าย 12/24/52 ครั้ง หรือกำหนดเอง',
+      },
+      {
+        label: 'รายได้ / รายหัก',
+        path: '/humansource/payroll/income-items',
+        description: 'ตั้งรายการเงินได้ รายการหัก ภาษี ประกันสังคม และผังบัญชีที่ใช้ในสลิป',
         children: [
-          { label: 'รายได้ประจำ', path: '/humansource/payroll/recurring-income', description: 'เงินเดือน ค่าตำแหน่ง และค่าครองชีพ' },
-          { label: 'รายได้ไม่ประจำ', path: '/humansource/payroll/variable-income', description: 'โบนัส ค่าคอมมิชชั่น และเบี้ยเลี้ยง' },
-          { label: 'รายการหัก', path: '/humansource/payroll/deductions', description: 'หักเงินกู้ หักสาย ขาด และรายการอื่น' },
+          { label: 'รายได้', path: '/humansource/payroll/income-items', description: 'เงินเดือน ค่าแรง OT โบนัส ค่าคอมฯ และเงินเพิ่มอื่นๆ' },
+          { label: 'รายหัก', path: '/humansource/payroll/deduction-items', description: 'ภาษี ประกันสังคม กองทุน เงินกู้ สาย ขาด และหักอื่นๆ' },
+          { label: 'ข้อมูลบัญชี', path: '/humansource/payroll/accounting-items', description: 'ผูกบัญชีเดบิต/เครดิตของรายได้และรายหัก' },
         ],
       },
-      { label: 'สวัสดิการและกองทุน', path: '/humansource/payroll/benefits-funds', description: 'สวัสดิการ กองทุนสำรองเลี้ยงชีพ และ กยศ.' },
-      { label: 'ภาษีเงินได้', path: '/humansource/payroll/tax', description: 'ภ.ง.ด.1 ภ.ง.ด.1ก และหนังสือรับรอง 50 ทวิ' },
-      { label: 'ประกันสังคมและเงินทดแทน', path: '/humansource/payroll/social-security', description: 'ผู้ประกันตน เงินสมทบ และกองทุนเงินทดแทน' },
-      { label: 'ธนาคารและไฟล์จ่ายเงิน', path: '/humansource/payroll/bank-payment-files', description: 'บัญชีบริษัท รูปแบบไฟล์ธนาคาร และรหัสจ่าย' },
-      { label: 'สลิปเงินเดือน', path: '/humansource/payroll/payslip-template', description: 'รูปแบบสลิป เงื่อนไขการเผยแพร่ และภาษา' },
-      { label: 'บัญชีและ Cost allocation', path: '/humansource/payroll/accounting-mapping', description: 'ผังบัญชี Cost center และไฟล์ส่งบัญชี' },
-      { label: 'ปิดงวดและอนุมัติเงินเดือน', path: '/humansource/payroll/closing-approval', description: 'ขั้นตอนตรวจสอบ ปิดงวด และปล่อยจ่าย' },
     ],
   },
   {
@@ -288,4 +249,3 @@ export const allHrNavigationItems = [
     description: 'จัดการรหัสผ่านสำหรับเข้าใช้งาน G-HUB',
   },
 ];
-

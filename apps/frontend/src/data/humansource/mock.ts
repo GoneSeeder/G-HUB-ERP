@@ -222,6 +222,56 @@ export type Employee = {
   salary: number;
   status: 'ปกติ' | 'ลาพักร้อน' | 'ลาออก' | 'ทดลองงาน' | 'สิ้นสุดสัญญา';
   active: boolean;
+  // FK ids (P5) — stable references into data-layer sources of truth
+  companyId: string;        // → Company.id
+  branchNodeId: string;     // → OrgNode(type:'branch').id
+  departmentNodeId: string; // → OrgNode(type:'department'|'team').id — used for leave eligibility
+  positionId: string;       // → Position.id
+  employeeTypeId: string;   // → EmployeeType.id
+};
+
+// ─── Lookup maps: display string → stable id ────────────────────────────────
+// 'CEO' maps to P001 (ผู้บริหาร) — no exact match in positions seed
+export const POSITION_NAME_TO_ID: Record<string, string> = {
+  'CEO':           'P001',
+  'ผู้จัดการ':    'P002',
+  'หัวหน้างาน':  'P003',
+  'พนักงานขาย':  'P004',
+  'พนักงานบัญชี': 'P005',
+  'พนักงานทั่วไป':'P006',
+  'ผู้อำนวยการ':  'P007',
+};
+
+export const EMPTYPE_NAME_TO_ID: Record<string, string> = {
+  'รายเดือน':  'ET001',
+  'รายวัน':    'ET003',
+  'พาร์ทไทม์': 'ET004',
+};
+
+export const BRANCH_NAME_TO_NODE_ID: Record<string, string> = {
+  'สำนักงานใหญ่':  'org-ghub-hq',
+  'สาขาเชียงใหม่': 'org-ghub-cnx',
+  'สาขาภูเก็ต':    'org-ghub-hkt',
+};
+
+// Branch+dept → department node id. 'IT'→org-ghub-it, 'Operations'→org-ghub-wh (closest match).
+// CNX/HKT branches have fewer departments — map to sales as closest for most cases.
+export const BRANCH_DEPT_TO_NODE_ID: Record<string, string> = {
+  'สำนักงานใหญ่|ฝ่ายบุคคล':  'org-ghub-hr',
+  'สำนักงานใหญ่|ฝ่ายบัญชี':  'org-ghub-acc',
+  'สำนักงานใหญ่|ฝ่ายขาย':    'org-ghub-sales',
+  'สำนักงานใหญ่|IT':          'org-ghub-it',
+  'สำนักงานใหญ่|Operations':  'org-ghub-wh',
+  'สาขาเชียงใหม่|ฝ่ายบุคคล':  'org-ghub-cnx-svc',
+  'สาขาเชียงใหม่|ฝ่ายบัญชี':  'org-ghub-cnx-svc',
+  'สาขาเชียงใหม่|ฝ่ายขาย':    'org-ghub-cnx-sales',
+  'สาขาเชียงใหม่|IT':          'org-ghub-cnx-svc',
+  'สาขาเชียงใหม่|Operations':  'org-ghub-cnx-svc',
+  'สาขาภูเก็ต|ฝ่ายบุคคล':    'org-ghub-hkt-sales',
+  'สาขาภูเก็ต|ฝ่ายบัญชี':    'org-ghub-hkt-sales',
+  'สาขาภูเก็ต|ฝ่ายขาย':      'org-ghub-hkt-sales',
+  'สาขาภูเก็ต|IT':            'org-ghub-hkt-sales',
+  'สาขาภูเก็ต|Operations':    'org-ghub-hkt-sales',
 };
 
 const NAMES = ['สมชาย ใจดี','สุดา มีสุข','วิชัย แข็งแรง','นภา สวยงาม','ประเสริฐ ดีมาก','กาญจนา รักเรียน','ธนกร มั่งมี','พิมพ์ใจ งามตา','ศักดิ์ชัย ยิ้มแย้ม','วิไล ใจงาม'];
@@ -238,22 +288,33 @@ function statusOf(i: number): Employee['status'] {
   return 'ปกติ';
 }
 
-export const employees: Employee[] = Array.from({ length: 28 }, (_, i) => ({
-  id: `EMP${String(i + 1).padStart(4, '0')}`,
-  code: String(20001 + i),
-  name: NAMES[i % 10],
-  email: `emp${i + 1}@ghub.co.th`,
-  phone: `08${String(i).padStart(8, '0')}`,
-  position: POSITIONS[i % 7],
-  department: DEPARTMENTS[i % 5],
-  branch: BRANCHES[i % 3],
-  empType: EMP_TYPES[i % 3],
-  schedule: 'ทำงาน 08:30 – 17:30',
-  startDate: START_DATES[i % 3],
-  salary: 25000 + i * 3000,
-  status: statusOf(i),
-  active: statusOf(i) !== 'ลาออก',
-}));
+export const employees: Employee[] = Array.from({ length: 28 }, (_, i) => {
+  const branch = BRANCHES[i % 3];
+  const department = DEPARTMENTS[i % 5];
+  const position = POSITIONS[i % 7];
+  const empType = EMP_TYPES[i % 3];
+  return {
+    id: `EMP${String(i + 1).padStart(4, '0')}`,
+    code: String(20001 + i),
+    name: NAMES[i % 10],
+    email: `emp${i + 1}@ghub.co.th`,
+    phone: `08${String(i).padStart(8, '0')}`,
+    position,
+    department,
+    branch,
+    empType,
+    schedule: 'ทำงาน 08:30 – 17:30',
+    startDate: START_DATES[i % 3],
+    salary: 25000 + i * 3000,
+    status: statusOf(i),
+    active: statusOf(i) !== 'ลาออก',
+    companyId: 'CO001',
+    branchNodeId: BRANCH_NAME_TO_NODE_ID[branch] ?? 'org-ghub-hq',
+    departmentNodeId: BRANCH_DEPT_TO_NODE_ID[`${branch}|${department}`] ?? 'org-ghub-wh',
+    positionId: POSITION_NAME_TO_ID[position] ?? 'P001',
+    employeeTypeId: EMPTYPE_NAME_TO_ID[empType] ?? 'ET001',
+  };
+});
 
 // ─── Announcements ──────────────────────────────────────────────────────────
 

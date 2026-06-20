@@ -159,6 +159,31 @@ Never use native `<select>` in the HR module.
 Dashed indigo border (`border-dashed border-indigo-200`), soft indigo tint background,
 centered icon in white box with shadow, title + description text. No solid card.
 
+### Settings-row list (`.hr-setting-row`)
+
+The calm "HR settings list" look (the pattern users have approved): a vertical list of rows,
+each **label on the left, control/value on the right**, separated by hairline dividers — no cards,
+no badges, no boxes. Reference: `OrganizationSettings` (the toggle list) and `TimeGeneralSettings`
+sections 2–3 (`hr-time-general.tsx`).
+
+```jsx
+<div className="hr-setting-rows">
+  <div className="hr-setting-row">
+    <span className="hr-setting-row__label">ช่วงเวลาที่นับการสแกนซ้ำ</span>
+    <span className="hr-setting-row__control">
+      <input className="hr-shift-control hr-setting-row__num" />
+      <span className="hr-setting-row__unit">นาที</span>
+    </span>
+  </div>
+  {/* …more rows… */}
+</div>
+```
+
+Use it for grouped policy settings (toggles, enums, small numeric values). The right side holds a
+toggle, an `HrCustomSelect`, a segmented control, or a number + unit. For a boolean/enum value with
+no editor, the right side is just muted text (e.g. `เปิด`, `ไม่ยืนยันตัวตน`). **Prefer this over
+fill-in-the-blank sentences or example callout boxes** (see "HR UI Standard" below).
+
 ---
 
 ## Animation
@@ -199,6 +224,52 @@ followed by `grid grid-cols-2 gap-4` of fields.
 - Gradient/glow card surfaces
 - Heavy indigo number badges as decorative section headers
 - Nested `<select>` elements
+
+---
+
+## HR UI Standard — must NOT look AI-generated
+
+> The product owner has repeatedly flagged screens that "look like AI made them." A real HR admin
+> tool is **terse, flat, and trusts the user**. Every HR screen — and every screen a future agent
+> builds — must follow this. When unsure, copy the layout/spacing/rhythm of an already-approved
+> board (`hr-employee-list-page`, `ShiftSettingsBoard`, `hr-leave-settings`, `hr-org-structure`,
+> `OrganizationSettings`, `TimeGeneralSettings`) rather than inventing a new visual treatment.
+
+### Anti-tells — the things that scream "AI" (do NOT do)
+1. **Tinted "ตัวอย่าง: …" / explainer callout boxes** under fields. Drop them. If a hint is truly
+   needed, use one short muted line or a tiny `ⓘ` tooltip — never a colored panel.
+2. **A full descriptive sentence under every control.** Trust the label. Microcopy ≤ 1 short muted
+   line, and only where it adds real information.
+3. **Fill-in-the-blank sentence inputs** ("หากภายใน `[__]` นาที มีการสแกนเกิน `[__]` ครั้ง"). Use
+   discrete labeled fields / settings-rows instead ("ช่วงเวลาที่นับ → `[3]` นาที").
+4. **Emoji used as icons** (✋ 🎉 ✅ …). Use the project icon set (`@/components/ui/icons`) or a small
+   inline SVG. Never emoji.
+5. **Repeated identical rows/cards** (e.g. the same shift text in five weekday cells). Collapse the
+   repetition (show once + "จ.–ศ.") instead of rendering N identical blocks.
+6. **Decorative chrome**: gradients, glows, soft drop-shadows (except modals), wide rounded card
+   surfaces stacked on a gray page, numbered/badged section cards, rainbow accent colors.
+7. **Over-structuring**: wrapping every small setting in its own bordered card. Group related
+   settings into one flat `hr-setting-row` list (see Components) instead.
+
+> **Approved exception — do not "fix" this.** The **multi-step create/edit modal** in
+> `ShiftSettingsBoard` uses numbered step sections (`ShiftFormSection`, the `1 2 3 4 5` headers) and
+> the product owner has **explicitly approved that look** (`CLAUDE.md §3.1`). Numbered section cards
+> are rejected only in **flat settings forms and master/detail right-panes** (`CLAUDE.md §3.2`) — not
+> in that step wizard. Leave the shift create modal as-is.
+
+### Do instead
+- **Flat forms:** `<h4>`/`GroupHeading` section title → field grid (`grid grid-cols-2 gap-4`) of
+  labeled fields. No section cards.
+- **Settings lists:** the `hr-setting-row` pattern — label left, control/value right, hairline
+  dividers (see Components).
+- **Restrained microcopy**, calm spacing, thin neutral borders, indigo `#4f46e5` only for
+  active/selected/detail states, status pills per the Status Badge Tones table.
+- **Match the surrounding density** — do not introduce a louder/flashier style than the existing
+  approved boards. Dark theme is mandatory for every new class.
+
+### Litmus test
+If a screen is *teaching* the user with example boxes and narrated sentences, it looks generated.
+Ship the version that a busy HR admin would find fastest to scan and edit.
 
 ---
 

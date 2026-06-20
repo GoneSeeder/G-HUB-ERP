@@ -16,7 +16,16 @@ import {
   type LeaveUnit,
   type TenureTier,
 } from '@/data/humansource/leave-types';
-import { employees, employeeTypes } from '@/data/humansource/mock';
+import { employees } from '@/data/humansource/mock';
+import {
+  ORG_STRUCTURE_SEED,
+  type OrgNode,
+} from '@/data/humansource/org-structure';
+import {
+  EMPLOYEE_TYPE_SEED,
+  EMPLOYEE_TYPES_STORAGE_KEY,
+  type EmployeeType,
+} from '@/data/humansource/employee-types';
 import {
   APPROVAL_DOC_CONFIGS_STORAGE_KEY,
   DOCUMENT_TYPES_SEED,
@@ -92,32 +101,41 @@ const STEP_OVERRIDE_OPTIONS: { value: string; label: string }[] = [
   { value: 'hr', label: 'ส่งตรงถึง HR' },
 ];
 
-const ACTIVE_EMPLOYEE_TYPES = employeeTypes.filter((et) => et.active);
+// ─── Org tree — built from org-structure SoT + employee FK ids ──────────────
+// Selection model: orgNodeIds[] = dept/team nodes selected whole; employeeIds[] = individuals.
+// Migration map: old 'departments' Thai name → OrgNode.id (used in hydrate migration).
+const DEPT_NAME_TO_NODE_ID: Record<string, string> = {
+  'ฝ่ายบุคคล':  'org-ghub-hr',
+  'ฝ่ายบัญชี':  'org-ghub-acc',
+  'ฝ่ายขาย':    'org-ghub-sales',
+  'IT':          'org-ghub-it',
+  'Operations':  'org-ghub-wh',
+};
 
-// ─── Org tree (company → department → employee) ─────────────────────────────
-// Built from mock employees. Replace with API/org-chart data when backend is ready.
-// Selection model on eligibility:
-//   departments[] = department names selected as a whole (everyone in them)
-//   employees[]   = individual employee ids selected when their dept isn't whole
 type OrgEmployee = { id: string; name: string; code: string; position: string };
-type OrgDept = { name: string; employees: OrgEmployee[] };
+type OrgLeaf = { nodeId: string; name: string; employees: OrgEmployee[] };
 
-const ORG_TREE: OrgDept[] = (() => {
-  const byDept = new Map<string, OrgEmployee[]>();
-  for (const emp of employees) {
-    if (!emp.active) continue; // skip resigned/inactive for eligibility picking
-    if (!byDept.has(emp.department)) byDept.set(emp.department, []);
-    byDept.get(emp.department)!.push({
-      id: emp.id,
-      name: emp.name,
-      code: emp.code,
-      position: emp.position,
-    });
+function flattenToLeaves(nodes: OrgNode[]): OrgLeaf[] {
+  const result: OrgLeaf[] = [];
+  for (const node of nodes) {
+    if (node.type === 'department' || node.type === 'team') {
+      result.push({
+        nodeId: node.id,
+        name: node.name,
+        employees: employees
+          .filter((e) => e.active && e.departmentNodeId === node.id)
+          .map((e) => ({ id: e.id, name: e.name, code: e.code, position: e.position })),
+      });
+      if (node.children.length > 0) result.push(...flattenToLeaves(node.children));
+    } else {
+      result.push(...flattenToLeaves(node.children));
+    }
   }
-  return Array.from(byDept.entries()).map(([name, emps]) => ({ name, employees: emps }));
-})();
+  return result;
+}
 
-const ALL_DEPT_NAMES = ORG_TREE.map((d) => d.name);
+const ORG_LEAVES: OrgLeaf[] = flattenToLeaves(ORG_STRUCTURE_SEED);
+const ALL_LEAF_IDS = ORG_LEAVES.map((l) => l.nodeId);
 const uniq = (arr: string[]) => Array.from(new Set(arr));
 
 function emptyLeave(seedColor: string): LeaveType {
@@ -151,9 +169,9 @@ function emptyLeave(seedColor: string): LeaveType {
       gender: 'all',
       requirePassProbation: false,
       minTenureMonths: 0,
-      positions: [],
-      departments: [],
-      employees: [],
+      positionIds: [],
+      orgNodeIds: [],
+      employeeIds: [],
     },
     quota: { mode: 'fixed', fixedDays: 0, prorateFirstYear: true, cutoffBasis: 'fiscal-year' },
     approval: { useDefaultTemplate: true, templateDocType: null },
@@ -173,7 +191,30 @@ export function LeaveSettings({ accent }: { accent: string }) {
       const raw = window.localStorage.getItem(LEAVE_TYPES_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as LeaveType[];
-        if (Array.isArray(parsed) && parsed.length > 0) setLeaveTypes(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // One-time migration: old shape had departments/positions/employees (string names).
+          // New shape uses orgNodeIds/positionIds/employeeIds (stable ids).
+          const migrated = parsed.map((lt) => {
+            const e = lt.eligibility as Record<string, unknown>;
+            if ('departments' in e && !('orgNodeIds' in e)) {
+              return {
+                ...lt,
+                eligibility: {
+                  gender: lt.eligibility.gender,
+                  requirePassProbation: lt.eligibility.requirePassProbation,
+                  minTenureMonths: lt.eligibility.minTenureMonths,
+                  positionIds: (e.positions as string[]) ?? [],
+                  orgNodeIds: ((e.departments as string[]) ?? [])
+                    .map((name) => DEPT_NAME_TO_NODE_ID[name])
+                    .filter((id): id is string => !!id),
+                  employeeIds: (e.employees as string[]) ?? [],
+                },
+              };
+            }
+            return lt;
+          });
+          setLeaveTypes(migrated);
+        }
       }
     } catch {
       window.localStorage.removeItem(LEAVE_TYPES_STORAGE_KEY);
@@ -1001,6 +1042,18 @@ function EligibilityForm({
   const q = draft.quota;
   const splitPerType = q.perEmployeeType !== undefined;
 
+  // Read employee types from localStorage (falls back to seed)
+  const [allEmpTypes, setAllEmpTypes] = useState<EmployeeType[]>(EMPLOYEE_TYPE_SEED);
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(EMPLOYEE_TYPES_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as EmployeeType[];
+        if (Array.isArray(parsed) && parsed.length > 0) setAllEmpTypes(parsed);
+      }
+    } catch { /* keep seed */ }
+  }, []);
+
   return (
     <div className="hr-leave-form">
       {/* ─── ใครได้สิทธิ์การลานี้ (ผังองค์กร) ─── */}
@@ -1009,9 +1062,9 @@ function EligibilityForm({
         <span className="hr-leave-form__heading-hint"> — ไม่เลือก = ทุกคนในบริษัท</span>
       </GroupHeading>
       <OrgTreeSelect
-        departments={draft.eligibility.departments}
-        employees={draft.eligibility.employees}
-        onChange={(departments, employees) => onEligibilityChange({ departments, employees })}
+        orgNodeIds={draft.eligibility.orgNodeIds}
+        employeeIds={draft.eligibility.employeeIds}
+        onChange={(orgNodeIds, employeeIds) => onEligibilityChange({ orgNodeIds, employeeIds })}
       />
 
       {/* ─── โควตาการลา ─── */}
@@ -1079,7 +1132,7 @@ function EligibilityForm({
         />
       </div>
       {splitPerType ? (
-        <PerEmployeeTypeQuota quota={q} onQuotaChange={onQuotaChange} />
+        <PerEmployeeTypeQuota quota={q} onQuotaChange={onQuotaChange} allEmployeeTypes={allEmpTypes} />
       ) : null}
     </div>
   );
@@ -1171,9 +1224,11 @@ function TenureTierTable({
 function PerEmployeeTypeQuota({
   quota,
   onQuotaChange,
+  allEmployeeTypes,
 }: {
   quota: LeaveType['quota'];
   onQuotaChange: (patch: Partial<LeaveType['quota']>) => void;
+  allEmployeeTypes: EmployeeType[];
 }) {
   const perType = quota.perEmployeeType ?? {};
 
@@ -1188,11 +1243,14 @@ function PerEmployeeTypeQuota({
 
   return (
     <div className="hr-leave-per-et">
-      {ACTIVE_EMPLOYEE_TYPES.map((et) => {
+      {allEmployeeTypes.map((et) => {
         const etQ = getEtQuota(et.id);
         return (
           <div key={et.id} className="hr-leave-per-et__row">
-            <span className="hr-leave-per-et__name">{et.nameTh}</span>
+            <span className="hr-leave-per-et__name">
+              {et.nameTh}
+              {!et.active && <span className="hr-leave-per-et__inactive"> (ปิดใช้งาน)</span>}
+            </span>
             <div className="hr-leave-per-et__quota">
               <HrCustomSelect
                 value={etQ.mode}
@@ -1239,86 +1297,84 @@ function PerEmployeeTypeQuota({
 type TriState = 'all' | 'some' | 'none';
 
 function OrgTreeSelect({
-  departments,
-  employees: selectedEmps,
+  orgNodeIds,
+  employeeIds: selectedEmps,
   onChange,
 }: {
-  departments: string[];
-  employees: string[];
-  onChange: (departments: string[], employees: string[]) => void;
+  orgNodeIds: string[];
+  employeeIds: string[];
+  onChange: (orgNodeIds: string[], employeeIds: string[]) => void;
 }) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [companyOpen, setCompanyOpen] = useState(true);
 
-  const deptIsWhole = (dept: string) => departments.includes(dept);
-  const deptEmpIds = (dept: string) =>
-    (ORG_TREE.find((d) => d.name === dept)?.employees ?? []).map((emp) => emp.id);
-  const isEmpSelected = (dept: string, id: string) =>
-    deptIsWhole(dept) || selectedEmps.includes(id);
+  const leafIsWhole = (nodeId: string) => orgNodeIds.includes(nodeId);
+  const leafEmpIds = (nodeId: string) =>
+    (ORG_LEAVES.find((l) => l.nodeId === nodeId)?.employees ?? []).map((e) => e.id);
+  const isEmpSelected = (nodeId: string, id: string) =>
+    leafIsWhole(nodeId) || selectedEmps.includes(id);
 
-  const deptState = (dept: string): TriState => {
-    if (deptIsWhole(dept)) return 'all';
-    const ids = deptEmpIds(dept);
+  const leafState = (nodeId: string): TriState => {
+    if (leafIsWhole(nodeId)) return 'all';
+    const ids = leafEmpIds(nodeId);
     const picked = ids.filter((id) => selectedEmps.includes(id)).length;
     if (picked === 0) return 'none';
     return picked === ids.length ? 'all' : 'some';
   };
 
   const companyState: TriState = (() => {
-    const states = ALL_DEPT_NAMES.map(deptState);
+    const states = ALL_LEAF_IDS.map(leafState);
     if (states.length && states.every((s) => s === 'all')) return 'all';
     if (states.every((s) => s === 'none')) return 'none';
     return 'some';
   })();
 
-  const toggleDept = (dept: string) => {
-    const ids = deptEmpIds(dept);
+  const toggleLeaf = (nodeId: string) => {
+    const ids = leafEmpIds(nodeId);
     const others = selectedEmps.filter((id) => !ids.includes(id));
-    if (deptState(dept) === 'all') {
-      onChange(departments.filter((d) => d !== dept), others);
+    if (leafState(nodeId) === 'all') {
+      onChange(orgNodeIds.filter((d) => d !== nodeId), others);
     } else {
-      onChange(uniq([...departments, dept]), others);
+      onChange(uniq([...orgNodeIds, nodeId]), others);
     }
   };
 
-  const toggleEmp = (dept: string, id: string) => {
-    const ids = deptEmpIds(dept);
-    if (deptIsWhole(dept)) {
-      // Whole dept was selected; unchecking one expands the rest to individuals.
+  const toggleEmp = (nodeId: string, id: string) => {
+    const ids = leafEmpIds(nodeId);
+    if (leafIsWhole(nodeId)) {
       onChange(
-        departments.filter((d) => d !== dept),
+        orgNodeIds.filter((d) => d !== nodeId),
         uniq([...selectedEmps, ...ids.filter((x) => x !== id)]),
       );
       return;
     }
     if (selectedEmps.includes(id)) {
-      onChange(departments, selectedEmps.filter((x) => x !== id));
+      onChange(orgNodeIds, selectedEmps.filter((x) => x !== id));
       return;
     }
     const nextEmps = uniq([...selectedEmps, id]);
     if (ids.every((x) => nextEmps.includes(x))) {
-      // Everyone individually picked → promote to whole department.
-      onChange(uniq([...departments, dept]), nextEmps.filter((x) => !ids.includes(x)));
+      onChange(uniq([...orgNodeIds, nodeId]), nextEmps.filter((x) => !ids.includes(x)));
     } else {
-      onChange(departments, nextEmps);
+      onChange(orgNodeIds, nextEmps);
     }
   };
 
   const toggleCompany = () => {
     if (companyState === 'all') onChange([], []);
-    else onChange([...ALL_DEPT_NAMES], []);
+    else onChange([...ALL_LEAF_IDS], []);
   };
 
-  // Removable summary chips for the current selection.
   const chips: { key: string; label: string; onRemove: () => void }[] = [];
-  for (const dept of departments) {
-    chips.push({ key: `d:${dept}`, label: `${dept} (ทั้งแผนก)`, onRemove: () => toggleDept(dept) });
+  for (const nodeId of orgNodeIds) {
+    const leaf = ORG_LEAVES.find((l) => l.nodeId === nodeId);
+    if (leaf) chips.push({ key: `n:${nodeId}`, label: `${leaf.name} (ทั้งหน่วย)`, onRemove: () => toggleLeaf(nodeId) });
   }
-  for (const dept of ORG_TREE) {
-    if (departments.includes(dept.name)) continue;
-    for (const emp of dept.employees) {
+  for (const leaf of ORG_LEAVES) {
+    if (orgNodeIds.includes(leaf.nodeId)) continue;
+    for (const emp of leaf.employees) {
       if (selectedEmps.includes(emp.id)) {
-        chips.push({ key: `e:${emp.id}`, label: emp.name, onRemove: () => toggleEmp(dept.name, emp.id) });
+        chips.push({ key: `e:${emp.id}`, label: emp.name, onRemove: () => toggleEmp(leaf.nodeId, emp.id) });
       }
     }
   }
@@ -1357,33 +1413,33 @@ function OrgTreeSelect({
           </button>
           <TriCheck state={companyState} onClick={toggleCompany} />
           <span className="hr-leave-tree__label hr-leave-tree__label--company">ทั้งบริษัท</span>
-          <span className="hr-leave-tree__count">{ALL_DEPT_NAMES.length} แผนก</span>
+          <span className="hr-leave-tree__count">{ALL_LEAF_IDS.length} หน่วยงาน</span>
         </div>
 
         {companyOpen
-          ? ORG_TREE.map((dept) => {
-              const open = expanded[dept.name] ?? false;
+          ? ORG_LEAVES.map((leaf) => {
+              const open = expanded[leaf.nodeId] ?? false;
               return (
-                <div key={dept.name} className="hr-leave-tree__group">
+                <div key={leaf.nodeId} className="hr-leave-tree__group">
                   <div className="hr-leave-tree__row hr-leave-tree__row--dept">
                     <button
                       type="button"
                       className={`hr-leave-tree__caret ${open ? 'hr-leave-tree__caret--open' : ''}`}
-                      onClick={() => setExpanded((m) => ({ ...m, [dept.name]: !open }))}
+                      onClick={() => setExpanded((m) => ({ ...m, [leaf.nodeId]: !open }))}
                       aria-label={open ? 'ยุบ' : 'ขยาย'}
                     >
                       <CaretIcon />
                     </button>
-                    <TriCheck state={deptState(dept.name)} onClick={() => toggleDept(dept.name)} />
-                    <span className="hr-leave-tree__label">{dept.name}</span>
-                    <span className="hr-leave-tree__count">{dept.employees.length} คน</span>
+                    <TriCheck state={leafState(leaf.nodeId)} onClick={() => toggleLeaf(leaf.nodeId)} />
+                    <span className="hr-leave-tree__label">{leaf.name}</span>
+                    <span className="hr-leave-tree__count">{leaf.employees.length} คน</span>
                   </div>
                   {open
-                    ? dept.employees.map((emp) => (
+                    ? leaf.employees.map((emp) => (
                         <div key={emp.id} className="hr-leave-tree__row hr-leave-tree__row--emp">
                           <TriCheck
-                            state={isEmpSelected(dept.name, emp.id) ? 'all' : 'none'}
-                            onClick={() => toggleEmp(dept.name, emp.id)}
+                            state={isEmpSelected(leaf.nodeId, emp.id) ? 'all' : 'none'}
+                            onClick={() => toggleEmp(leaf.nodeId, emp.id)}
                           />
                           <span className="hr-leave-tree__label">{emp.name}</span>
                           <span className="hr-leave-tree__meta">{emp.position} · {emp.code}</span>

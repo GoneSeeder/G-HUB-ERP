@@ -153,30 +153,38 @@ export function TimeGeneralSettings({ accent }: { accent: string }) {
           </div>
         </header>
         <div className="hr-time-section__body">
-          <div className="hr-time-duplicate">
-            <p className="hr-time-duplicate__text">นับครั้งแรกที่สแกน หากภายใน</p>
-            <input
-              type="number"
-              min={1}
-              max={60}
-              value={duplicateWindow}
-              onChange={(e) => setDuplicateWindow(Number(e.target.value))}
-              className="hr-shift-control hr-time-duplicate__input"
-            />
-            <p className="hr-time-duplicate__text">นาที มีการสแกนเกิน</p>
-            <input
-              type="number"
-              min={1}
-              max={50}
-              value={duplicateScans}
-              onChange={(e) => setDuplicateScans(Number(e.target.value))}
-              className="hr-shift-control hr-time-duplicate__input"
-            />
-            <p className="hr-time-duplicate__text">ครั้ง ระบบจะข้ามไม่บันทึกซ้ำเป็นเวลาออก</p>
+          <div className="hr-setting-rows">
+            <div className="hr-setting-row">
+              <span className="hr-setting-row__label">ช่วงเวลาที่นับการสแกนซ้ำ</span>
+              <span className="hr-setting-row__control">
+                <input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={duplicateWindow}
+                  onChange={(e) => setDuplicateWindow(Number(e.target.value))}
+                  className="hr-shift-control hr-setting-row__num"
+                  aria-label="ช่วงเวลาที่นับการสแกนซ้ำ (นาที)"
+                />
+                <span className="hr-setting-row__unit">นาที</span>
+              </span>
+            </div>
+            <div className="hr-setting-row">
+              <span className="hr-setting-row__label">ข้ามการสแกนซ้ำเมื่อเกิน</span>
+              <span className="hr-setting-row__control">
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={duplicateScans}
+                  onChange={(e) => setDuplicateScans(Number(e.target.value))}
+                  className="hr-shift-control hr-setting-row__num"
+                  aria-label="ข้ามการสแกนซ้ำเมื่อเกิน (ครั้ง)"
+                />
+                <span className="hr-setting-row__unit">ครั้ง</span>
+              </span>
+            </div>
           </div>
-          <p className="hr-time-duplicate__example">
-            ตัวอย่าง: ตั้ง <b>{duplicateScans} ครั้ง / {duplicateWindow} นาที</b> — พนักงานสแกนเข้างานเวลา 08:00 และสแกนอีกครั้งภายใน {duplicateWindow} นาที ครั้งที่ 2–{duplicateScans} ระบบจะไม่บันทึกเป็นเวลาออก
-          </p>
         </div>
       </section>
 
@@ -211,11 +219,6 @@ export function TimeGeneralSettings({ accent }: { accent: string }) {
               หักครึ่งวัน
             </button>
           </div>
-          <p className="hr-time-switch__hint">
-            {partialPolicy === 'full'
-              ? 'พนักงานที่ลงเวลาไม่ครบในวันนั้นจะถูกบันทึกเป็นขาดงานเต็มวัน'
-              : 'พนักงานที่ลงเวลาไม่ครบในวันนั้นจะถูกบันทึกเป็นขาดงานครึ่งวัน'}
-          </p>
         </div>
       </section>
 
@@ -334,10 +337,7 @@ function ShiftPicker({
         )}
         {workOpts.length > 0 && (
           <div className="hr-time-picker__group">
-            <p className="hr-time-picker__group-title">
-              <span>เข้า</span>
-              <span aria-hidden="true">✋</span>
-            </p>
+            <p className="hr-time-picker__group-title">วันทำงาน</p>
             {workOpts.map((opt) => (
               <PickerOption
                 key={opt.code}

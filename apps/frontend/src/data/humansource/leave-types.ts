@@ -38,9 +38,9 @@ export type LeaveEligibility = {
   gender: LeaveGender;
   requirePassProbation: boolean;
   minTenureMonths: number;
-  positions: string[];    // [] = ทุกตำแหน่ง (ใช้ position id จาก mock.ts)
-  departments: string[];  // [] = ทุกแผนก
-  employees: string[];    // [] = ไม่ระบุรายคน
+  positionIds: string[];  // [] = ทุกตำแหน่ง → Position.id
+  orgNodeIds: string[];   // [] = ทุกหน่วยงาน → OrgNode.id (branch/dept/team selected whole)
+  employeeIds: string[];  // [] = ไม่ระบุรายคน → Employee.id
 };
 
 export type LeaveQuotaByEmployeeType = {
@@ -87,9 +87,9 @@ const baseEligibility: LeaveEligibility = {
   gender: 'all',
   requirePassProbation: false,
   minTenureMonths: 0,
-  positions: [],
-  departments: [],
-  employees: [],
+  positionIds: [],
+  orgNodeIds: [],
+  employeeIds: [],
 };
 
 const baseApproval: LeaveApproval = {

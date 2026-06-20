@@ -12,7 +12,7 @@ import { setAuthTokenCookie } from '@/lib/auth';
 import { queryOptions } from '@/lib/queries';
 
 const API_URL = getApiBaseUrl();
-const LOGIN_TRANSITION_MS = 1700;
+const LOGIN_TRANSITION_MS = 1200;
 const HUB_LOADING_GRACE_MS = 2000;
 
 function wait(ms: number) {
@@ -63,6 +63,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
   const [showHubLoading, setShowHubLoading] = useState(false);
+  const [cardHovered, setCardHovered] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const showPassword = username.trim().length > 0;
 
@@ -148,8 +149,12 @@ export default function LoginPage() {
           <LoadingState label="Loading hub..." className="min-h-0" />
         </div>
       ) : null}
-      <LoginCodeSliceBackground />
-      {!showTransition ? <div className="erp-fade-in relative z-20 w-full max-w-[420px]">
+      <LoginCodeSliceBackground disabled={cardHovered || showTransition || showHubLoading} />
+      {!showTransition ? <div
+        className="erp-fade-in relative z-20 w-full max-w-[420px]"
+        onPointerEnter={() => setCardHovered(true)}
+        onPointerLeave={() => setCardHovered(false)}
+      >
         <form
           noValidate
           onSubmit={onSubmit}
