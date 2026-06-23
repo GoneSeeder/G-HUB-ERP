@@ -1,7 +1,9 @@
 'use client';
 
-import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react';
-import { PlusIcon, TrashIcon, XIcon } from '@/components/ui/icons';
+import { type CSSProperties, type ChangeEvent, type FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ArrowLeftIcon, ArrowRightIcon, CalendarIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '@/components/ui/icons';
+import { cn } from '@/lib/cn';
 import { HrCustomSelect } from './hr-ui';
 import {
   type Announcement,
@@ -22,8 +24,7 @@ import {
 
 // ─── constants ─────────────────────────────────────────────────────────────
 
-const STATUS_FILTER_OPTIONS: { value: string; label: string }[] = [
-  { value: '',          label: 'ทุกสถานะ' },
+const STATUS_CHIP_OPTIONS: { value: string; label: string }[] = [
   { value: 'draft',     label: STATUS_LABELS.draft },
   { value: 'published', label: STATUS_LABELS.published },
   { value: 'archived',  label: STATUS_LABELS.archived },
@@ -36,15 +37,6 @@ function shortDate(d: string | null): string {
   const datePart = d.includes('T') ? d.split('T')[0] : d;
   const [y, m, dd] = datePart.split('-');
   return `${dd}/${m}/${y}`;
-}
-
-function formatThaiDateTime(iso: string): string {
-  const hasTime = iso.includes('T');
-  const [datePart, timePart = ''] = hasTime ? iso.split('T') : [iso, ''];
-  const [y, m, d] = datePart.split('-');
-  const beYear = parseInt(y, 10) + 543;
-  const time = timePart.slice(0, 5);
-  return `${d}/${m}/${beYear}${time ? ` ${time}` : ''}`;
 }
 
 function audienceSummary(a: Announcement['audience']): string {
@@ -173,22 +165,6 @@ function FileThumb({ file, onRemove }: { file: AttachmentFile; onRemove: () => v
   );
 }
 
-// ─── ToggleSwitchRow ───────────────────────────────────────────────────────
-
-function ToggleSwitchRow({ label, checked, onChange }: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="hr-announce-pin-row">
-      <span className="hr-announce-drawer-label">{label}</span>
-      <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span className="hr-leave-switch"><span className="hr-leave-switch__thumb" /></span>
-    </label>
-  );
-}
-
 // ─── DeleteConfirm ─────────────────────────────────────────────────────────
 
 function DeleteConfirm({ message, onConfirm, onCancel }: {
@@ -209,77 +185,74 @@ function DeleteConfirm({ message, onConfirm, onCancel }: {
   );
 }
 
-// ─── CategoryDrawer ────────────────────────────────────────────────────────
+// ─── DateTimePicker ─────────────────────────────────────────────────────────
 
-function CategoryDrawer({
-  initial,
-  accent,
-  onCancel,
-  onSave,
-}: {
-  initial: AnnouncementCategory | null;
-  accent: string;
-  onCancel: () => void;
-  onSave: (c: AnnouncementCategory) => void;
-}) {
-  const [nameTh, setNameTh] = useState(initial?.nameTh ?? '');
-  const [active, setActive] = useState(initial?.active ?? true);
+const DTP_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+  'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const DTP_MONTHS_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const DTP_WEEKDAYS = ['อา','จ','อ','พ','พฤ','ศ','ส'];
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!nameTh.trim()) return;
-    onSave({
-      id:     initial?.id ?? `CAT${Date.now()}`,
-      nameTh: nameTh.trim(),
-      color:  initial?.color ?? '#4f46e5',
-      active,
-    });
-  };
-
-  return (
-    <>
-      <div className="fixed inset-0 z-[69] bg-black/30" onClick={onCancel} />
-      <div className="hr-announce-drawer hr-announce-drawer--narrow" role="dialog" aria-modal="true">
-        <form className="flex min-h-0 flex-1 flex-col" onSubmit={submit}>
-          <header className="hr-announce-drawer__head">
-            <h3 className="hr-announce-drawer__title">
-              {initial ? 'แก้ไขหมวดประกาศ' : 'สร้างหมวดประกาศ'}
-            </h3>
-            <button type="button" className="hr-announce-drawer__close" onClick={onCancel} aria-label="ปิด">
-              <XIcon className="h-4 w-4" />
-            </button>
-          </header>
-
-          <div className="hr-announce-drawer__body">
-            <div className="hr-announce-drawer-field">
-              <span className="hr-leave-field__label">ชื่อหมวด</span>
-              <input
-                className="hr-leave-input"
-                value={nameTh}
-                onChange={(e) => setNameTh(e.target.value)}
-                placeholder="เช่น นโยบาย, กิจกรรม"
-                required
-                autoFocus
-              />
-            </div>
-            <ToggleSwitchRow label="เปิดใช้งาน" checked={active} onChange={setActive} />
-          </div>
-
-          <footer className="hr-announce-drawer__foot">
-            <div className="flex items-center gap-2 ml-auto">
-              <button type="button" className="hr-position-modal__cancel" onClick={onCancel}>ยกเลิก</button>
-              <button type="submit" className="hr-position-modal__save" style={{ backgroundColor: accent }}>บันทึก</button>
-            </div>
-          </footer>
-        </form>
-      </div>
-    </>
-  );
+function dtpCalendarDays(viewDate: Date): (Date | null)[] {
+  const y = viewDate.getFullYear();
+  const m = viewDate.getMonth();
+  const firstWeekday = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  return Array.from({ length: 42 }, (_, i) => {
+    const d = i - firstWeekday + 1;
+    return d >= 1 && d <= daysInMonth ? new Date(y, m, d) : null;
+  });
 }
 
-// ─── DateTimeField ─────────────────────────────────────────────────────────
+function dtpSameDay(a: Date | null, b: Date): boolean {
+  return !!(a && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate());
+}
 
-function DateTimeField({
+function dtpParseISO(iso: string): { date: Date | null; h: string; min: string } {
+  if (!iso) return { date: null, h: '08', min: '00' };
+  const [datePart = '', timePart = '08:00'] = iso.split('T');
+  const [ys, ms, ds] = datePart.split('-');
+  const y = Number(ys), mo = Number(ms), d = Number(ds);
+  if (!y || !mo || !d) return { date: null, h: '08', min: '00' };
+  const [h = '08', min = '00'] = timePart.slice(0, 5).split(':');
+  return { date: new Date(y, mo - 1, d), h: h.padStart(2,'0'), min: min.padStart(2,'0') };
+}
+
+function dtpToISO(date: Date, h: string, min: string): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2,'0');
+  const d = String(date.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}T${h.padStart(2,'0')}:${min.padStart(2,'0')}`;
+}
+
+function dtpFormatDisplay(date: Date, h: string, min: string): string {
+  return `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()} ${h.padStart(2,'0')}:${min.padStart(2,'0')}`;
+}
+
+function dtpParseTyped(raw: string): { date: Date; h: string; min: string } | null {
+  const trimmed = raw.trim();
+  const mFull = trimmed.match(/^(\d{1,2})[/.](\d{1,2})[/.](\d{4})\s+(\d{1,2}):(\d{1,2})$/);
+  if (mFull) {
+    const [, ds, mos, ys, hs, mins] = mFull;
+    const d = Number(ds), mo = Number(mos), y = Number(ys), hv = Number(hs), minv = Number(mins);
+    const date = new Date(y, mo - 1, d);
+    if (date.getFullYear() === y && date.getMonth() === mo - 1 && date.getDate() === d
+        && hv >= 0 && hv <= 23 && minv >= 0 && minv <= 59) {
+      return { date, h: String(hv).padStart(2,'0'), min: String(minv).padStart(2,'0') };
+    }
+  }
+  const mDate = trimmed.match(/^(\d{1,2})[/.](\d{1,2})[/.](\d{4})$/);
+  if (mDate) {
+    const [, ds, mos, ys] = mDate;
+    const d = Number(ds), mo = Number(mos), y = Number(ys);
+    const date = new Date(y, mo - 1, d);
+    if (date.getFullYear() === y && date.getMonth() === mo - 1 && date.getDate() === d) {
+      return { date, h: '08', min: '00' };
+    }
+  }
+  return null;
+}
+
+function DateTimePicker({
   label,
   required,
   value,
@@ -290,28 +263,280 @@ function DateTimeField({
   value: string;
   onChange: (iso: string) => void;
 }) {
-  const display = value ? formatThaiDateTime(value) : '';
+  const { date: selectedDate, h: initH, min: initMin } = dtpParseISO(value);
+
+  const triggerRef  = useRef<HTMLDivElement>(null);
+  const inputRef    = useRef<HTMLInputElement>(null);
+  const popoverRef  = useRef<HTMLDivElement>(null);
+
+  const [mounted,    setMounted]    = useState(false);
+  const [open,       setOpen]       = useState(false);
+  const [focused,    setFocused]    = useState(false);
+  const [inputValue, setInputValue] = useState(() =>
+    selectedDate ? dtpFormatDisplay(selectedDate, initH, initMin) : ''
+  );
+  const [view,     setView]     = useState<'days' | 'months' | 'years'>('days');
+  const [viewDate, setViewDate] = useState(() => selectedDate ?? new Date());
+  const [hour,     setHour]     = useState(initH);
+  const [minute,   setMinute]   = useState(initMin);
+  const [popStyle, setPopStyle] = useState<CSSProperties>({});
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (focused) return;
+    const { date, h, min } = dtpParseISO(value);
+    if (date) {
+      setInputValue(dtpFormatDisplay(date, h, min));
+      setViewDate(date);
+      setHour(h);
+      setMinute(min);
+    } else if (!value) {
+      setInputValue('');
+    }
+  }, [value, focused]);
+
+  const positionPopover = () => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const width = Math.min(288, window.innerWidth - 16);
+    const height = 400;
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
+    const top = window.innerHeight - rect.bottom >= height + 8
+      ? rect.bottom + 8
+      : Math.max(8, rect.top - height - 8);
+    setPopStyle({ left, top, width });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    positionPopover();
+  }, [open, view]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!open) return;
+    const onOutside = (e: MouseEvent) => {
+      if (!triggerRef.current?.contains(e.target as Node) && !popoverRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('resize', positionPopover);
+    window.addEventListener('scroll', positionPopover, true);
+    document.addEventListener('mousedown', onOutside);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      window.removeEventListener('resize', positionPopover);
+      window.removeEventListener('scroll', positionPopover, true);
+      document.removeEventListener('mousedown', onOutside);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = dtpCalendarDays(viewDate);
+  const year = viewDate.getFullYear();
+  const yearPageStart = Math.floor(year / 12) * 12;
+
+  const emitDatetime = (date: Date, h: string, min: string) => {
+    onChange(dtpToISO(date, h, min));
+    setInputValue(dtpFormatDisplay(date, h, min));
+    setViewDate(date);
+    setHour(h);
+    setMinute(min);
+  };
+
+  const changeHour = (raw: string) => {
+    const n = Math.max(0, Math.min(23, parseInt(raw, 10) || 0));
+    const h = String(n).padStart(2,'0');
+    setHour(h);
+    if (selectedDate) emitDatetime(selectedDate, h, minute);
+  };
+
+  const changeMinute = (raw: string) => {
+    const n = Math.max(0, Math.min(59, parseInt(raw, 10) || 0));
+    const min = String(n).padStart(2,'0');
+    setMinute(min);
+    if (selectedDate) emitDatetime(selectedDate, hour, min);
+  };
+
+  const commitTyped = () => {
+    const raw = (inputRef.current?.value ?? inputValue).trim();
+    if (!raw) { onChange(''); setInputValue(''); return; }
+    const parsed = dtpParseTyped(raw);
+    if (!parsed) return;
+    emitDatetime(parsed.date, parsed.h, parsed.min);
+  };
+
+  const moveView = (dir: -1 | 1) => {
+    setViewDate((curr) => {
+      if (view === 'days')   return new Date(curr.getFullYear(), curr.getMonth() + dir, 1);
+      if (view === 'months') return new Date(curr.getFullYear() + dir, curr.getMonth(), 1);
+      return new Date(curr.getFullYear() + dir * 12, curr.getMonth(), 1);
+    });
+  };
+
+  const popup = (
+    <div
+      ref={popoverRef}
+      role="dialog"
+      aria-label="เลือกวันที่และเวลา"
+      className="fixed z-[120] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[0_20px_48px_rgba(15,23,42,0.18)]"
+      style={popStyle}
+    >
+      {/* nav header */}
+      <div className="flex h-11 items-center justify-between border-b border-slate-100 px-1.5">
+        <button type="button" onClick={() => moveView(-1)} aria-label="ก่อนหน้า"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+          <ArrowLeftIcon className="h-4 w-4" />
+        </button>
+        <button type="button"
+          onClick={() => setView((v) => v === 'days' ? 'months' : v === 'months' ? 'years' : 'days')}
+          className="h-7 rounded-md px-2 text-[13px] font-semibold text-slate-900 transition hover:bg-slate-100">
+          {view === 'days'   && `${DTP_MONTHS[viewDate.getMonth()]} ${year + 543}`}
+          {view === 'months' && `พ.ศ. ${year + 543}`}
+          {view === 'years'  && `${yearPageStart + 543} - ${yearPageStart + 11 + 543}`}
+        </button>
+        <button type="button" onClick={() => moveView(1)} aria-label="ถัดไป"
+          className="flex h-7 w-7 items-center justify-center rounded-md text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+          <ArrowRightIcon className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* calendar grid */}
+      <div className="p-2">
+        {view === 'days' && (
+          <>
+            <div className="grid grid-cols-7 pb-1">
+              {DTP_WEEKDAYS.map((w) => (
+                <div key={w} className="flex h-7 items-center justify-center text-[10px] font-medium text-slate-400">{w}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-y-1">
+              {days.map((date, i) => {
+                if (!date) return <span key={`e-${i}`} className="h-8" />;
+                const isSel  = dtpSameDay(selectedDate, date);
+                const isToday = dtpSameDay(today, date);
+                return (
+                  <button
+                    key={`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`}
+                    type="button"
+                    onClick={() => emitDatetime(date, hour, minute)}
+                    className={cn(
+                      'mx-auto flex h-8 w-8 items-center justify-center rounded-md text-xs transition',
+                      isSel   && 'bg-indigo-600 font-semibold text-white',
+                      !isSel  && isToday  && 'border border-indigo-300 font-semibold text-indigo-700',
+                      !isSel  && !isToday && 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700',
+                    )}>
+                    {date.getDate()}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+        {view === 'months' && (
+          <div className="grid grid-cols-3 gap-1.5 py-1.5">
+            {DTP_MONTHS_SHORT.map((m, i) => (
+              <button key={m} type="button"
+                onClick={() => { setViewDate(new Date(year, i, 1)); setView('days'); }}
+                className={cn('h-10 rounded-md text-xs transition',
+                  i === viewDate.getMonth() ? 'bg-indigo-600 font-semibold text-white' : 'text-slate-600 hover:bg-indigo-50')}>
+                {m}
+              </button>
+            ))}
+          </div>
+        )}
+        {view === 'years' && (
+          <div className="grid grid-cols-3 gap-1.5 py-1.5">
+            {Array.from({ length: 12 }, (_, i) => yearPageStart + i).map((y) => (
+              <button key={y} type="button"
+                onClick={() => { setViewDate(new Date(y, viewDate.getMonth(), 1)); setView('months'); }}
+                className={cn('h-10 rounded-md text-xs transition',
+                  y === year ? 'bg-indigo-600 font-semibold text-white' : 'text-slate-600 hover:bg-indigo-50')}>
+                {y + 543}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* time row */}
+      <div className="flex items-center gap-2 border-t border-slate-100 px-3 py-2">
+        <span className="shrink-0 text-[11px] font-medium text-slate-500">เวลา</span>
+        <div className="flex items-center gap-1">
+          <input
+            type="number" min={0} max={23}
+            value={Number(hour)}
+            onChange={(e) => changeHour(e.target.value)}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="w-12 rounded border border-slate-200 px-1 py-0.5 text-center text-xs font-mono text-slate-800 outline-none focus:border-indigo-400"
+          />
+          <span className="text-xs font-semibold text-slate-400">:</span>
+          <input
+            type="number" min={0} max={59} step={5}
+            value={Number(minute)}
+            onChange={(e) => changeMinute(e.target.value)}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="w-12 rounded border border-slate-200 px-1 py-0.5 text-center text-xs font-mono text-slate-800 outline-none focus:border-indigo-400"
+          />
+        </div>
+        <span className="ml-1 text-[11px] text-slate-400">น.</span>
+      </div>
+
+      {/* footer */}
+      <div className="flex items-center justify-between border-t border-slate-100 px-2 py-1.5">
+        <button type="button"
+          onClick={() => { onChange(''); setInputValue(''); setOpen(false); }}
+          className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-[11px] font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
+          <XIcon className="h-3.5 w-3.5" />ล้างวันที่
+        </button>
+        <button type="button"
+          onClick={() => { emitDatetime(today, hour, minute); setOpen(false); }}
+          className="h-7 rounded-md px-2.5 text-[11px] font-semibold text-indigo-600 transition hover:bg-indigo-50">
+          วันนี้
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="hr-announce-dt-field">
       <span className="hr-leave-field__label">
         {label}{required && <span className="hr-leave-field__required"> *</span>}
       </span>
-      {/* label wraps display + input so clicking anywhere on the display area activates the picker */}
-      <label className="hr-announce-dt-label">
-        <div className={`hr-announce-dt-input${!display ? ' hr-announce-dt-input--empty' : ''}`}>
-          <span>{display || 'กรุณาเลือก'}</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-          </svg>
-        </div>
+      <div
+        ref={triggerRef}
+        className="flex h-9 w-full items-center overflow-hidden rounded-lg border border-slate-200 bg-white transition focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-50 hover:border-slate-300"
+      >
         <input
-          type="datetime-local"
-          className="hr-announce-dt-native"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          ref={inputRef}
+          type="text"
+          placeholder="DD/MM/YYYY HH:mm"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onFocus={() => { setFocused(true); setOpen(true); setView('days'); }}
+          onBlur={() => { setFocused(false); commitTyped(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { commitTyped(); setOpen(false); inputRef.current?.blur(); }
+            if (e.key === 'Escape') { setOpen(false); inputRef.current?.blur(); }
+          }}
+          className="h-full min-w-0 flex-1 bg-transparent px-3 text-[13px] font-medium text-slate-800 outline-none placeholder:font-normal placeholder:text-slate-400"
         />
-      </label>
+        <button
+          type="button"
+          aria-label="เลือกวันที่"
+          aria-expanded={open}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => { setView('days'); setOpen((v) => !v); }}
+          className="flex h-full w-9 shrink-0 items-center justify-center outline-none hover:bg-slate-50"
+        >
+          <CalendarIcon className="h-4 w-4 text-indigo-500" />
+        </button>
+      </div>
+      {mounted && open ? createPortal(popup, document.body) : null}
     </div>
   );
 }
@@ -536,8 +761,8 @@ function AnnounceDrawer({
               {timing === 'scheduled' && (
                 <div className="hr-announce-setting-row-expand">
                   <div className="hr-announce-dt-row">
-                    <DateTimeField label="วันที่เริ่มประกาศ" required value={publishAt} onChange={setPublishAt} />
-                    <DateTimeField label="วันที่จบประกาศ" value={publishEnd} onChange={setPublishEnd} />
+                    <DateTimePicker label="วันที่เริ่มประกาศ" required value={publishAt} onChange={setPublishAt} />
+                    <DateTimePicker label="วันที่จบประกาศ" value={publishEnd} onChange={setPublishEnd} />
                   </div>
                 </div>
               )}
@@ -583,6 +808,65 @@ function AnnounceDrawer({
         </form>
       </div>
     </>
+  );
+}
+
+// ─── FilterChipSelect ──────────────────────────────────────────────────────
+
+function FilterChipSelect({
+  label,
+  value,
+  options,
+  onChange,
+  accent,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+  accent: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value);
+
+  if (selected) {
+    return (
+      <div className="hr-filter-chip hr-filter-chip--active" style={{ borderColor: accent, color: accent }}>
+        <span>{selected.label}</span>
+        <button type="button" className="hr-filter-chip__clear" aria-label="ล้างตัวกรอง" onClick={() => onChange('')}>
+          <XIcon className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={wrapRef} className="hr-filter-chip-wrap">
+      <button type="button" className="hr-filter-chip" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        {label} <span aria-hidden>▾</span>
+      </button>
+      {open && (
+        <div className="hr-filter-chip-dropdown">
+          {options.map((o) => (
+            <button key={o.value} type="button" className="hr-filter-chip-dropdown__item"
+              onClick={() => { onChange(o.value); setOpen(false); }}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -657,29 +941,37 @@ function AnnouncementsList({ accent }: { accent: string }) {
   return (
     <div className="hr-announce-page">
       {/* toolbar */}
-      <div className="hr-announce-toolbar">
-        <input
-          className="hr-settings-search hr-announce-search"
-          placeholder="ค้นหาชื่อประกาศ"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <div className="hr-announce-filter-select">
-          <HrCustomSelect
-            options={STATUS_FILTER_OPTIONS}
-            value={filterSt}
-            onChange={(v) => setFilterSt(v as string)}
-          />
+      <div className="hr-settings-toolbar">
+        <div className="hr-settings-toolbar__filters">
+          <div className="hr-leave-board__search">
+            <SearchIcon className="h-3.5 w-3.5" />
+            <input
+              type="search"
+              placeholder="ค้นหาชื่อประกาศ"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="hr-leave-board__search-input"
+            />
+          </div>
         </div>
-        <button
-          type="button"
-          className="hr-announce-create-btn"
-          style={{ backgroundColor: accent }}
-          onClick={() => setDrawer('create')}
-        >
-          <PlusIcon className="h-4 w-4" />
-          สร้างประกาศ
-        </button>
+        <div className="hr-filter-chip-group">
+          <FilterChipSelect
+            label="สถานะ"
+            value={filterSt}
+            options={STATUS_CHIP_OPTIONS}
+            onChange={setFilterSt}
+            accent={accent}
+          />
+          <button
+            type="button"
+            className="hr-announce-create-btn"
+            style={{ backgroundColor: accent }}
+            onClick={() => setDrawer('create')}
+          >
+            <PlusIcon className="h-4 w-4" />
+            สร้างประกาศ
+          </button>
+        </div>
       </div>
 
       {/* table */}
@@ -780,165 +1072,8 @@ function AnnouncementsList({ accent }: { accent: string }) {
   );
 }
 
-// ─── CategoriesBoard ───────────────────────────────────────────────────────
-
-function CategoriesBoard({ accent }: { accent: string }) {
-  const [cats,         setCats]         = useState<AnnouncementCategory[]>([]);
-  const [hydrated,     setHydrated]     = useState(false);
-  const [search,       setSearch]       = useState('');
-  const [drawer,       setDrawer]       = useState<'create' | AnnouncementCategory | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<AnnouncementCategory | null>(null);
-
-  useEffect(() => {
-    const raw = localStorage.getItem(ANNOUNCEMENT_CATEGORIES_STORAGE_KEY);
-    setCats(raw ? (JSON.parse(raw) as AnnouncementCategory[]) : ANNOUNCEMENT_CATEGORY_SEED);
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (hydrated) localStorage.setItem(ANNOUNCEMENT_CATEGORIES_STORAGE_KEY, JSON.stringify(cats));
-  }, [cats, hydrated]);
-
-  const q        = search.toLowerCase();
-  const filtered = cats.filter((c) => !q || c.nameTh.toLowerCase().includes(q));
-
-  const handleSave = (saved: AnnouncementCategory) => {
-    setCats((prev) =>
-      prev.some((c) => c.id === saved.id)
-        ? prev.map((c) => (c.id === saved.id ? saved : c))
-        : [...prev, saved],
-    );
-    setDrawer(null);
-  };
-
-  const toggleActive = (id: string) =>
-    setCats((prev) => prev.map((c) => (c.id === id ? { ...c, active: !c.active } : c)));
-
-  const handleDelete = (target: AnnouncementCategory) => {
-    setCats((prev) => prev.filter((c) => c.id !== target.id));
-    setDeleteTarget(null);
-  };
-
-  return (
-    <div className="hr-announce-page">
-      <div className="hr-announce-toolbar">
-        <input
-          className="hr-settings-search hr-announce-search"
-          placeholder="ค้นหาหมวดประกาศ"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <button
-          type="button"
-          className="hr-announce-create-btn"
-          style={{ backgroundColor: accent }}
-          onClick={() => setDrawer('create')}
-        >
-          <PlusIcon className="h-4 w-4" />
-          สร้างหมวด
-        </button>
-      </div>
-
-      <div className="hr-announce-table-wrap">
-        <table className="hr-announce-table">
-          <thead>
-            <tr>
-              <th className="hr-announce-table__swatch-col" />
-              <th>ชื่อหมวด</th>
-              <th>สถานะ</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((c) => (
-              <tr key={c.id}>
-                <td className="hr-announce-table__swatch-col">
-                  <span className="hr-announce-cat-swatch" style={{ background: c.color }} />
-                </td>
-                <td className="hr-announce-table__title">{c.nameTh}</td>
-                <td>
-                  <label style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}>
-                    <input type="checkbox" className="sr-only" checked={c.active} onChange={() => toggleActive(c.id)} />
-                    <span className="hr-leave-switch"><span className="hr-leave-switch__thumb" /></span>
-                  </label>
-                </td>
-                <td>
-                  <div className="hr-announce-row-actions">
-                    <button type="button" className="hr-announce-icon-btn" onClick={() => setDrawer(c)} title="แก้ไข">
-                      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                      </svg>
-                    </button>
-                    <button type="button" className="hr-announce-icon-btn hr-announce-icon-btn--danger" onClick={() => setDeleteTarget(c)} title="ลบ">
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={4} className="hr-announce-empty">
-                  {search ? 'ไม่พบหมวดที่ตรงกับการค้นหา' : 'ยังไม่มีหมวดประกาศ'}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {drawer !== null && (
-        <CategoryDrawer
-          initial={drawer === 'create' ? null : drawer}
-          accent={accent}
-          onCancel={() => setDrawer(null)}
-          onSave={handleSave}
-        />
-      )}
-      {deleteTarget && (
-        <DeleteConfirm
-          message={`ลบหมวด "${deleteTarget.nameTh}" ใช่หรือไม่?`}
-          onConfirm={() => handleDelete(deleteTarget)}
-          onCancel={() => setDeleteTarget(null)}
-        />
-      )}
-    </div>
-  );
-}
-
-// ─── AudienceBoard ─────────────────────────────────────────────────────────
-
-function AudienceBoard() {
-  return (
-    <div className="hr-announce-page">
-      <div className="hr-announce-info-panel">
-        <div className="hr-announce-info-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-          </svg>
-        </div>
-        <h3 className="hr-announce-info-title">กลุ่มผู้รับประกาศ</h3>
-        <p className="hr-announce-info-desc">
-          การกำหนดกลุ่มผู้รับทำได้ในระดับประกาศ — เปิด <strong>แก้ไขประกาศ</strong> แล้วเลือกช่อง <strong>ผู้รับประกาศ</strong>
-        </p>
-        <p className="hr-announce-info-sub">
-          รองรับ: ทุกคน · แยกตามประเภทพนักงาน (เวอร์ชันถัดไป: หน่วยงาน · รายบุคคล)
-        </p>
-      </div>
-    </div>
-  );
-}
-
 // ─── AnnouncementsBoard (export) ───────────────────────────────────────────
 
-export function AnnouncementsBoard({
-  sub,
-  accent,
-}: {
-  sub: 'list' | 'categories' | 'audience';
-  accent: string;
-}) {
-  if (sub === 'categories') return <CategoriesBoard accent={accent} />;
-  if (sub === 'audience')   return <AudienceBoard />;
+export function AnnouncementsBoard({ accent }: { accent: string }) {
   return <AnnouncementsList accent={accent} />;
 }

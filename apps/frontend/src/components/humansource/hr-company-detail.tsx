@@ -59,6 +59,37 @@ function ToggleField({
   );
 }
 
+function NumField({
+  label,
+  suffix,
+  value,
+  fallback,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  suffix?: string;
+  value: number | undefined;
+  fallback: number;
+  min?: number;
+  max?: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <Field label={label} suffix={suffix}>
+      <input
+        className="hr-leave-input hr-leave-input--num"
+        type="number"
+        min={min}
+        max={max}
+        value={value ?? fallback}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+    </Field>
+  );
+}
+
 // ─── Weekday toggle row ────────────────────────────────────────────────────────
 
 const DAY_LABELS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
@@ -241,28 +272,69 @@ function SignerModal({
   );
 }
 
-// ─── Company detail (fullscreen modal, 3 tabs) ────────────────────────────────
+// ─── Work-conditions sub-sections (left sub-nav inside the conditions tab) ──────
 
-type CompanyTab = 'legal' | 'conditions' | 'signers';
+type CondSection = 'hours' | 'score' | 'shift' | 'probation' | 'retire' | 'exit';
+
+const COND_SECTIONS: { key: CondSection; label: string; desc: string }[] = [
+  { key: 'hours',     label: 'ชั่วโมงทำงานและสถานะ', desc: 'ชั่วโมงต่อวัน วันทำงาน และเกณฑ์สาย/ขาด' },
+  { key: 'score',     label: 'คะแนนการเข้างาน',     desc: 'เกณฑ์คำนวณคะแนนการเข้างานของพนักงาน' },
+  { key: 'shift',     label: 'กะทำงาน',             desc: 'การเปลี่ยนกะและค่ากะพิเศษ' },
+  { key: 'probation', label: 'การทดลองงาน',         desc: 'ระยะเวลาและการประเมินทดลองงาน' },
+  { key: 'retire',    label: 'การเกษียณอายุ',        desc: 'อายุเกษียณและนโยบายการเกษียณ' },
+  { key: 'exit',      label: 'การพ้นสภาพ',          desc: 'การแจ้งลาออกและการคืนทรัพย์สิน' },
+];
+
+function CondIcon({ section }: { section: CondSection }) {
+  const common = { viewBox: '0 0 20 20', fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
+  switch (section) {
+    case 'hours':
+      return <svg {...common}><rect x="3" y="5.5" width="14" height="11" rx="1.5" /><path d="M3 8.5h14M7 3.5v3M13 3.5v3" /></svg>;
+    case 'score':
+      return <svg {...common}><circle cx="10" cy="10" r="6.5" /><path d="M10 6.5v3.5l2.3 1.4" /></svg>;
+    case 'shift':
+      return <svg {...common}><circle cx="10" cy="10" r="6.5" /><path d="M10 5v5l3 1.6" /></svg>;
+    case 'probation':
+      return <svg {...common}><circle cx="10" cy="7" r="2.6" /><path d="M4.5 16c0-2.8 2.4-4.6 5.5-4.6s5.5 1.8 5.5 4.6" /></svg>;
+    case 'retire':
+      return <svg {...common}><circle cx="10" cy="6.5" r="2.4" /><path d="M6 16c0-3 1.8-5 4-5s4 2 4 5M10 11v5" /></svg>;
+    case 'exit':
+      return <svg {...common}><path d="M12 4.5H6.5A1.5 1.5 0 005 6v8a1.5 1.5 0 001.5 1.5H12M10 10h6m0 0l-2.2-2.2M16 10l-2.2 2.2" /></svg>;
+  }
+}
+
+// ─── Company detail (fullscreen modal, 4 tabs) ────────────────────────────────
+
+type CompanyTab = 'legal' | 'branches' | 'conditions' | 'signers';
 
 function CompanyDetailModal({
   company,
   onSave,
   onClose,
   accent,
+  initialTab = 'legal',
+  focusBranchId = null,
 }: {
   company: Company;
   onSave: (updated: Company) => void;
   onClose: () => void;
   accent: string;
+  initialTab?: CompanyTab;
+  focusBranchId?: string | null;
 }) {
-  const [tab, setTab] = useState<CompanyTab>('legal');
+  const [tab, setTab] = useState<CompanyTab>(initialTab);
+  const [condSection, setCondSection] = useState<CondSection>('hours');
   const [draft, setDraft] = useState<Company>(company);
   const [signerModal, setSignerModal] = useState<AuthorizedSigner | null>(null);
+  // Deep-link: when opened from the org tree on a specific branch, open its editor immediately.
+  const [branchModal, setBranchModal] = useState<Branch | null>(
+    () => (focusBranchId ? company.branches.find((b) => b.id === focusBranchId) ?? null : null),
+  );
 
   const upd = (patch: Partial<Company>) => setDraft((d) => ({ ...d, ...patch }));
   const updCond = (patch: Partial<WorkConditions>) =>
     setDraft((d) => ({ ...d, workConditions: { ...d.workConditions, ...patch } }));
+  const wc = draft.workConditions;
 
   const handleSave = (e: FormEvent) => {
     e.preventDefault();
@@ -289,8 +361,28 @@ function CompanyDetailModal({
   const deleteSigner = (id: string) =>
     setDraft((d) => ({ ...d, signers: d.signers.filter((s) => s.id !== id) }));
 
+  const openAddBranch = () =>
+    setBranchModal({ id: '', code: '', nameTh: '', isHeadOffice: false, submitSocialSecurity: true, branchSeq: '', active: true });
+  const openEditBranch = (b: Branch) => setBranchModal(b);
+
+  const saveBranch = (b: Branch) => {
+    setDraft((d) => {
+      const id = b.id || `br-${Date.now()}`;
+      const exists = d.branches.some((x) => x.id === b.id);
+      const branches = exists
+        ? d.branches.map((x) => (x.id === b.id ? { ...b, id } : x))
+        : [...d.branches, { ...b, id }];
+      return { ...d, branches };
+    });
+    setBranchModal(null);
+  };
+
+  const deleteBranch = (id: string) =>
+    setDraft((d) => ({ ...d, branches: d.branches.filter((b) => b.id !== id) }));
+
   const TABS: { key: CompanyTab; label: string }[] = [
     { key: 'legal',      label: 'นิติบุคคล/นายจ้าง' },
+    { key: 'branches',   label: 'ข้อมูลสาขา' },
     { key: 'conditions', label: 'เงื่อนไขการทำงาน' },
     { key: 'signers',    label: 'ผู้มีอำนาจลงนาม' },
   ];
@@ -370,56 +462,206 @@ function CompanyDetailModal({
           </div>
         ) : null}
 
-        {/* Tab 2: Work conditions */}
-        {tab === 'conditions' ? (
+        {/* Tab 2: Branches */}
+        {tab === 'branches' ? (
           <div>
-            <GroupHeading>เวลาและการทำงาน</GroupHeading>
-            <div className="hr-leave-form__grid">
-              <Field label="ชม. ทำงาน/วัน" suffix="ชม.">
-                <input className="hr-leave-input hr-leave-input--num" type="number" min={1} max={24} value={draft.workConditions.workHoursPerDay} onChange={(e) => updCond({ workHoursPerDay: Number(e.target.value) || 8 })} />
-              </Field>
-              <Field label="วันตัดรอบประจำปี" suffix="ของทุกปี">
-                <input className="hr-leave-input hr-leave-input--num" type="number" min={1} max={31} value={draft.workConditions.annualCutoffDate} onChange={(e) => updCond({ annualCutoffDate: Number(e.target.value) || 31 })} />
-              </Field>
-              <Field label="เกณฑ์มาสาย" suffix="นาที">
-                <input className="hr-leave-input hr-leave-input--num" type="number" min={0} value={draft.workConditions.lateThresholdMin} onChange={(e) => updCond({ lateThresholdMin: Number(e.target.value) || 0 })} />
-              </Field>
-              <Field label="เกณฑ์ขาดงาน" suffix="นาที">
-                <input className="hr-leave-input hr-leave-input--num" type="number" min={0} value={draft.workConditions.absentThresholdMin} onChange={(e) => updCond({ absentThresholdMin: Number(e.target.value) || 0 })} />
-              </Field>
+            <div className="hr-company-signers-head">
+              <GroupHeading>สาขาของนิติบุคคล</GroupHeading>
+              <button
+                type="button"
+                className="hr-leave-board__add"
+                style={{ backgroundColor: accent }}
+                onClick={openAddBranch}
+              >
+                <PlusIcon className="h-3.5 w-3.5" />
+                เพิ่มสาขา
+              </button>
             </div>
-
-            <GroupHeading>เงินเดือนและ HR</GroupHeading>
-            <div className="hr-leave-form__grid">
-              <Field label="วันจ่ายเงินเดือน" suffix="ของทุกเดือน">
-                <input className="hr-leave-input hr-leave-input--num" type="number" min={1} max={31} value={draft.workConditions.payrollDay} onChange={(e) => updCond({ payrollDay: Number(e.target.value) || 28 })} />
-              </Field>
-              <Field label="อายุเกษียณ" suffix="ปี">
-                <input className="hr-leave-input hr-leave-input--num" type="number" min={40} max={70} value={draft.workConditions.retirementAge} onChange={(e) => updCond({ retirementAge: Number(e.target.value) || 60 })} />
-              </Field>
-              <Field label="ทดลองงาน" suffix="วัน">
-                <input className="hr-leave-input hr-leave-input--num" type="number" min={0} value={draft.workConditions.probationDays} onChange={(e) => updCond({ probationDays: Number(e.target.value) || 90 })} />
-              </Field>
-              <Field label="สกุลเงิน">
-                <HrCustomSelect
-                  value={draft.workConditions.currency}
-                  options={['THB', 'USD', 'SGD'].map((v) => ({ value: v, label: v }))}
-                  onChange={(v) => updCond({ currency: v })}
-                />
-              </Field>
-            </div>
-
-            <GroupHeading>วันหยุดรายสัปดาห์</GroupHeading>
-            <WeekdayPicker value={draft.workConditions.weeklyHolidays} onChange={(days) => updCond({ weeklyHolidays: days })} />
-
+            {draft.branches.length === 0 ? (
+              <p className="hr-company-signers-empty">ยังไม่มีสาขา</p>
+            ) : (
+              <div className="hr-company-branch-table-wrap">
+                <table className="hr-company-branch-table">
+                  <thead>
+                    <tr>
+                      <th>รหัสสาขา</th>
+                      <th>ชื่อสาขา</th>
+                      <th>จังหวัด</th>
+                      <th className="hr-company-branch-table__center">นำส่งประกันสังคม</th>
+                      <th className="hr-company-branch-table__center">ลำดับที่สาขา</th>
+                      <th className="hr-company-branch-table__center">สถานะ</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {draft.branches.map((b) => (
+                      <tr key={b.id}>
+                        <td className="hr-company-branch-table__mono">{b.code || '—'}</td>
+                        <td>
+                          <span className="hr-company-branch-table__name">{b.nameTh}</span>
+                          {b.isHeadOffice ? <span className="hr-company-branch-table__hq">สำนักงานใหญ่</span> : null}
+                        </td>
+                        <td>{b.province || '—'}</td>
+                        <td className="hr-company-branch-table__center">
+                          {b.submitSocialSecurity ? <span className="hr-company-branch-table__check">✓</span> : '—'}
+                        </td>
+                        <td className="hr-company-branch-table__center hr-company-branch-table__mono">{b.branchSeq || '—'}</td>
+                        <td className="hr-company-branch-table__center">
+                          <span className={`hr-company-branch-status ${b.active ? 'hr-company-branch-status--on' : 'hr-company-branch-status--off'}`}>
+                            {b.active ? 'ใช้งาน' : 'ปิด'}
+                          </span>
+                        </td>
+                        <td className="hr-company-branch-table__center">
+                          <div className="hr-company-signer-row__actions">
+                            <button type="button" className="hr-leave-board__actions" aria-label="แก้ไข" onClick={() => openEditBranch(b)}>
+                              <EditIcon className="h-3.5 w-3.5" />
+                            </button>
+                            <button type="button" className="hr-leave-board__action-danger" aria-label="ลบ" onClick={() => deleteBranch(b.id)}>
+                              <TrashIcon className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             <div className="hr-company-detail__cond-note">
-              การตั้งค่ากะ ปฏิทินวันหยุด และการลงเวลา จัดการได้ที่เมนู
-              <strong> ตั้งค่าเวลาการทำงาน</strong>
+              โครงสร้างฝ่าย/แผนกใต้สาขา จัดการได้ที่หน้า
+              <strong> ผังองค์กร</strong>
             </div>
           </div>
         ) : null}
 
-        {/* Tab 3: Signers */}
+        {/* Tab 3: Work conditions — left sub-nav + flat field panel */}
+        {tab === 'conditions' ? (
+          <div className="hr-cond">
+            <nav className="hr-cond__nav" aria-label="หมวดเงื่อนไขการทำงาน">
+              {COND_SECTIONS.map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  className={`hr-cond__nav-item ${condSection === s.key ? 'hr-cond__nav-item--active' : ''}`}
+                  onClick={() => setCondSection(s.key)}
+                >
+                  <span className="hr-cond__nav-icon"><CondIcon section={s.key} /></span>
+                  <span className="hr-cond__nav-text">
+                    <span className="hr-cond__nav-label">{s.label}</span>
+                    <span className="hr-cond__nav-desc">{s.desc}</span>
+                  </span>
+                </button>
+              ))}
+            </nav>
+
+            <div className="hr-cond__panel">
+              {COND_SECTIONS.filter((s) => s.key === condSection).map((s) => (
+                <header key={s.key} className="hr-cond__panel-head">
+                  <span className="hr-cond__panel-icon"><CondIcon section={s.key} /></span>
+                  <div>
+                    <h4 className="hr-cond__panel-title">{s.label}</h4>
+                    <p className="hr-cond__panel-desc">{s.desc}</p>
+                  </div>
+                </header>
+              ))}
+
+              {/* 1) ชั่วโมงทำงานและสถานะ */}
+              {condSection === 'hours' ? (
+                <>
+                  <div className="hr-leave-form__grid">
+                    <NumField label="ชั่วโมงทำงาน/วัน" suffix="ชม." min={1} max={24} value={wc.workHoursPerDay} fallback={8} onChange={(n) => updCond({ workHoursPerDay: n })} />
+                    <NumField label="วันทำงาน/สัปดาห์" suffix="วัน" min={1} max={7} value={wc.workDaysPerWeek} fallback={5} onChange={(n) => updCond({ workDaysPerWeek: n })} />
+                    <NumField label="เกณฑ์มาสาย" suffix="นาที" min={0} value={wc.lateThresholdMin} fallback={15} onChange={(n) => updCond({ lateThresholdMin: n })} />
+                    <NumField label="เกณฑ์ขาดงาน" suffix="นาที" min={0} value={wc.absentThresholdMin} fallback={240} onChange={(n) => updCond({ absentThresholdMin: n })} />
+                  </div>
+                  <div className="hr-cond__field-block">
+                    <span className="hr-leave-field__label">วันหยุดประจำสัปดาห์</span>
+                    <WeekdayPicker value={wc.weeklyHolidays} onChange={(days) => updCond({ weeklyHolidays: days })} />
+                  </div>
+                </>
+              ) : null}
+
+              {/* 2) คะแนนการเข้างาน */}
+              {condSection === 'score' ? (
+                <>
+                  <div className="hr-cond__toggle-block">
+                    <ToggleField label="เปิดใช้คะแนนการเข้างาน" checked={wc.attendanceScoringEnabled ?? false} onChange={(v) => updCond({ attendanceScoringEnabled: v })} />
+                  </div>
+                  <div className="hr-leave-form__grid">
+                    <NumField label="คะแนนเริ่มต้น" suffix="คะแนน" min={0} value={wc.attendanceBaseScore} fallback={100} onChange={(n) => updCond({ attendanceBaseScore: n })} />
+                    <NumField label="หักเมื่อมาสาย" suffix="/ครั้ง" min={0} value={wc.attendanceDeductLate} fallback={1} onChange={(n) => updCond({ attendanceDeductLate: n })} />
+                    <NumField label="หักเมื่อขาดงาน" suffix="/ครั้ง" min={0} value={wc.attendanceDeductAbsent} fallback={5} onChange={(n) => updCond({ attendanceDeductAbsent: n })} />
+                    <NumField label="หักเมื่อลา" suffix="/ครั้ง" min={0} value={wc.attendanceDeductLeave} fallback={1} onChange={(n) => updCond({ attendanceDeductLeave: n })} />
+                  </div>
+                </>
+              ) : null}
+
+              {/* 3) กะทำงาน */}
+              {condSection === 'shift' ? (
+                <>
+                  <div className="hr-leave-form__grid">
+                    <NumField label="อัตราค่ากะกลางคืน" suffix="บาท/กะ" min={0} value={wc.nightShiftRate} fallback={0} onChange={(n) => updCond({ nightShiftRate: n })} />
+                  </div>
+                  <div className="hr-cond__toggle-block">
+                    <ToggleField label="อนุญาตให้เปลี่ยนกะ" checked={wc.allowShiftChange ?? false} onChange={(v) => updCond({ allowShiftChange: v })} />
+                    <ToggleField label="จ่ายค่ากะพิเศษ" checked={wc.payShiftAllowance ?? false} onChange={(v) => updCond({ payShiftAllowance: v })} />
+                  </div>
+                  <div className="hr-company-detail__cond-note">
+                    ตั้งค่ากะแบบละเอียด (เวลาเข้า-ออก รอบตัดเวลา) จัดการได้ที่เมนู
+                    <strong> ตั้งค่าเวลาการทำงาน</strong>
+                  </div>
+                </>
+              ) : null}
+
+              {/* 4) การทดลองงาน */}
+              {condSection === 'probation' ? (
+                <>
+                  <div className="hr-leave-form__grid">
+                    <NumField label="ระยะเวลาทดลองงาน" suffix="วัน" min={0} value={wc.probationDays} fallback={90} onChange={(n) => updCond({ probationDays: n })} />
+                    <NumField label="แจ้งเตือนก่อนครบกำหนด" suffix="วัน" min={0} value={wc.probationAlertDays} fallback={7} onChange={(n) => updCond({ probationAlertDays: n })} />
+                  </div>
+                  <div className="hr-cond__toggle-block">
+                    <ToggleField label="ต้องประเมินผลก่อนผ่านทดลองงาน" checked={wc.probationRequireReview ?? false} onChange={(v) => updCond({ probationRequireReview: v })} />
+                  </div>
+                </>
+              ) : null}
+
+              {/* 5) การเกษียณอายุ */}
+              {condSection === 'retire' ? (
+                <div className="hr-leave-form__grid">
+                  <NumField label="อายุเกษียณ" suffix="ปี" min={40} max={70} value={wc.retirementAge} fallback={60} onChange={(n) => updCond({ retirementAge: n })} />
+                  <Field label="นโยบายการเกษียณ">
+                    <HrCustomSelect
+                      value={wc.retirementPolicy ?? 'birthMonthEnd'}
+                      options={[
+                        { value: 'birthMonthEnd', label: 'สิ้นเดือนที่ครบอายุ' },
+                        { value: 'fiscalYearEnd', label: 'สิ้นปีบัญชี' },
+                        { value: 'exactDate',     label: 'วันครบอายุพอดี' },
+                      ]}
+                      onChange={(v) => updCond({ retirementPolicy: v as WorkConditions['retirementPolicy'] })}
+                    />
+                  </Field>
+                  <NumField label="แจ้งเตือนก่อนเกษียณ" suffix="วัน" min={0} value={wc.retirementAlertDays} fallback={90} onChange={(n) => updCond({ retirementAlertDays: n })} />
+                </div>
+              ) : null}
+
+              {/* 6) การพ้นสภาพ */}
+              {condSection === 'exit' ? (
+                <>
+                  <div className="hr-leave-form__grid">
+                    <NumField label="แจ้งลาออกล่วงหน้า" suffix="วัน" min={0} value={wc.resignNoticeDays} fallback={30} onChange={(n) => updCond({ resignNoticeDays: n })} />
+                  </div>
+                  <div className="hr-cond__toggle-block">
+                    <ToggleField label="ต้องคืนทรัพย์สินก่อนพ้นสภาพ" checked={wc.returnAssetsRequired ?? false} onChange={(v) => updCond({ returnAssetsRequired: v })} />
+                    <ToggleField label="คำนวณวันลาคงเหลือเป็นเงิน" checked={wc.payoutRemainingLeave ?? false} onChange={(v) => updCond({ payoutRemainingLeave: v })} />
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Tab 4: Signers */}
         {tab === 'signers' ? (
           <div>
             <div className="hr-company-signers-head">
@@ -460,66 +702,80 @@ function CompanyDetailModal({
           accent={accent}
         />
       ) : null}
+
+      {branchModal ? (
+        <BranchEditModal
+          initial={branchModal}
+          onCancel={() => setBranchModal(null)}
+          onSave={saveBranch}
+          accent={accent}
+        />
+      ) : null}
     </>
   );
 }
 
-// ─── Branch detail (fullscreen modal) ──────────────────────────────────────────
+// ─── Branch edit (inner dialog, edits one branch within the company draft) ──────
 
-function BranchDetailModal({
-  node,
-  branch,
+function BranchEditModal({
+  initial,
+  onCancel,
   onSave,
-  onClose,
   accent,
 }: {
-  node: OrgNode;
-  branch: Branch | null;
+  initial: Branch;
+  onCancel: () => void;
   onSave: (b: Branch) => void;
-  onClose: () => void;
   accent: string;
 }) {
-  const [draft, setDraft] = useState<Branch>(
-    branch ?? { id: '', code: '', nameTh: node.name, isHeadOffice: false, active: true },
-  );
-
+  const [draft, setDraft] = useState<Branch>(initial);
+  const [error, setError] = useState('');
   const upd = (patch: Partial<Branch>) => setDraft((d) => ({ ...d, ...patch }));
 
-  const handleSave = (e: FormEvent) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault();
-    const id = draft.id || `br-${Date.now()}`;
-    onSave({ ...draft, id, nameTh: draft.nameTh || node.name });
-    onClose();
+    if (!draft.nameTh.trim()) { setError('กรุณาระบุชื่อสาขา'); return; }
+    onSave(draft);
   };
 
   return (
-    <ModalShell
-      title={draft.nameTh || node.name}
-      subtitle="ข้อมูลสาขา"
-      onClose={onClose}
-      onSubmit={handleSave}
-      accent={accent}
-    >
-      <GroupHeading>ข้อมูลสาขา</GroupHeading>
-      <div className="hr-leave-form__grid">
-        <Field label="ชื่อสาขา (ไทย)" required>
-          <input className="hr-leave-input" value={draft.nameTh} onChange={(e) => upd({ nameTh: e.target.value })} placeholder="สำนักงานใหญ่" />
-        </Field>
-        <Field label="ชื่อสาขา (EN)">
-          <input className="hr-leave-input" value={draft.nameEn ?? ''} onChange={(e) => upd({ nameEn: e.target.value })} placeholder="Head Office" />
-        </Field>
-        <Field label="รหัสสาขา">
-          <input className="hr-leave-input hr-leave-input--mono" value={draft.code} onChange={(e) => upd({ code: e.target.value })} placeholder="BO0001" />
-        </Field>
-        <Field label="จังหวัด">
-          <input className="hr-leave-input" value={draft.province ?? ''} onChange={(e) => upd({ province: e.target.value })} placeholder="กรุงเทพฯ" />
-        </Field>
-      </div>
-      <div className="mt-5 flex flex-col gap-3">
-        <ToggleField label="สำนักงานใหญ่" checked={draft.isHeadOffice} onChange={(v) => upd({ isHeadOffice: v })} />
-        <ToggleField label="เปิดใช้งานสาขานี้" checked={draft.active} onChange={(v) => upd({ active: v })} />
-      </div>
-    </ModalShell>
+    <div className="hr-leave-confirm-overlay" role="presentation" onClick={onCancel}>
+      <section className="hr-company-signer-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+        <header className="hr-leave-confirm__head">
+          <h4>{initial.id ? 'แก้ไขสาขา' : 'เพิ่มสาขา'}</h4>
+          <button type="button" onClick={onCancel} aria-label="ปิด"><XIcon className="h-4 w-4" /></button>
+        </header>
+        <form onSubmit={submit} className="hr-leave-confirm__body">
+          {error ? <p className="hr-leave-modal-error">{error}</p> : null}
+          <div className="hr-leave-form__grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            <Field label="ชื่อสาขา (ไทย)" required>
+              <input className="hr-leave-input" value={draft.nameTh} onChange={(e) => upd({ nameTh: e.target.value })} placeholder="สำนักงานใหญ่" />
+            </Field>
+            <Field label="ชื่อสาขา (EN)">
+              <input className="hr-leave-input" value={draft.nameEn ?? ''} onChange={(e) => upd({ nameEn: e.target.value })} placeholder="Head Office" />
+            </Field>
+            <Field label="รหัสสาขา">
+              <input className="hr-leave-input hr-leave-input--mono" value={draft.code} onChange={(e) => upd({ code: e.target.value })} placeholder="BO0001" />
+            </Field>
+            <Field label="จังหวัด">
+              <input className="hr-leave-input" value={draft.province ?? ''} onChange={(e) => upd({ province: e.target.value })} placeholder="กรุงเทพฯ" />
+            </Field>
+            <Field label="ลำดับที่สาขา (ประกันสังคม)">
+              <input className="hr-leave-input hr-leave-input--mono" value={draft.branchSeq ?? ''} onChange={(e) => upd({ branchSeq: e.target.value })} placeholder="000000" maxLength={6} />
+            </Field>
+          </div>
+          <div className="mt-4 flex flex-col gap-3">
+            <ToggleField label="นำส่งประกันสังคมในนามสาขานี้" checked={draft.submitSocialSecurity ?? false} onChange={(v) => upd({ submitSocialSecurity: v })} />
+            <ToggleField label="สำนักงานใหญ่" checked={draft.isHeadOffice} onChange={(v) => upd({ isHeadOffice: v })} />
+            <ToggleField label="เปิดใช้งานสาขานี้" checked={draft.active} onChange={(v) => upd({ active: v })} />
+          </div>
+          <footer className="hr-leave-confirm__foot" style={{ marginTop: '1rem' }}>
+            <button type="button" className="hr-leave-modal-foot__cancel" onClick={onCancel}>ยกเลิก</button>
+            <button type="submit" className="hr-leave-modal-foot__save" style={{ backgroundColor: accent }}>บันทึก</button>
+          </footer>
+        </form>
+      </section>
+    </div>
   );
 }
 
@@ -530,7 +786,6 @@ export function OrgNodeDetailModal({
   branchOwnerCompanyId,
   companies,
   onCompanySave,
-  onBranchSave,
   onClose,
   accent,
 }: {
@@ -538,12 +793,12 @@ export function OrgNodeDetailModal({
   branchOwnerCompanyId: string | null;
   companies: Company[];
   onCompanySave: (updated: Company) => void;
-  onBranchSave: (companyId: string, branch: Branch) => void;
   onClose: () => void;
   accent: string;
 }) {
   if (!selectedNode) return null;
 
+  // Company node → company modal (legal tab).
   if (selectedNode.type === 'company') {
     const company = companies.find((c) => c.orgNodeId === selectedNode.id);
     if (!company) return null;
@@ -558,18 +813,21 @@ export function OrgNodeDetailModal({
     );
   }
 
+  // Branch node → deep-link into the owning company modal, branches tab,
+  // focused on the matching branch record (single source of truth — no separate editor).
   if (selectedNode.type === 'branch') {
     const owningCompany = companies.find((c) => c.id === branchOwnerCompanyId);
     if (!owningCompany) return null;
     const branch = owningCompany.branches.find((b) => b.nameTh === selectedNode.name) ?? null;
     return (
-      <BranchDetailModal
-        key={selectedNode.id}
-        node={selectedNode}
-        branch={branch}
-        onSave={(b) => onBranchSave(owningCompany.id, b)}
+      <CompanyDetailModal
+        key={`${owningCompany.id}:${selectedNode.id}`}
+        company={owningCompany}
+        onSave={onCompanySave}
         onClose={onClose}
         accent={accent}
+        initialTab="branches"
+        focusBranchId={branch?.id ?? null}
       />
     );
   }

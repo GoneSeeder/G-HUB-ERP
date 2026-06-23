@@ -1,11 +1,13 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { LogOutIcon, SearchIcon } from '@/components/ui/icons';
-import { clearAuthTokenCookie } from '@/lib/auth';
+import { clearAuthTokenCookie, getAuthTokenFromCookie } from '@/lib/auth';
+import { clearHrSessionSnapshot, getHrSessionSnapshot, setHrSessionSnapshot, type HrSession } from '@/lib/hr-auth';
 import { queryOptions } from '@/lib/queries';
 import { cn } from '@/lib/cn';
 import {
@@ -193,6 +195,7 @@ void LEGACY_NAV;
 const COLLAPSED_W = 52;
 const EXPANDED_W = 220;
 const SUBMENU_W = 292;
+const GHUB_LINK_STORAGE_KEY = 'g-hub.hr.ghub-linked';
 
 // ─── Shell ────────────────────────────────────────────────────────────────────
 
@@ -240,7 +243,9 @@ export function HrShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: me } = useQuery(queryOptions.me);
+  const [hasGhubToken, setHasGhubToken] = useState(false);
+  const [hrSession, setHrSession] = useState<HrSession | null>(null);
+  const { data: me } = useQuery({ ...queryOptions.me, enabled: hasGhubToken });
   const [hovered, setHovered] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -248,6 +253,7 @@ export function HrShell({ children }: { children: ReactNode }) {
   const [submenuClosing, setSubmenuClosing] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [hasGhubLink, setHasGhubLink] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const submenuTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const collapseAfterSubmenu = useRef(false);
@@ -296,6 +302,34 @@ export function HrShell({ children }: { children: ReactNode }) {
     if (savedTheme === 'dark' || savedTheme === 'light') setTheme(savedTheme);
   }, []);
 
+  useEffect(() => {
+    const readSession = () => {
+      const nextSession = getHrSessionSnapshot();
+      setHrSession(nextSession);
+      setHasGhubToken(Boolean(getAuthTokenFromCookie()));
+      if (nextSession?.hasGhubLink) setHasGhubLink(true);
+    };
+
+    readSession();
+    window.addEventListener('g-hub.hr.session-changed', readSession);
+    return () => window.removeEventListener('g-hub.hr.session-changed', readSession);
+  }, []);
+
+  useEffect(() => {
+    const readGhubLinkState = (value: string | null) => {
+      setHasGhubLink(Boolean(hrSession?.hasGhubLink) || value === 'true' || value === '1' || value === 'linked');
+    };
+
+    readGhubLinkState(window.localStorage.getItem(GHUB_LINK_STORAGE_KEY));
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === GHUB_LINK_STORAGE_KEY) readGhubLinkState(event.newValue);
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [hrSession?.hasGhubLink]);
+
   useEffect(() => () => {
     if (submenuTimer.current) clearTimeout(submenuTimer.current);
   }, []);
@@ -335,7 +369,8 @@ export function HrShell({ children }: { children: ReactNode }) {
   const logout = () => {
     queryClient.clear();
     clearAuthTokenCookie();
-    router.push('/login');
+    clearHrSessionSnapshot();
+    router.push('/humansource/login');
     router.refresh();
   };
 
@@ -344,11 +379,23 @@ export function HrShell({ children }: { children: ReactNode }) {
     window.localStorage.setItem('ghub-hr-theme', nextTheme);
   };
 
+  const updateGhubLinkMock = (nextLinked: boolean) => {
+    setHasGhubLink(nextLinked);
+    window.localStorage.setItem(GHUB_LINK_STORAGE_KEY, nextLinked ? 'true' : 'false');
+    const currentSession = getHrSessionSnapshot();
+    if (currentSession) {
+      const nextSession = { ...currentSession, hasGhubLink: nextLinked };
+      setHrSession(nextSession);
+      setHrSessionSnapshot(nextSession);
+    }
+  };
+
+  const isDevMode = process.env.NODE_ENV !== 'production';
   const showSubmenu = Boolean(submenuItem?.sections?.length);
 
-  const userName = me?.name ?? me?.username ?? 'User';
+  const userName = me?.name ?? me?.username ?? hrSession?.displayName ?? 'User';
   const userInitial = userName.slice(0, 1).toUpperCase();
-  const userSub = me?.username ?? me?.sub ?? '';
+  const userSub = me?.username ?? me?.sub ?? hrSession?.email ?? '';
   const ThemeIcon = theme === 'dark' ? MoonIcon : SunIcon;
   const settingsItem = NAV.find((item) => item.key === 'settings');
   const isHolidayCalendarPage = pathname.includes('/humansource/time/holiday-calendar');
@@ -373,10 +420,12 @@ export function HrShell({ children }: { children: ReactNode }) {
       >
         {/* Module mark */}
         <div className="relative flex h-[60px] items-center overflow-hidden border-b border-gray-100">
-          <img
+          <Image
             src="/hr-logo.png"
             alt=""
             aria-hidden="true"
+            width={32}
+            height={32}
             className="h-8 w-8 flex-shrink-0 rounded-xl object-cover shadow-[0_8px_18px_rgba(147,51,234,0.22)]"
             style={{
               marginLeft: (COLLAPSED_W - 28) / 2, // 12px — centers 28px button in 52px bar
@@ -521,34 +570,36 @@ export function HrShell({ children }: { children: ReactNode }) {
               </span>
             </button>
           )}
-          <Link
-            href="/hub"
-            title={expanded ? undefined : 'กลับ G-HUB'}
-            className={cn(
-              'group flex h-10 w-full items-center overflow-hidden text-xs text-gray-400 hover:text-gray-700',
-              expanded && 'rounded-xl pr-3 hover:bg-gray-50',
-            )}
-            style={{ transition: 'background-color 150ms, color 150ms' }}
-          >
-            <span
-              className="flex h-10 flex-shrink-0 items-center justify-center"
-              style={{ width: COLLAPSED_W }}
+          {hasGhubLink && (
+            <Link
+              href="/hub"
+              title={expanded ? undefined : 'กลับ G-HUB'}
+              className={cn(
+                'group flex h-10 w-full items-center overflow-hidden text-xs text-gray-400 hover:text-gray-700',
+                expanded && 'rounded-xl pr-3 hover:bg-gray-50',
+              )}
+              style={{ transition: 'background-color 150ms, color 150ms' }}
             >
-              <span className="flex h-9 w-10 items-center justify-center rounded-xl group-hover:bg-gray-50">
-                <HomeIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
+              <span
+                className="flex h-10 flex-shrink-0 items-center justify-center"
+                style={{ width: COLLAPSED_W }}
+              >
+                <span className="flex h-9 w-10 items-center justify-center rounded-xl group-hover:bg-gray-50">
+                  <HomeIcon style={{ width: 14, height: 14, flexShrink: 0 }} />
+                </span>
               </span>
-            </span>
-            <span
-              className="overflow-hidden whitespace-nowrap"
-              style={{
-                opacity: expanded ? 1 : 0,
-                width: expanded ? 'auto' : 0,
-                transition: 'opacity 150ms ease-out',
-              }}
-            >
-              กลับ G-HUB
-            </span>
-          </Link>
+              <span
+                className="overflow-hidden whitespace-nowrap"
+                style={{
+                  opacity: expanded ? 1 : 0,
+                  width: expanded ? 'auto' : 0,
+                  transition: 'opacity 150ms ease-out',
+                }}
+              >
+                กลับ G-HUB
+              </span>
+            </Link>
+          )}
         </div>
       </aside>
 
@@ -745,6 +796,31 @@ export function HrShell({ children }: { children: ReactNode }) {
                         </button>
                       </div>
                     </div>
+
+                    {isDevMode && (
+                      <button
+                        type="button"
+                        onClick={() => updateGhubLinkMock(!hasGhubLink)}
+                        aria-pressed={hasGhubLink}
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-xs font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700"
+                      >
+                        <HomeIcon className="h-4 w-4 text-indigo-500" />
+                        <span className="flex-1">Dev: G-HUB link</span>
+                        <span
+                          className={cn(
+                            'relative h-5 w-9 rounded-full p-0.5 transition-colors',
+                            hasGhubLink ? 'bg-indigo-600' : 'bg-gray-200',
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'block h-4 w-4 rounded-full bg-white shadow-sm transition-transform',
+                              hasGhubLink && 'translate-x-4',
+                            )}
+                          />
+                        </span>
+                      </button>
+                    )}
 
                     <button
                       type="button"

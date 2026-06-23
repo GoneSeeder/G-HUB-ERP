@@ -1,0 +1,165 @@
+{
+  "$meta": {
+    "name": "G-HUB HumanSource Design Tokens",
+    "version": "2.0.0",
+    "source": "Extracted verbatim from the approved Holiday Management UI (design-samples/holiday-management.html). No values invented; every token traces to a rule in that file.",
+    "authority": "Visual authority is the approved Holiday Management UI. On conflict with DESIGN.md, this set wins (per DESIGN_SYSTEM_EXTRACTION.md).",
+    "rule": "Do not add tokens from theory, Material, Tailwind defaults, or other SaaS. New tokens must be extracted from an approved screen."
+  },
+
+  "color": {
+    "surface":      { "value": "#ffffff", "from": "--hr-surface — card/panel/table background" },
+    "page":         { "value": "#f6f7fa", "from": "--hr-page — app shell background" },
+    "border":       { "value": "#e2e8f0", "from": "--hr-border — default 1px border (table wrap, inputs, chips)" },
+    "borderSoft":   { "value": "#edf1f6", "from": "--hr-border-soft — hairline dividers (table rows, setting-row)" },
+    "text":         { "value": "#0f172a", "from": "--hr-text — headings, primary cell text" },
+    "textMuted":    { "value": "#64748b", "from": "--hr-text-muted — secondary labels, field labels, meta" },
+    "textSubtle":   { "value": "#94a3b8", "from": "--hr-text-subtle — placeholder, table th, tertiary" },
+
+    "primary":      { "value": "#4f46e5", "from": "--hr-primary — accent: active rail, selected, focus, today, calendar event" },
+    "primarySoft":  { "value": "#eef2ff", "from": "--hr-primary-soft — selected option bg, active rail bg, soft accent tint" },
+    "primaryInk":   { "value": "#4338ca", "from": ".select-option--selected color / pill--indigo text" },
+    "focusRing":    { "value": "rgba(99,102,241,0.12)", "from": "input/select :focus box-shadow (0 0 0 3px)" },
+    "focusBorder":  { "value": "#818cf8", "from": "input/select :focus border-color" },
+
+    "actionPrimary":      { "value": "#111827", "from": ".btn--primary background — primary CTA is dark, NOT indigo" },
+    "actionPrimaryHover": { "value": "#1f2937", "from": ".btn--primary:hover" },
+
+    "danger":       { "value": "#be123c", "from": ".btn--danger text / modal__icon (delete)" },
+    "dangerSoft":   { "value": "#fff1f2", "from": ".btn--danger background" },
+    "dangerBorder": { "value": "#fecdd3", "from": ".btn--danger border" },
+    "error":        { "value": "#e11d48", "from": "field__error text, field__req asterisk, topbar notification dot" },
+    "errorBorder":  { "value": "#f43f5e", "from": ".field--error control border-color" },
+    "errorRing":    { "value": "rgba(244,63,94,0.12)", "from": ".field--error control box-shadow" },
+
+    "status": {
+      "active":   { "bg": "#ecfdf5", "fg": "#047857", "dot": "#10b981", "from": ".pill--green — สถานะ ใช้งาน / active" },
+      "draft":    { "bg": "#fffbeb", "fg": "#b45309", "dot": "#f59e0b", "from": ".pill--amber — สถานะ ร่าง / pending" },
+      "disabled": { "bg": "#f1f5f9", "fg": "#64748b", "dot": "#94a3b8", "from": ".pill--slate — สถานะ ปิดใช้งาน / inactive" },
+      "info":     { "bg": "#eef2ff", "fg": "#4338ca", "dot": "#6366f1", "from": ".pill--indigo — info / on-leave" }
+    },
+
+    "category": {
+      "public":  { "value": "#6366f1", "from": "type-tag dot + cal-event--public (วันหยุดนักขัตฤกษ์)" },
+      "company": { "value": "#f59e0b", "from": "type-tag dot + cal-event--company (วันหยุดบริษัท)" },
+      "branch":  { "value": "#06b6d4", "from": "type-tag dot + cal-event--branch (วันหยุดเฉพาะสาขา)" }
+    },
+
+    "dark": {
+      "surface":     { "value": "#0f172a", "from": ".hr-theme-dark --hr-surface" },
+      "page":        { "value": "#020617", "from": ".hr-theme-dark --hr-page" },
+      "border":      { "value": "#1e293b", "from": ".hr-theme-dark --hr-border / --hr-border-soft" },
+      "text":        { "value": "#e2e8f0", "from": ".hr-theme-dark --hr-text" },
+      "textMuted":   { "value": "#94a3b8", "from": ".hr-theme-dark --hr-text-muted" },
+      "textSubtle":  { "value": "#64748b", "from": ".hr-theme-dark --hr-text-subtle" },
+      "primary":     { "value": "#818cf8", "from": ".hr-theme-dark --hr-primary" },
+      "primarySoft": { "value": "#1e1b4b", "from": ".hr-theme-dark --hr-primary-soft" },
+      "rail":        { "value": "#0b1120", "from": ".hr-theme-dark --hr-rail / --hr-topbar" }
+    }
+  },
+
+  "typography": {
+    "fontFamily": { "value": "'Kanit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", "from": "body font-family — single brand family, no pairing" },
+    "weights": {
+      "light":    { "value": 300, "from": "page-subtitle, field__hint, empty__desc, setrow__sub, tooltip — descriptive text" },
+      "regular":  { "value": 400, "from": "table body, chip, input text" },
+      "medium":   { "value": 500, "from": "cell-name__primary, field__label, pill, cell-date, seg__btn" },
+      "semibold": { "value": 600, "from": "fgroup__head, table th, btn, statstrip label dot rows, drawer__title" },
+      "bold":     { "value": 700, "from": "page-title, statstrip__value, rail logo" }
+    },
+    "size": {
+      "displayStat": { "value": "1.5rem",   "weight": 700, "tracking": "-0.02em", "from": ".statstrip__value" },
+      "pageTitle":   { "value": "1.25rem",  "weight": 700, "tracking": "-0.01em", "from": ".page-title" },
+      "sectionTitle":{ "value": "1rem",     "weight": 600, "from": ".empty__title / .cal-title / .drawer__title / .modal__title" },
+      "bodyData":    { "value": "0.875rem", "weight": 400, "from": ".tbl / inputs / select-option" },
+      "label":       { "value": "0.8125rem","weight": 500, "from": ".field__label is 0.75rem; 0.8125rem = chip / setrow__label / fgroup__head / btn" },
+      "labelSm":     { "value": "0.75rem",  "weight": 500, "from": ".field__label / breadcrumb / table th (600) / statstrip label" },
+      "micro":       { "value": "0.72rem",  "weight": 500, "from": ".pill / .type-tag / .field__hint / .field__error / .tooltip / .cell-meta small" }
+    },
+    "lineHeight": {
+      "tight":  { "value": 1.2,  "from": "topbar__user-meta, cal-event" },
+      "snug":   { "value": 1.4,  "from": "tooltip__bubble, modal__text(1.5)" },
+      "normal": { "value": 1.5,  "from": "textarea, modal__text" }
+    }
+  },
+
+  "spacing": {
+    "$scale": "rem steps observed in the UI; use these, not arbitrary px",
+    "0_25": { "value": "0.25rem", "from": "tightest gaps (row-actions, pill dot gap, chip caret)" },
+    "0_4":  { "value": "0.4rem",  "from": "icon/label gaps" },
+    "0_5":  { "value": "0.5rem",  "from": "default control gap (toolbar chips, btn icon gap)" },
+    "0_7":  { "value": "0.7rem",  "from": "table cell padding (0.7rem 1rem)" },
+    "0_75": { "value": "0.75rem", "from": "toolbar gap, fgrid gap, fgroup gap" },
+    "1":    { "value": "1rem",    "from": "table cell horizontal padding, statstrip cell" },
+    "1_1":  { "value": "1.1rem",  "from": "drawer head padding-y" },
+    "1_25": { "value": "1.25rem", "from": "drawer body padding, modal body padding, page-head margin" },
+    "1_5":  { "value": "1.5rem",  "from": "main padding-y" },
+    "2":    { "value": "2rem",    "from": "main padding-x" }
+  },
+
+  "radius": {
+    "chip":    { "value": "0.375rem", "from": ".chip / .select-option / dropdown item" },
+    "control": { "value": "0.5rem",   "from": "inputs, buttons, table-wrap, select-trigger, search" },
+    "card":    { "value": "0.625rem", "from": "statstrip, table-wrap (calendar), cal-grid-wrap, empty, rail logo" },
+    "modal":   { "value": "0.75rem",  "from": ".modal" },
+    "pill":    { "value": "9999px",   "from": ".pill / avatar / toggle / scrollbar" }
+  },
+
+  "shadow": {
+    "resting":  { "value": "0 1px 2px rgba(15,23,42,0.05)", "from": "--hr-shadow (empty__icon, seg active)" },
+    "button":   { "value": "0 1px 2px rgba(15,23,42,0.08)", "from": ".btn--primary" },
+    "dropdown": { "value": "0 12px 28px rgba(15,23,42,0.12)", "from": ".chip-menu" },
+    "menu":     { "value": "0 16px 32px rgba(15,23,42,0.14)", "from": ".select-menu" },
+    "popover":  { "value": "0 16px 36px rgba(15,23,42,0.16)", "from": ".dp-pop date picker" },
+    "drawer":   { "value": "-16px 0 40px rgba(15,23,42,0.14)", "from": ".drawer" },
+    "modal":    { "value": "0 24px 60px rgba(15,23,42,0.28)", "from": ".modal" },
+    "tooltip":  { "value": "0 6px 18px rgba(15,23,42,0.24)", "from": ".tip__bubble / .toast" },
+    "$rule": "No resting shadow on cards/tables. Shadow only on floating layers (dropdown, popover, drawer, modal, tooltip, toast) + the small empty-state icon chip."
+  },
+
+  "breakpoint": {
+    "compact": { "value": "860px", "from": "@media (max-width:860px) — rail hidden, statstrip 2-col, fgrid 1-col, cal-cell shorter" }
+  },
+
+  "motion": {
+    "easingStandard": { "value": "cubic-bezier(0.16, 1, 0.3, 1)", "from": "drawer, modalIn, toggle thumb — expo-out, no bounce" },
+    "microInteraction": { "value": "140ms", "from": "hover/focus/color transitions on controls" },
+    "fast": { "value": "120ms", "from": "chip/iconbtn/select-option background transitions" },
+    "control": { "value": "160ms", "from": "toggle background + thumb" },
+    "modal": { "value": "200ms", "from": "modalIn keyframe + toast + scrim" },
+    "drawer": { "value": "240ms", "from": ".drawer transform" },
+    "skeleton": { "value": "1.2s", "from": "@keyframes sk shimmer (ease-in-out infinite)" },
+    "reducedMotion": { "value": "0.001ms", "from": "@media (prefers-reduced-motion: reduce) — all animation/transition collapsed" }
+  },
+
+  "zIndex": {
+    "dropdown":      { "value": 50,  "from": "--z-dropdown (chip-menu, select-menu, dp-pop)" },
+    "sticky":        { "value": 60,  "from": "--z-sticky" },
+    "drawerBackdrop":{ "value": 100, "from": "--z-drawer-backdrop (scrim)" },
+    "drawer":        { "value": 110, "from": "--z-drawer" },
+    "topbar":        { "value": 115, "from": "--z-topbar — above drawer so header stays visible while drawer open" },
+    "modalBackdrop": { "value": 120, "from": "--z-modal-backdrop" },
+    "modal":         { "value": 130, "from": "--z-modal" },
+    "tooltip":       { "value": 200, "from": "--z-tooltip (tooltip + toast)" }
+  },
+
+  "size": {
+    "controlHeight":   { "value": "2.25rem", "from": "btn / input / select-trigger / searchbox / topbar__search (h-9)" },
+    "chipHeight":      { "value": "2rem",    "from": ".chip / .filter-chip" },
+    "topbarHeight":    { "value": "3.5rem",  "from": "grid-template-rows + drawer top offset" },
+    "railWidth":       { "value": "4rem",    "from": "grid-template-columns rail" },
+    "drawerWidth":     { "value": "min(30rem, 100vw)", "from": ".drawer width" },
+    "toggle":          { "value": "2.6rem x 1.5rem", "from": ".toggle (thumb 1.14rem, travel 1.1rem)" },
+    "iconButton":      { "value": "1.85rem", "from": ".iconbtn (row actions, calendar nav)" },
+    "avatar":          { "value": "2rem",    "from": ".topbar__avatar / rail item icon box" },
+    "tableMinWidth":   { "value": "60rem",   "from": "table.tbl min-width before horizontal scroll" }
+  },
+
+  "icon": {
+    "default":     { "value": "1rem",     "from": ".icon (1rem)" },
+    "small":       { "value": "0.875rem", "from": ".icon-sm" },
+    "large":       { "value": "1.25rem",  "from": ".icon-lg (rail items)" },
+    "strokeWidth": { "value": 1.6,        "from": ".icon stroke-width — line/stroke icons, never emoji" },
+    "style":       { "value": "stroke, round caps/joins, currentColor", "from": ".icon { fill:none; stroke:currentColor; stroke-linecap/linejoin:round }" }
+  }
+}

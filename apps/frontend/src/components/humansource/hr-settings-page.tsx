@@ -8,7 +8,7 @@ import {
   type HrNavChild,
   type HrSettingsGroup,
 } from '@/data/humansource/navigation';
-import { PlusIcon } from '@/components/ui/icons';
+import { PlusIcon, XIcon } from '@/components/ui/icons';
 import { HrCustomSelect } from './hr-ui';
 import { HolidayYearCalendar as HolidayYearCalendarCrud } from './hr-holiday-year-calendar';
 import { CUSTOM_SHIFTS_STORAGE_KEY, type HrShiftGroupKey, type HrShiftRow } from './hr-shifts';
@@ -288,6 +288,7 @@ function FocusPage({
     '/humansource/time/leave-types',
     '/humansource/organization/structure',
     '/humansource/payroll/income-items',
+    '/humansource/settings/announcements',
   ];
   const showTabs = !hideAutoTabsPaths.includes(activeTopic.path);
   const tabs: Array<{ label: string; path?: string }> = activeTopic.children?.length
@@ -411,11 +412,8 @@ function SettingsWorkbench({
     if (activeItem.path.includes('company/employee-defaults')) return <BasicSettingsBoard sub="employee-defaults" accent={accent} />;
     if (activeItem.path.includes('company/running-number'))    return <BasicSettingsBoard sub="running-number"    accent={accent} />;
     if (activeItem.path.includes('organization/employee-type')) return <BasicSettingsBoard sub="employee-type"   accent={accent} />;
-    if (activeItem.path.includes('master-personal'))           return <BasicSettingsBoard sub="master-personal"  accent={accent} />;
     if (activeItem.path.includes('company/general'))                    return <BasicSettingsBoard sub="employee-type"    accent={accent} />;
-    if (activeItem.path.includes('settings/announcement-categories')) return <AnnouncementsBoard sub="categories" accent={accent} />;
-    if (activeItem.path.includes('settings/announcement-audience'))   return <AnnouncementsBoard sub="audience"   accent={accent} />;
-    if (activeItem.path.includes('settings/announcements'))           return <AnnouncementsBoard sub="list"       accent={accent} />;
+    if (activeItem.path.includes('settings/announcements'))           return <AnnouncementsBoard accent={accent} />;
     return null;
   }
 
@@ -444,6 +442,9 @@ function TimeSettingsTable({
   accent: string;
 }) {
   const [showAddWorkIn, setShowAddWorkIn] = useState(false);
+  const [filterWiCompany, setFilterWiCompany] = useState('');
+  const [filterWiDevice, setFilterWiDevice] = useState('');
+  const [filterWiStatus, setFilterWiStatus] = useState('');
 
   if (activeItem.path === '/humansource/time/general') {
     return <TimeGeneralSettings accent={accent} />;
@@ -470,26 +471,28 @@ function TimeSettingsTable({
 
   return (
     <div className="p-5">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {view.filters.map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              className="h-9 rounded-lg border border-gray-200 bg-gray-50 px-3 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
-            >
-              {filter}
-            </button>
-          ))}
+      <div className="hr-settings-toolbar">
+        <div className="hr-settings-toolbar__filters">
+          <input type="search" placeholder="ค้นหา..." className="hr-settings-search" />
         </div>
-        <button
-          type="button"
-          onClick={() => isAttendanceLocations && setShowAddWorkIn(true)}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-gray-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800"
-        >
-          <PlusIcon className="h-4 w-4" />
-          {view.actionLabel}
-        </button>
+        <div className="hr-filter-chip-group">
+          {isAttendanceLocations ? (
+            <>
+              <FilterChipSelect label="บริษัท"       value={filterWiCompany} options={WORKIN_COMPANY_OPTIONS} onChange={setFilterWiCompany} accent={accent} />
+              <FilterChipSelect label="ประเภทอุปกรณ์" value={filterWiDevice}  options={WORKIN_DEVICE_OPTIONS}  onChange={setFilterWiDevice}  accent={accent} />
+              <FilterChipSelect label="สถานะ"         value={filterWiStatus}  options={WORKIN_STATUS_OPTIONS}   onChange={setFilterWiStatus}  accent={accent} />
+            </>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => isAttendanceLocations && setShowAddWorkIn(true)}
+            className="hr-settings-primary-action"
+            style={{ backgroundColor: accent }}
+          >
+            <PlusIcon className="h-4 w-4" />
+            {view.actionLabel}
+          </button>
+        </div>
       </div>
 
       {showAddWorkIn && <AddWorkInLocationModal accent={accent} onClose={() => setShowAddWorkIn(false)} />}
@@ -759,11 +762,103 @@ export function HolidayYearCalendarLegacy({ accent }: { accent: string }) {
   );
 }
 
+// ─── FilterChipSelect (shared within this file) ──────────────────────────────
+
+function FilterChipSelect({
+  label, value, options, onChange, accent,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+  accent: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value);
+  if (selected) {
+    return (
+      <div className="hr-filter-chip hr-filter-chip--active" style={{ borderColor: accent, color: accent }}>
+        <span>{selected.label}</span>
+        <button type="button" className="hr-filter-chip__clear" aria-label="ล้างตัวกรอง" onClick={() => onChange('')}>
+          <XIcon className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div ref={wrapRef} className="hr-filter-chip-wrap">
+      <button type="button" className="hr-filter-chip" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        {label} <span aria-hidden>▾</span>
+      </button>
+      {open && (
+        <div className="hr-filter-chip-dropdown">
+          {options.map((o) => (
+            <button key={o.value} type="button" className="hr-filter-chip-dropdown__item"
+              onClick={() => { onChange(o.value); setOpen(false); }}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const SHIFT_FILTER_COMPANY_OPTIONS = [
+  { value: 'ใช้กับทุกบริษัท', label: 'ใช้กับทุกบริษัท' },
+  { value: 'G-HUB Enterprise',  label: 'G-HUB Enterprise' },
+  { value: 'Operations',         label: 'Operations' },
+  { value: 'ฝ่ายขาย',           label: 'ฝ่ายขาย' },
+  { value: 'คลังสินค้า',        label: 'คลังสินค้า' },
+];
+const SHIFT_FILTER_TYPE_OPTIONS = [
+  { value: 'กะปกติ',    label: 'กะปกติ' },
+  { value: 'กะพิเศษ',   label: 'กะพิเศษ' },
+  { value: 'กะข้ามวัน', label: 'กะข้ามวัน' },
+  { value: 'ชั่วโมงรวม', label: 'ชั่วโมงรวม' },
+  { value: 'ควบกะ',     label: 'ควบกะ' },
+];
+const SHIFT_FILTER_STATUS_OPTIONS = [
+  { value: 'enabled',  label: 'ใช้งาน' },
+  { value: 'disabled', label: 'ไม่ใช้งาน' },
+];
+
+const WORKIN_COMPANY_OPTIONS = [
+  { value: 'G-HUB Enterprise', label: 'G-HUB Enterprise' },
+  { value: 'Operations',        label: 'Operations' },
+  { value: 'M-HUB Enterprise',  label: 'M-HUB Enterprise' },
+];
+const WORKIN_DEVICE_OPTIONS = [
+  { value: 'GPS',              label: 'GPS' },
+  { value: 'IOMO',             label: 'IOMO' },
+  { value: 'QR Code Station',  label: 'QR Code Station' },
+];
+const WORKIN_STATUS_OPTIONS = [
+  { value: 'enabled',  label: 'ใช้งาน' },
+  { value: 'disabled', label: 'ไม่ใช้งาน' },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 function ShiftSettingsBoard({ accent }: { accent: string }) {
   const [customShifts, setCustomShifts] = useState<ShiftRow[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [form, setForm] = useState<ShiftForm>(EMPTY_SHIFT_FORM);
   const [formError, setFormError] = useState('');
+  const [filterCompany, setFilterCompany] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => {
     try {
@@ -933,6 +1028,15 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
     closeCreateModal();
   };
 
+  const allShiftRows = shiftGroups.flatMap((group) => group.rows);
+  const filteredShiftRows = allShiftRows.filter((row) => {
+    if (filterCompany && row.company !== filterCompany) return false;
+    if (filterType && row.type !== filterType) return false;
+    if (filterStatus === 'enabled' && !row.enabled) return false;
+    if (filterStatus === 'disabled' && row.enabled) return false;
+    return true;
+  });
+
   return (
     <div className="p-5">
       <div className="hr-settings-toolbar">
@@ -942,23 +1046,20 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
             placeholder="ค้นหากะการทำงาน"
             className="hr-settings-search"
           />
-          {['ใช้กับทุกบริษัท', 'ประเภทกะ', 'ใช้งาน'].map((filter, index) => (
-            <button
-              key={filter}
-              type="button"
-              className={`hr-settings-filter ${index === 2 ? 'hr-settings-filter--active' : ''}`}
-            >
-              {filter}
-            </button>
-          ))}
         </div>
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="hr-settings-primary-action"
-        >
-          + เพิ่มกะการทำงาน
-        </button>
+        <div className="hr-filter-chip-group">
+          <FilterChipSelect label="บริษัท"   value={filterCompany} options={SHIFT_FILTER_COMPANY_OPTIONS} onChange={setFilterCompany} accent={accent} />
+          <FilterChipSelect label="ประเภทกะ" value={filterType}    options={SHIFT_FILTER_TYPE_OPTIONS}    onChange={setFilterType}    accent={accent} />
+          <FilterChipSelect label="สถานะ"    value={filterStatus}  options={SHIFT_FILTER_STATUS_OPTIONS}   onChange={setFilterStatus}  accent={accent} />
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="hr-settings-primary-action"
+            style={{ backgroundColor: accent }}
+          >
+            + เพิ่มกะการทำงาน
+          </button>
+        </div>
       </div>
 
       <div className="hr-settings-table-wrap">
@@ -973,7 +1074,7 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
             </tr>
           </thead>
           <tbody>
-            {shiftGroups.flatMap((group) => group.rows).map((row) => (
+            {filteredShiftRows.map((row) => (
               <tr key={row.code}>
                 <td>
                   <div className="flex flex-col gap-1">

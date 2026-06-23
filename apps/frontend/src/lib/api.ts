@@ -27,14 +27,33 @@ export function getRealtimeBaseUrl() {
 const API_URL = getApiBaseUrl();
 const SESSION_EXPIRED_MESSAGE = 'Your session has expired. Please sign in again.';
 
+type ApiErrorBody = {
+  code?: string;
+  message?: string | string[];
+};
+
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+    readonly details?: ApiErrorBody | null,
+  ) {
+    super(message);
+    this.name = 'ApiRequestError';
+  }
+}
+
 function redirectToLogin() {
   if (typeof window === 'undefined') {
     return;
   }
 
   clearAuthTokenCookie();
-  if (!window.location.pathname.startsWith('/login')) {
-    window.location.assign('/login');
+  const p = window.location.pathname;
+  const isLoginPage = p.startsWith('/login') || p.startsWith('/humansource/login');
+  if (!isLoginPage) {
+    window.location.assign(p.startsWith('/humansource') ? '/humansource/login' : '/login');
   }
 }
 
@@ -70,13 +89,16 @@ export async function apiFetch<T>(
       throw new Error('File too large');
     }
 
-    const errorBody = (await response.json().catch(() => null)) as {
-      message?: string | string[];
-    } | null;
+    const errorBody = (await response.json().catch(() => null)) as ApiErrorBody | null;
     const message = Array.isArray(errorBody?.message)
       ? errorBody.message.join(', ')
       : errorBody?.message;
-    throw new Error(message ?? `Request failed with status ${response.status}`);
+    throw new ApiRequestError(
+      message ?? `Request failed with status ${response.status}`,
+      response.status,
+      errorBody?.code,
+      errorBody,
+    );
   }
 
   return (await response.json()) as T;
@@ -95,13 +117,16 @@ export async function publicApiFetch<T>(
   });
 
   if (!response.ok) {
-    const errorBody = (await response.json().catch(() => null)) as {
-      message?: string | string[];
-    } | null;
+    const errorBody = (await response.json().catch(() => null)) as ApiErrorBody | null;
     const message = Array.isArray(errorBody?.message)
       ? errorBody.message.join(', ')
       : errorBody?.message;
-    throw new Error(message ?? `Request failed with status ${response.status}`);
+    throw new ApiRequestError(
+      message ?? `Request failed with status ${response.status}`,
+      response.status,
+      errorBody?.code,
+      errorBody,
+    );
   }
 
   return (await response.json()) as T;
@@ -132,13 +157,16 @@ export async function apiUpload<T>(path: string, file: Blob): Promise<T> {
       throw new Error('File too large');
     }
 
-    const errorBody = (await response.json().catch(() => null)) as {
-      message?: string | string[];
-    } | null;
+    const errorBody = (await response.json().catch(() => null)) as ApiErrorBody | null;
     const message = Array.isArray(errorBody?.message)
       ? errorBody.message.join(', ')
       : errorBody?.message;
-    throw new Error(message ?? `Request failed with status ${response.status}`);
+    throw new ApiRequestError(
+      message ?? `Request failed with status ${response.status}`,
+      response.status,
+      errorBody?.code,
+      errorBody,
+    );
   }
 
   return (await response.json()) as T;

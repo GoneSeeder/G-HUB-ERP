@@ -242,12 +242,10 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
       .filter((holiday): holiday is HolidayEntry => Boolean(holiday));
   }, [officialHolidayYears, officialOverrides, year, isDefaultCalendar]);
 
-  const customForActive = customHolidayYears[activeCalendarId]?.[year] ?? [];
-
-  const holidays = useMemo(
-    () => [...officialWithOverrides, ...customForActive].sort((a, b) => a.date.localeCompare(b.date)),
-    [officialWithOverrides, customForActive],
-  );
+  const holidays = useMemo(() => {
+    const customForActive = customHolidayYears[activeCalendarId]?.[year] ?? [];
+    return [...officialWithOverrides, ...customForActive].sort((a, b) => a.date.localeCompare(b.date));
+  }, [officialWithOverrides, customHolidayYears, activeCalendarId, year]);
 
   // Count holidays per calendar (for cards). Default = official+overrides+custom; others = custom only.
   const calendarCounts = useMemo(() => {

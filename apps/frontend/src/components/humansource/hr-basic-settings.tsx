@@ -11,18 +11,11 @@ import {
   type EmployeeTypeTax,
 } from '@/data/humansource/employee-types';
 import {
-  EDUCATION_OPTIONS_STORAGE_KEY,
-  EDUCATION_SEED,
   EMPLOYEE_DEFAULTS_SEED,
   EMPLOYEE_DEFAULTS_STORAGE_KEY,
-  NATIONALITY_OPTIONS_STORAGE_KEY,
-  NATIONALITY_SEED,
-  PREFIX_OPTIONS_STORAGE_KEY,
-  PREFIX_SEED,
   RUNNING_NUMBER_SEED,
   RUNNING_NUMBERS_STORAGE_KEY,
   type EmployeeDefaults,
-  type MasterOption,
   type RunningNumberConfig,
   type RunningNumberDateToken,
 } from '@/data/humansource/company-basics';
@@ -337,9 +330,6 @@ function EmployeeTypeBoard({ accent }: { accent: string }) {
     <div className="hr-leave-board">
       <header className="hr-leave-board__toolbar">
         <div className="hr-leave-board__toolbar-left">
-          <span className="hr-leave-board__toolbar-count">{rows.length} ประเภทพนักงาน</span>
-        </div>
-        <div className="hr-leave-board__toolbar-right">
           <div className="hr-leave-board__search">
             <SearchIcon className="h-3.5 w-3.5" />
             <input
@@ -350,6 +340,8 @@ function EmployeeTypeBoard({ accent }: { accent: string }) {
               className="hr-leave-board__search-input"
             />
           </div>
+        </div>
+        <div className="hr-leave-board__toolbar-right">
           <button
             type="button"
             onClick={openCreate}
@@ -697,6 +689,7 @@ function RunningNumberModal({
 function RunningNumberBoard({ accent }: { accent: string }) {
   const [rows, setRows] = useState<RunningNumberConfig[]>(RUNNING_NUMBER_SEED);
   const [hydrated, setHydrated] = useState(false);
+  const [shown, setShown] = useState(false);
   const [editing, setEditing] = useState<RunningNumberConfig | null>(null);
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create');
   const [confirmDel, setConfirmDel] = useState<RunningNumberConfig | null>(null);
@@ -747,7 +740,14 @@ function RunningNumberBoard({ accent }: { accent: string }) {
     <div className="hr-leave-board">
       <header className="hr-leave-board__toolbar">
         <div className="hr-leave-board__toolbar-left">
-          <span className="hr-leave-board__toolbar-count">{rows.length} รายการ</span>
+          <button
+            type="button"
+            className="hr-rn-toggle"
+            onClick={() => setShown((v) => !v)}
+          >
+            <span className="hr-rn-toggle__arrow">{shown ? '▾' : '▸'}</span>
+            {shown ? `ซ่อนรายการ (${rows.length})` : `แสดงรายการ (${rows.length})`}
+          </button>
         </div>
         <div className="hr-leave-board__toolbar-right">
           <button
@@ -762,7 +762,7 @@ function RunningNumberBoard({ accent }: { accent: string }) {
         </div>
       </header>
 
-      <div className="hr-leave-board__table-wrap">
+      {shown && <div className="hr-leave-board__table-wrap">
         <table className="hr-leave-board__table">
           <thead>
             <tr>
@@ -816,7 +816,7 @@ function RunningNumberBoard({ accent }: { accent: string }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       {editing ? (
         <RunningNumberModal
@@ -839,221 +839,12 @@ function RunningNumberBoard({ accent }: { accent: string }) {
   );
 }
 
-// ─── Master Personal (3 inline lists) ────────────────────────────────────────
-
-function MasterList({
-  title,
-  items,
-  storageKey,
-  seed,
-  accent,
-}: {
-  title: string;
-  items: MasterOption[];
-  storageKey: string;
-  seed: MasterOption[];
-  accent: string;
-}) {
-  const [rows, setRows] = useState<MasterOption[]>(items);
-  const [hydrated, setHydrated] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const [addName, setAddName] = useState('');
-  const [addNameEn, setAddNameEn] = useState('');
-  const counter = useRef(0);
-  const addRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw) as MasterOption[];
-        if (Array.isArray(parsed) && parsed.length > 0) setRows(parsed);
-      }
-    } catch {
-      window.localStorage.removeItem(storageKey);
-    }
-    setHydrated(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(storageKey, JSON.stringify(rows));
-  }, [rows, hydrated, storageKey]);
-
-  useEffect(() => {
-    if (adding) addRef.current?.focus();
-  }, [adding]);
-
-  const commitAdd = () => {
-    const name = addName.trim();
-    if (!name) { setAdding(false); setAddName(''); setAddNameEn(''); return; }
-    const id = `mst-${Date.now()}-${counter.current++}`;
-    setRows((r) => [...r, { id, nameTh: name, nameEn: addNameEn.trim() || undefined, active: true }]);
-    setAddName('');
-    setAddNameEn('');
-    setAdding(false);
-  };
-
-  const toggle = (id: string) =>
-    setRows((r) => r.map((o) => (o.id === id ? { ...o, active: !o.active } : o)));
-
-  const del = (id: string) => setRows((r) => r.filter((o) => o.id !== id));
-
-  void seed; // seed used only as initial state in parent
-
-  return (
-    <div className="hr-basic-master-list">
-      <div className="hr-basic-master-list__head">
-        <span className="hr-basic-master-list__title">{title}</span>
-        <button
-          type="button"
-          className="hr-basic-master-list__add-btn"
-          style={{ color: accent }}
-          onClick={() => setAdding(true)}
-        >
-          <PlusIcon className="h-3.5 w-3.5" />
-          เพิ่ม
-        </button>
-      </div>
-
-      <ul className="hr-basic-master-list__rows">
-        {rows.map((opt) => (
-          <li key={opt.id} className="hr-basic-master-list__row">
-            <span className="hr-basic-master-list__name">
-              {opt.nameTh}
-              {opt.nameEn ? <span className="hr-basic-master-list__name-en">{opt.nameEn}</span> : null}
-            </span>
-            <label className="hr-leave-board__inline-toggle">
-              <input
-                type="checkbox"
-                checked={opt.active}
-                onChange={() => toggle(opt.id)}
-                aria-label={opt.active ? 'ปิด' : 'เปิด'}
-              />
-              <span className={`hr-leave-board__toggle-label ${opt.active ? 'hr-settings-status--enabled' : 'hr-settings-status--disabled'}`}>
-                {opt.active ? 'ใช้งาน' : 'ปิด'}
-              </span>
-            </label>
-            <button
-              type="button"
-              className="hr-basic-master-list__del"
-              aria-label="ลบ"
-              onClick={() => del(opt.id)}
-            >
-              <TrashIcon className="h-3.5 w-3.5" />
-            </button>
-          </li>
-        ))}
-        {rows.length === 0 ? (
-          <li className="hr-basic-master-list__empty">ยังไม่มีรายการ</li>
-        ) : null}
-      </ul>
-
-      {adding ? (
-        <div className="hr-basic-master-list__add-row">
-          <input
-            ref={addRef}
-            className="hr-leave-input"
-            placeholder="ชื่อ (ไทย)"
-            value={addName}
-            onChange={(e) => setAddName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') { e.preventDefault(); commitAdd(); }
-              if (e.key === 'Escape') { setAdding(false); setAddName(''); setAddNameEn(''); }
-            }}
-          />
-          <input
-            className="hr-leave-input"
-            placeholder="ชื่อ (EN) — ไม่บังคับ"
-            value={addNameEn}
-            onChange={(e) => setAddNameEn(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') { e.preventDefault(); commitAdd(); }
-              if (e.key === 'Escape') { setAdding(false); setAddName(''); setAddNameEn(''); }
-            }}
-          />
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="hr-leave-modal-foot__save px-4 py-1.5 text-xs"
-              style={{ backgroundColor: accent }}
-              onClick={commitAdd}
-            >
-              บันทึก
-            </button>
-            <button
-              type="button"
-              className="hr-leave-modal-foot__cancel px-4 py-1.5 text-xs"
-              onClick={() => { setAdding(false); setAddName(''); setAddNameEn(''); }}
-            >
-              ยกเลิก
-            </button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function MasterPersonalBoard({ accent }: { accent: string }) {
-  const [prefixes, setPrefixes] = useState<MasterOption[]>(PREFIX_SEED);
-  const [nationalities, setNationalities] = useState<MasterOption[]>(NATIONALITY_SEED);
-  const [educations, setEducations] = useState<MasterOption[]>(EDUCATION_SEED);
-  const [hydrated, setHydrated] = useState(false);
-
-  useEffect(() => {
-    const load = <T,>(key: string, setter: (v: T) => void) => {
-      try {
-        const raw = window.localStorage.getItem(key);
-        if (raw) {
-          const p = JSON.parse(raw) as T;
-          if (Array.isArray(p) && (p as unknown[]).length > 0) setter(p);
-        }
-      } catch { /* ignore */ }
-    };
-    load(PREFIX_OPTIONS_STORAGE_KEY, setPrefixes);
-    load(NATIONALITY_OPTIONS_STORAGE_KEY, setNationalities);
-    load(EDUCATION_OPTIONS_STORAGE_KEY, setEducations);
-    setHydrated(true);
-  }, []);
-
-  void hydrated; // hydration handled per MasterList
-
-  return (
-    <div className="hr-basic-master-board">
-      <MasterList
-        title="คำนำหน้าชื่อ"
-        items={prefixes}
-        storageKey={PREFIX_OPTIONS_STORAGE_KEY}
-        seed={PREFIX_SEED}
-        accent={accent}
-      />
-      <MasterList
-        title="สัญชาติ"
-        items={nationalities}
-        storageKey={NATIONALITY_OPTIONS_STORAGE_KEY}
-        seed={NATIONALITY_SEED}
-        accent={accent}
-      />
-      <MasterList
-        title="วุฒิการศึกษา"
-        items={educations}
-        storageKey={EDUCATION_OPTIONS_STORAGE_KEY}
-        seed={EDUCATION_SEED}
-        accent={accent}
-      />
-    </div>
-  );
-}
-
 // ─── Main dispatcher ──────────────────────────────────────────────────────────
 
 export type BasicSettingsSub =
   | 'employee-type'
   | 'employee-defaults'
-  | 'running-number'
-  | 'master-personal';
+  | 'running-number';
 
 export function BasicSettingsBoard({
   sub,
@@ -1064,6 +855,5 @@ export function BasicSettingsBoard({
 }) {
   if (sub === 'employee-defaults') return <EmployeeDefaultsForm accent={accent} />;
   if (sub === 'running-number')    return <RunningNumberBoard accent={accent} />;
-  if (sub === 'master-personal')   return <MasterPersonalBoard accent={accent} />;
   return <EmployeeTypeBoard accent={accent} />;
 }

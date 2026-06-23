@@ -1,0 +1,2250 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Holiday Management - G-HUB HumanSource UI Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --hr-surface: #ffffff;
+      --hr-page: #f6f7fa;
+      --hr-border: #e2e8f0;
+      --hr-border-soft: #edf1f6;
+      --hr-text: #0f172a;
+      --hr-text-muted: #64748b;
+      --hr-text-subtle: #94a3b8;
+      --hr-primary: #4f46e5;
+      --hr-primary-soft: #eef2ff;
+      --hr-focus: rgba(79, 70, 229, 0.14);
+      --hr-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+      --hr-danger: #be123c;
+      --hr-danger-soft: #fff1f2;
+      --hr-success: #047857;
+      --hr-success-soft: #ecfdf5;
+      --hr-warning: #b45309;
+      --hr-warning-soft: #fffbeb;
+      --hr-info-soft: #eef2ff;
+      --sidebar-width: 244px;
+      font-family: "Kanit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      letter-spacing: 0;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background: var(--hr-page);
+      color: var(--hr-text);
+      font-family: "Kanit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+    }
+
+    .hr-shell,
+    .hr-shell * {
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 transparent;
+    }
+
+    .hr-shell::-webkit-scrollbar,
+    .hr-shell *::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    .hr-shell::-webkit-scrollbar-track,
+    .hr-shell *::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .hr-shell::-webkit-scrollbar-thumb,
+    .hr-shell *::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border: 3px solid transparent;
+      border-radius: 999px;
+      background-clip: padding-box;
+    }
+
+    .hr-shell::-webkit-scrollbar-thumb:hover,
+    .hr-shell *::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+      border: 3px solid transparent;
+      background-clip: padding-box;
+    }
+
+    .hr-app {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .hr-sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      border-right: 1px solid var(--hr-border);
+      background: var(--hr-surface);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hr-sidebar__brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 56px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--hr-border-soft);
+    }
+
+    .hr-logo {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--hr-primary);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .hr-brand-text {
+      min-width: 0;
+    }
+
+    .hr-brand-text strong {
+      display: block;
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .hr-brand-text span {
+      display: block;
+      color: var(--hr-text-subtle);
+      font-size: 11px;
+      font-weight: 300;
+      line-height: 1.2;
+    }
+
+    .hr-sidebar__section {
+      padding: 14px 10px;
+    }
+
+    .hr-sidebar__label {
+      margin: 8px 10px 6px;
+      color: var(--hr-text-subtle);
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .hr-nav-item {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 38px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--hr-text-muted);
+      padding: 0 10px;
+      text-align: left;
+      transition: background 140ms ease, color 140ms ease;
+    }
+
+    .hr-nav-item:hover {
+      background: #f8fafc;
+      color: var(--hr-text);
+    }
+
+    .hr-nav-item.is-active {
+      background: var(--hr-primary-soft);
+      color: var(--hr-primary);
+      font-weight: 600;
+    }
+
+    .hr-nav-item svg {
+      width: 17px;
+      height: 17px;
+      flex: 0 0 auto;
+    }
+
+    .hr-sidebar__footer {
+      margin-top: auto;
+      padding: 12px 10px;
+      border-top: 1px solid var(--hr-border-soft);
+    }
+
+    .hr-company-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: #fff;
+      padding: 9px 10px;
+      text-align: left;
+    }
+
+    .hr-company-pill__avatar {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      color: var(--hr-primary);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .hr-company-pill strong {
+      display: block;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .hr-company-pill span {
+      display: block;
+      color: var(--hr-text-subtle);
+      font-size: 11px;
+    }
+
+    .hr-workspace {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .hr-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 56px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--hr-border);
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(8px);
+    }
+
+    .hr-topbar__search {
+      position: relative;
+      width: min(360px, 36vw);
+      min-width: 240px;
+    }
+
+    .hr-topbar__search svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      width: 16px;
+      height: 16px;
+      transform: translateY(-50%);
+      color: var(--hr-text-subtle);
+    }
+
+    .hr-input,
+    .hr-textarea {
+      width: 100%;
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--hr-text);
+      outline: none;
+      transition: border-color 140ms ease, box-shadow 140ms ease;
+    }
+
+    .hr-input {
+      height: 36px;
+      padding: 0 11px;
+      font-size: 13px;
+    }
+
+    .hr-textarea {
+      min-height: 86px;
+      resize: vertical;
+      padding: 10px 11px;
+      font-size: 13px;
+    }
+
+    .hr-input:focus,
+    .hr-textarea:focus {
+      border-color: rgba(79, 70, 229, 0.55);
+      box-shadow: 0 0 0 3px var(--hr-focus);
+    }
+
+    .hr-input.is-invalid,
+    .hr-textarea.is-invalid {
+      border-color: #fb7185;
+      background: #fff7f7;
+    }
+
+    .hr-topbar__search .hr-input {
+      padding-left: 36px;
+      background: #f8fafc;
+    }
+
+    .hr-topbar__spacer {
+      flex: 1;
+    }
+
+    .hr-icon-button {
+      display: inline-grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--hr-text-muted);
+      transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+    }
+
+    .hr-icon-button:hover {
+      border-color: #cbd5e1;
+      color: var(--hr-text);
+      background: #f8fafc;
+    }
+
+    .hr-icon-button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .hr-user-menu {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 0;
+      background: transparent;
+      padding: 0;
+      text-align: left;
+    }
+
+    .hr-avatar {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--hr-primary);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .hr-user-menu strong {
+      display: block;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .hr-user-menu span {
+      display: block;
+      color: var(--hr-text-subtle);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .hr-content {
+      padding: 18px 24px 28px;
+    }
+
+    .hr-breadcrumb {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      color: var(--hr-text-subtle);
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .hr-breadcrumb strong {
+      color: var(--hr-text-muted);
+      font-weight: 500;
+    }
+
+    .hr-page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .hr-page-title {
+      margin: 0;
+      color: var(--hr-text);
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .hr-page-subtitle {
+      margin: 4px 0 0;
+      color: var(--hr-text-subtle);
+      font-size: 12px;
+      font-weight: 300;
+    }
+
+    .hr-page-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .hr-button {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      padding: 0 13px;
+      font-size: 13px;
+      font-weight: 600;
+      transition: background 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+    }
+
+    .hr-button:focus-visible,
+    .hr-icon-button:focus-visible,
+    .hr-nav-item:focus-visible,
+    .hr-company-pill:focus-visible,
+    .hr-user-menu:focus-visible,
+    .hr-custom-select__trigger:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 4px var(--hr-focus);
+    }
+
+    .hr-button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .hr-button--primary {
+      background: #020617;
+      color: #fff;
+    }
+
+    .hr-button--primary:hover {
+      background: #111827;
+    }
+
+    .hr-button--secondary {
+      border-color: var(--hr-border);
+      background: #fff;
+      color: #475569;
+    }
+
+    .hr-button--secondary:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+      color: var(--hr-text);
+    }
+
+    .hr-button--ghost {
+      background: transparent;
+      color: var(--hr-text-muted);
+    }
+
+    .hr-button--ghost:hover {
+      background: #f8fafc;
+      color: var(--hr-text);
+    }
+
+    .hr-button--danger {
+      border-color: #fecdd3;
+      background: var(--hr-danger-soft);
+      color: var(--hr-danger);
+    }
+
+    .hr-button--danger:hover {
+      border-color: #fda4af;
+      background: #ffe4e6;
+    }
+
+    .hr-button:disabled,
+    .hr-button.is-disabled {
+      border-color: var(--hr-border);
+      background: #f1f5f9;
+      color: #94a3b8;
+      box-shadow: none;
+      pointer-events: none;
+    }
+
+    .hr-main-surface {
+      overflow: hidden;
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: var(--hr-surface);
+      box-shadow: var(--hr-shadow);
+    }
+
+    .hr-tabbar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      min-height: 48px;
+      border-bottom: 1px solid var(--hr-border);
+      padding: 0 16px;
+    }
+
+    .hr-tab {
+      align-self: stretch;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: var(--hr-text-muted);
+      padding: 0 12px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .hr-tab.is-active {
+      border-bottom-color: var(--hr-primary);
+      color: var(--hr-primary);
+    }
+
+    .hr-tab__count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: var(--hr-text-muted);
+      padding: 0 6px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .hr-tab.is-active .hr-tab__count {
+      background: var(--hr-primary-soft);
+      color: var(--hr-primary);
+    }
+
+    .hr-summary-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      border-bottom: 1px solid var(--hr-border);
+      background: #fff;
+    }
+
+    .hr-stat {
+      min-height: 78px;
+      padding: 14px 16px;
+      border-right: 1px solid var(--hr-border-soft);
+    }
+
+    .hr-stat:last-child {
+      border-right: 0;
+    }
+
+    .hr-stat__label {
+      display: block;
+      color: var(--hr-text-subtle);
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .hr-stat__value {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin-top: 5px;
+      color: var(--hr-text);
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+
+    .hr-stat__value small {
+      color: var(--hr-text-muted);
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .hr-stat__note {
+      margin-top: 6px;
+      color: var(--hr-text-muted);
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hr-toolbar {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) 164px 164px 144px auto auto;
+      gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--hr-border);
+      background: #fff;
+    }
+
+    .hr-search-field {
+      position: relative;
+      min-width: 0;
+    }
+
+    .hr-search-field svg {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      width: 16px;
+      height: 16px;
+      transform: translateY(-50%);
+      color: var(--hr-text-subtle);
+    }
+
+    .hr-search-field .hr-input {
+      padding-left: 34px;
+    }
+
+    .hr-custom-select {
+      position: relative;
+      min-width: 0;
+    }
+
+    .hr-custom-select__trigger {
+      width: 100%;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--hr-text);
+      padding: 0 11px;
+      font-size: 13px;
+      font-weight: 500;
+      text-align: left;
+    }
+
+    .hr-custom-select__trigger:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+    }
+
+    .hr-custom-select__value {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .hr-custom-select__chevron {
+      width: 8px;
+      height: 8px;
+      border-right: 1.5px solid currentColor;
+      border-bottom: 1.5px solid currentColor;
+      transform: rotate(45deg) translateY(-2px);
+      color: var(--hr-text-subtle);
+      flex: 0 0 auto;
+    }
+
+    .hr-custom-select.is-open .hr-custom-select__chevron {
+      transform: rotate(225deg) translate(-1px, -1px);
+    }
+
+    .hr-custom-select__menu {
+      position: absolute;
+      z-index: 60;
+      left: 0;
+      right: 0;
+      top: calc(100% + 6px);
+      display: none;
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+      padding: 5px;
+    }
+
+    .hr-custom-select.is-open .hr-custom-select__menu {
+      display: block;
+    }
+
+    .hr-custom-select__option {
+      width: 100%;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--hr-text-muted);
+      padding: 8px 9px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .hr-custom-select__option:hover,
+    .hr-custom-select__option.is-selected {
+      background: var(--hr-primary-soft);
+      color: var(--hr-primary);
+    }
+
+    .hr-date-trigger {
+      height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: #fff;
+      color: #475569;
+      padding: 0 12px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .hr-date-trigger:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+      color: var(--hr-text);
+    }
+
+    .hr-date-trigger svg {
+      width: 16px;
+      height: 16px;
+      color: var(--hr-text-muted);
+    }
+
+    .hr-segment {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: #f8fafc;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .hr-segment button {
+      height: 28px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--hr-text-muted);
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .hr-segment button.is-active {
+      background: #fff;
+      color: var(--hr-primary);
+      box-shadow: var(--hr-shadow);
+    }
+
+    .hr-content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 332px;
+      min-height: 520px;
+    }
+
+    .hr-table-area {
+      min-width: 0;
+      border-right: 1px solid var(--hr-border);
+      background: #fff;
+    }
+
+    .hr-table-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 16px;
+      color: var(--hr-text-muted);
+      font-size: 12px;
+      border-bottom: 1px solid var(--hr-border-soft);
+    }
+
+    .hr-table-meta strong {
+      color: var(--hr-text);
+      font-weight: 600;
+    }
+
+    .hr-table-wrap {
+      overflow: auto;
+    }
+
+    .hr-table {
+      width: 100%;
+      min-width: 940px;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .hr-table th {
+      height: 38px;
+      background: #f8fafc;
+      color: var(--hr-text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-align: left;
+      border-bottom: 1px solid var(--hr-border);
+      padding: 0 14px;
+      white-space: nowrap;
+    }
+
+    .hr-table td {
+      border-bottom: 1px solid var(--hr-border-soft);
+      padding: 12px 14px;
+      vertical-align: middle;
+      color: #334155;
+    }
+
+    .hr-table tr:hover td {
+      background: #f8fafc;
+    }
+
+    .hr-table tr.is-selected td {
+      background: rgba(238, 242, 255, 0.56);
+    }
+
+    .hr-row-title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .hr-row-title strong {
+      color: var(--hr-text);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .hr-row-title span {
+      color: var(--hr-text-subtle);
+      font-size: 11px;
+      font-weight: 300;
+    }
+
+    .hr-code {
+      color: var(--hr-text-muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .hr-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 0 9px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .hr-badge--green {
+      background: var(--hr-success-soft);
+      color: var(--hr-success);
+    }
+
+    .hr-badge--indigo {
+      background: var(--hr-primary-soft);
+      color: var(--hr-primary);
+    }
+
+    .hr-badge--amber {
+      background: var(--hr-warning-soft);
+      color: var(--hr-warning);
+    }
+
+    .hr-badge--rose {
+      background: var(--hr-danger-soft);
+      color: var(--hr-danger);
+    }
+
+    .hr-badge--slate {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
+    .hr-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .hr-action {
+      display: inline-grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--hr-text-muted);
+    }
+
+    .hr-action:hover {
+      border-color: var(--hr-border);
+      background: #fff;
+      color: var(--hr-primary);
+    }
+
+    .hr-action--danger:hover {
+      color: var(--hr-danger);
+      background: var(--hr-danger-soft);
+      border-color: #fecdd3;
+    }
+
+    .hr-action svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .hr-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      color: var(--hr-text-muted);
+      font-size: 12px;
+    }
+
+    .hr-page-buttons {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hr-page-button {
+      min-width: 32px;
+      height: 32px;
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--hr-text-muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .hr-page-button:hover {
+      background: #f8fafc;
+      color: var(--hr-text);
+    }
+
+    .hr-page-button.is-active {
+      border-color: var(--hr-primary);
+      background: var(--hr-primary);
+      color: #fff;
+    }
+
+    .hr-side-panel {
+      min-width: 0;
+      background: #fff;
+      padding: 14px 14px 16px;
+    }
+
+    .hr-panel-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .hr-panel-heading h3 {
+      margin: 0;
+      color: var(--hr-text);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .hr-panel-heading p {
+      margin: 2px 0 0;
+      color: var(--hr-text-subtle);
+      font-size: 12px;
+      font-weight: 300;
+    }
+
+    .hr-mini-calendar {
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .hr-mini-calendar__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--hr-border-soft);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .hr-mini-calendar__grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      border-top: 0;
+    }
+
+    .hr-mini-calendar__grid span {
+      min-height: 34px;
+      display: grid;
+      place-items: center;
+      border-right: 1px solid var(--hr-border-soft);
+      border-bottom: 1px solid var(--hr-border-soft);
+      color: var(--hr-text-muted);
+      font-size: 12px;
+    }
+
+    .hr-mini-calendar__grid span:nth-child(7n) {
+      border-right: 0;
+    }
+
+    .hr-mini-calendar__grid .is-label {
+      min-height: 28px;
+      background: #f8fafc;
+      color: var(--hr-text-subtle);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .hr-mini-calendar__grid .is-muted {
+      color: #cbd5e1;
+      background: #fafafa;
+    }
+
+    .hr-mini-calendar__grid .is-holiday {
+      background: var(--hr-primary-soft);
+      color: var(--hr-primary);
+      font-weight: 700;
+    }
+
+    .hr-mini-calendar__grid .is-weekend {
+      background: #fff7f7;
+      color: #be123c;
+    }
+
+    .hr-setting-rows {
+      margin-top: 14px;
+      border-top: 1px solid var(--hr-border-soft);
+    }
+
+    .hr-setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 45px;
+      border-bottom: 1px solid var(--hr-border-soft);
+    }
+
+    .hr-setting-row__label {
+      color: #334155;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .hr-setting-row__value {
+      color: var(--hr-text-muted);
+      font-size: 12px;
+      text-align: right;
+    }
+
+    .hr-empty-state {
+      margin-top: 14px;
+      border: 1px dashed #c7d2fe;
+      border-radius: 8px;
+      background: rgba(238, 242, 255, 0.42);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .hr-empty-state__icon {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      margin: 0 auto 8px;
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--hr-primary);
+      box-shadow: var(--hr-shadow);
+    }
+
+    .hr-empty-state__icon svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .hr-empty-state h4 {
+      margin: 0;
+      color: var(--hr-text);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .hr-empty-state p {
+      margin: 4px 0 0;
+      color: var(--hr-text-muted);
+      font-size: 12px;
+      font-weight: 300;
+    }
+
+    .hr-sync-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      color: var(--hr-text-muted);
+      font-size: 12px;
+    }
+
+    .hr-spinner {
+      width: 15px;
+      height: 15px;
+      border: 2px solid #e2e8f0;
+      border-top-color: var(--hr-primary);
+      border-radius: 50%;
+      animation: hr-spin 900ms linear infinite;
+    }
+
+    @keyframes hr-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .hr-drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      background: rgba(15, 23, 42, 0.38);
+    }
+
+    .hr-drawer-backdrop.is-open {
+      display: block;
+    }
+
+    .hr-drawer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      width: min(468px, 100%);
+      height: 100%;
+      background: #fff;
+      box-shadow: -18px 0 36px rgba(15, 23, 42, 0.18);
+    }
+
+    .hr-drawer__header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid var(--hr-border);
+    }
+
+    .hr-drawer__header h2 {
+      margin: 0;
+      color: var(--hr-text);
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .hr-drawer__header p {
+      margin: 4px 0 0;
+      color: var(--hr-text-subtle);
+      font-size: 12px;
+      font-weight: 300;
+    }
+
+    .hr-drawer__body {
+      overflow: auto;
+      padding: 18px 22px 20px;
+    }
+
+    .hr-form-section {
+      margin-bottom: 18px;
+    }
+
+    .hr-form-section h3 {
+      margin: 0 0 12px;
+      color: #334155;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .hr-field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .hr-field {
+      min-width: 0;
+    }
+
+    .hr-field--wide {
+      grid-column: 1 / -1;
+    }
+
+    .hr-label-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .hr-help {
+      position: relative;
+      display: inline-grid;
+      place-items: center;
+      width: 17px;
+      height: 17px;
+      border: 1px solid var(--hr-border);
+      border-radius: 999px;
+      color: var(--hr-text-muted);
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .hr-tooltip {
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 8px);
+      display: none;
+      width: 230px;
+      transform: translateX(-50%);
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
+      color: #475569;
+      padding: 9px 10px;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.45;
+      text-align: left;
+    }
+
+    .hr-help:hover .hr-tooltip,
+    .hr-help:focus .hr-tooltip {
+      display: block;
+    }
+
+    .hr-error {
+      display: block;
+      margin-top: 5px;
+      color: var(--hr-danger);
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .hr-help-text {
+      display: block;
+      margin-top: 5px;
+      color: var(--hr-text-subtle);
+      font-size: 11px;
+      font-weight: 300;
+    }
+
+    .hr-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 48px;
+      border-top: 1px solid var(--hr-border-soft);
+      padding-top: 12px;
+      margin-top: 12px;
+    }
+
+    .hr-toggle-row strong {
+      display: block;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .hr-toggle-row span {
+      display: block;
+      color: var(--hr-text-subtle);
+      font-size: 11px;
+      font-weight: 300;
+    }
+
+    .hr-switch {
+      position: relative;
+      width: 44px;
+      height: 26px;
+      border: 0;
+      border-radius: 999px;
+      background: #cbd5e1;
+      padding: 3px;
+      transition: background 140ms ease;
+      flex: 0 0 auto;
+    }
+
+    .hr-switch span {
+      display: block;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: var(--hr-shadow);
+      transition: transform 140ms ease;
+    }
+
+    .hr-switch.is-on {
+      background: var(--hr-primary);
+    }
+
+    .hr-switch.is-on span {
+      transform: translateX(18px);
+    }
+
+    .hr-checkbox {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 0;
+      background: transparent;
+      color: #475569;
+      padding: 0;
+      font-size: 13px;
+      font-weight: 400;
+      text-align: left;
+    }
+
+    .hr-checkbox__box {
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border: 1px solid var(--hr-primary);
+      border-radius: 5px;
+      background: var(--hr-primary);
+      color: #fff;
+      flex: 0 0 auto;
+    }
+
+    .hr-checkbox__box svg {
+      width: 13px;
+      height: 13px;
+    }
+
+    .hr-field-box {
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: #fff;
+      padding: 12px;
+    }
+
+    .hr-date-picker {
+      margin-top: 8px;
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .hr-date-picker__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 34px;
+      padding: 0 10px;
+      border-bottom: 1px solid var(--hr-border-soft);
+      color: #334155;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .hr-date-picker__grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+    }
+
+    .hr-date-picker__grid span {
+      display: grid;
+      place-items: center;
+      min-height: 28px;
+      border-right: 1px solid var(--hr-border-soft);
+      border-bottom: 1px solid var(--hr-border-soft);
+      color: var(--hr-text-muted);
+      font-size: 11px;
+    }
+
+    .hr-date-picker__grid span:nth-child(7n) {
+      border-right: 0;
+    }
+
+    .hr-date-picker__grid .is-label {
+      background: #f8fafc;
+      color: var(--hr-text-subtle);
+      font-weight: 600;
+    }
+
+    .hr-date-picker__grid .is-muted {
+      color: #cbd5e1;
+      background: #fafafa;
+    }
+
+    .hr-date-picker__grid .is-selected {
+      background: var(--hr-primary);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .hr-drawer__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 22px;
+      border-top: 1px solid var(--hr-border);
+      background: #fff;
+    }
+
+    .hr-drawer__footer-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hr-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      z-index: 150;
+      display: none;
+      transform: translateX(-50%);
+      border: 1px solid var(--hr-border);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
+      color: var(--hr-text);
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .hr-toast.is-open {
+      display: block;
+    }
+
+    @media (max-width: 1180px) {
+      .hr-summary-strip {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .hr-toolbar {
+        grid-template-columns: minmax(240px, 1fr) 150px 150px auto;
+      }
+
+      .hr-toolbar .hr-date-trigger,
+      .hr-toolbar .hr-segment {
+        grid-column: span 2;
+      }
+
+      .hr-content-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hr-table-area {
+        border-right: 0;
+        border-bottom: 1px solid var(--hr-border);
+      }
+    }
+
+    @media (max-width: 860px) {
+      .hr-app {
+        grid-template-columns: 1fr;
+      }
+
+      .hr-sidebar {
+        display: none;
+      }
+
+      .hr-topbar {
+        padding: 0 14px;
+      }
+
+      .hr-topbar__search {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .hr-user-menu div {
+        display: none;
+      }
+
+      .hr-content {
+        padding: 14px;
+      }
+
+      .hr-page-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .hr-page-actions {
+        justify-content: flex-start;
+      }
+
+      .hr-summary-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .hr-toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .hr-toolbar .hr-date-trigger,
+      .hr-toolbar .hr-segment {
+        grid-column: auto;
+      }
+
+      .hr-field-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 1ms !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body class="hr-shell">
+  <div class="hr-app">
+    <aside class="hr-sidebar" aria-label="เมนู HumanSource">
+      <div class="hr-sidebar__brand">
+        <div class="hr-logo" aria-hidden="true">H</div>
+        <div class="hr-brand-text">
+          <strong>HumanSource</strong>
+          <span>HR Operations</span>
+        </div>
+      </div>
+
+      <div class="hr-sidebar__section">
+        <div class="hr-sidebar__label">เมนูหลัก</div>
+        <button class="hr-nav-item" type="button" data-toast="เปิดหน้า Dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11.5 12 5l8 6.5V20a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-8.5Z"/></svg>
+          <span>Dashboard</span>
+        </button>
+        <button class="hr-nav-item" type="button" data-toast="เปิดหน้าพนักงาน">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3"/><path d="M21 20v-2a4 4 0 0 0-3-3.8"/><path d="M16 4.2a3 3 0 0 1 0 5.6"/></svg>
+          <span>พนักงาน</span>
+        </button>
+        <button class="hr-nav-item is-active" type="button" data-toast="อยู่ที่เมนูวันหยุด">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3v3M17 3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/><path d="m9 15 2 2 4-5"/></svg>
+          <span>เวลาและวันหยุด</span>
+        </button>
+        <button class="hr-nav-item" type="button" data-toast="เปิดหน้าเงินเดือน">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h5M7 14h3M17 14h.01"/></svg>
+          <span>เงินเดือน</span>
+        </button>
+        <button class="hr-nav-item" type="button" data-toast="เปิดหน้ารายงาน">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h10l4 4v12H5V4Z"/><path d="M15 4v5h5M8 14h8M8 17h5"/></svg>
+          <span>รายงาน</span>
+        </button>
+      </div>
+
+      <div class="hr-sidebar__section">
+        <div class="hr-sidebar__label">ตั้งค่า</div>
+        <button class="hr-nav-item" type="button" data-toast="เปิดการตั้งค่าองค์กร">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V7l8-4 8 4v14"/><path d="M9 21v-7h6v7M8 9h.01M12 9h.01M16 9h.01"/></svg>
+          <span>โครงสร้างองค์กร</span>
+        </button>
+        <button class="hr-nav-item" type="button" data-toast="เปิดการตั้งค่าระบบ">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.8 1.8 0 0 0 15 19.4a1.8 1.8 0 0 0-1 .6l-.08.08a2 2 0 0 1-2.83-2.83l.08-.08A1.8 1.8 0 0 0 11.6 15a1.8 1.8 0 0 0-1.6-1.6 1.8 1.8 0 0 0-1.98.36l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.8 1.8 0 0 0 4.6 9a1.8 1.8 0 0 0-.6-1l-.08-.08a2 2 0 0 1 2.83-2.83l.08.08A1.8 1.8 0 0 0 9 4.6a1.8 1.8 0 0 0 1.6-1.6 1.8 1.8 0 0 0-.36-1.98"/></svg>
+          <span>ตั้งค่า</span>
+        </button>
+      </div>
+
+      <div class="hr-sidebar__footer">
+        <button class="hr-company-pill" type="button" data-toast="เปลี่ยนบริษัท">
+          <span class="hr-company-pill__avatar">GH</span>
+          <span>
+            <strong>G-HUB Enterprise</strong>
+            <span>บริษัทหลัก</span>
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <section class="hr-workspace">
+      <header class="hr-topbar">
+        <label class="hr-topbar__search" aria-label="ค้นหาในระบบ">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input class="hr-input" type="search" placeholder="ค้นหาเมนู พนักงาน หรือเอกสาร" />
+        </label>
+        <div class="hr-topbar__spacer"></div>
+        <button class="hr-icon-button" type="button" aria-label="แจ้งเตือน" data-toast="ไม่มีแจ้งเตือนใหม่">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        </button>
+        <button class="hr-user-menu" type="button" data-toast="เปิดเมนูบัญชี">
+          <span class="hr-avatar">G</span>
+          <div>
+            <strong>G-HUB Admin</strong>
+            <span>HR Manager</span>
+          </div>
+        </button>
+      </header>
+
+      <main class="hr-content">
+        <nav class="hr-breadcrumb" aria-label="breadcrumb">
+          <span>HumanSource</span>
+          <span>/</span>
+          <span>เวลาและวันหยุด</span>
+          <span>/</span>
+          <strong>Holiday Management</strong>
+        </nav>
+
+        <div class="hr-page-header">
+          <div>
+            <h1 class="hr-page-title">Holiday Management</h1>
+            <p class="hr-page-subtitle">จัดการวันหยุดบริษัท ประเภทวันหยุด สาขาที่ใช้งาน และผลกระทบต่อพนักงานประจำปี 2026</p>
+          </div>
+          <div class="hr-page-actions">
+            <button class="hr-button hr-button--secondary" type="button" data-toast="ส่งออกไฟล์วันหยุด 2026">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+              ส่งออก
+            </button>
+            <button class="hr-button hr-button--secondary is-disabled" type="button" aria-disabled="true">
+              นำเข้าปฏิทิน
+            </button>
+            <button class="hr-button hr-button--primary" type="button" id="openDrawer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 5v14M5 12h14"/></svg>
+              เพิ่มวันหยุด
+            </button>
+          </div>
+        </div>
+
+        <section class="hr-main-surface" aria-label="หน้าจัดการวันหยุด">
+          <div class="hr-tabbar" role="tablist">
+            <button class="hr-tab is-active" type="button" role="tab" aria-selected="true">วันหยุดบริษัท <span class="hr-tab__count">18</span></button>
+            <button class="hr-tab" type="button" role="tab" aria-selected="false" data-toast="เปิดมุมมองปฏิทิน">มุมมองปฏิทิน</button>
+            <button class="hr-tab" type="button" role="tab" aria-selected="false" data-toast="เปิดประวัติการแก้ไข">ประวัติการแก้ไข</button>
+          </div>
+
+          <div class="hr-summary-strip" aria-label="สรุปวันหยุด">
+            <div class="hr-stat">
+              <span class="hr-stat__label">วันหยุดทั้งหมด</span>
+              <span class="hr-stat__value">18 <small>วัน</small></span>
+              <div class="hr-stat__note">รวมวันหยุดราชการและวันหยุดบริษัท</div>
+            </div>
+            <div class="hr-stat">
+              <span class="hr-stat__label">ใช้งาน</span>
+              <span class="hr-stat__value">15 <small>รายการ</small></span>
+              <div class="hr-stat__note">มีผลกับรอบเวลาและการลา</div>
+            </div>
+            <div class="hr-stat">
+              <span class="hr-stat__label">ร่าง</span>
+              <span class="hr-stat__value">2 <small>รายการ</small></span>
+              <div class="hr-stat__note">รออนุมัติประกาศใช้งาน</div>
+            </div>
+            <div class="hr-stat">
+              <span class="hr-stat__label">พนักงานที่ได้รับผล</span>
+              <span class="hr-stat__value">842 <small>คน</small></span>
+              <div class="hr-stat__note">จาก 5 สาขาที่เลือก</div>
+            </div>
+            <div class="hr-stat">
+              <span class="hr-stat__label">วันหยุดถัดไป</span>
+              <span class="hr-stat__value">13 <small>เม.ย.</small></span>
+              <div class="hr-stat__note">สงกรานต์, ทุกสาขา</div>
+            </div>
+          </div>
+
+          <div class="hr-toolbar" aria-label="ตัวกรอง">
+            <label class="hr-search-field">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input class="hr-input" type="search" placeholder="ค้นหาชื่อวันหยุด รหัส หรือผู้สร้าง" />
+            </label>
+
+            <div class="hr-custom-select" data-select>
+              <button class="hr-custom-select__trigger" type="button" aria-haspopup="listbox">
+                <span class="hr-custom-select__value">ปี 2026</span>
+                <span class="hr-custom-select__chevron"></span>
+              </button>
+              <div class="hr-custom-select__menu" role="listbox">
+                <button class="hr-custom-select__option" type="button" data-option="ปี 2026">ปี 2026</button>
+                <button class="hr-custom-select__option" type="button" data-option="ปี 2025">ปี 2025</button>
+                <button class="hr-custom-select__option" type="button" data-option="ปี 2027">ปี 2027</button>
+              </div>
+            </div>
+
+            <div class="hr-custom-select" data-select>
+              <button class="hr-custom-select__trigger" type="button" aria-haspopup="listbox">
+                <span class="hr-custom-select__value">ทุกสาขา</span>
+                <span class="hr-custom-select__chevron"></span>
+              </button>
+              <div class="hr-custom-select__menu" role="listbox">
+                <button class="hr-custom-select__option" type="button" data-option="ทุกสาขา">ทุกสาขา</button>
+                <button class="hr-custom-select__option" type="button" data-option="สำนักงานใหญ่">สำนักงานใหญ่</button>
+                <button class="hr-custom-select__option" type="button" data-option="โรงงานชลบุรี">โรงงานชลบุรี</button>
+                <button class="hr-custom-select__option" type="button" data-option="เชียงใหม่">เชียงใหม่</button>
+              </div>
+            </div>
+
+            <div class="hr-custom-select" data-select>
+              <button class="hr-custom-select__trigger" type="button" aria-haspopup="listbox">
+                <span class="hr-custom-select__value">ทุกประเภท</span>
+                <span class="hr-custom-select__chevron"></span>
+              </button>
+              <div class="hr-custom-select__menu" role="listbox">
+                <button class="hr-custom-select__option" type="button" data-option="ทุกประเภท">ทุกประเภท</button>
+                <button class="hr-custom-select__option" type="button" data-option="ราชการ">ราชการ</button>
+                <button class="hr-custom-select__option" type="button" data-option="บริษัท">บริษัท</button>
+                <button class="hr-custom-select__option" type="button" data-option="เฉพาะสาขา">เฉพาะสาขา</button>
+              </div>
+            </div>
+
+            <button class="hr-date-trigger" type="button" data-toast="เปิดตัวเลือกช่วงวันที่">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3v3M17 3v3M4 9h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/></svg>
+              ม.ค.-ธ.ค. 2026
+            </button>
+
+            <div class="hr-segment" aria-label="สถานะ">
+              <button class="is-active" type="button">ทั้งหมด</button>
+              <button type="button">ใช้งาน</button>
+              <button type="button">ร่าง</button>
+            </div>
+          </div>
+
+          <div class="hr-content-grid">
+            <section class="hr-table-area" aria-label="รายการวันหยุด">
+              <div class="hr-table-meta">
+                <span>แสดง <strong>1-10</strong> จาก <strong>18</strong> รายการ</span>
+                <span>ข้อมูลของ G-HUB Enterprise</span>
+              </div>
+              <div class="hr-table-wrap">
+                <table class="hr-table">
+                  <thead>
+                    <tr>
+                      <th>รหัส</th>
+                      <th>วันหยุด</th>
+                      <th>วันที่</th>
+                      <th>ประเภท</th>
+                      <th>สาขาที่ใช้งาน</th>
+                      <th>พนักงาน</th>
+                      <th>สร้างโดย</th>
+                      <th>วันที่สร้าง</th>
+                      <th>สถานะ</th>
+                      <th>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="is-selected">
+                      <td><span class="hr-code">HOL-26001</span></td>
+                      <td><div class="hr-row-title"><strong>วันขึ้นปีใหม่</strong><span>นับเป็นวันหยุดแบบจ่ายค่าจ้าง</span></div></td>
+                      <td>1 ม.ค. 2026</td>
+                      <td><span class="hr-badge hr-badge--indigo">ราชการ</span></td>
+                      <td>ทุกสาขา</td>
+                      <td>842 คน</td>
+                      <td>HR Admin</td>
+                      <td>12 ธ.ค. 2025</td>
+                      <td><span class="hr-badge hr-badge--green">Active</span></td>
+                      <td>
+                        <div class="hr-actions">
+                          <button class="hr-action" type="button" aria-label="ดูรายละเอียด" data-toast="ดูรายละเอียด HOL-26001"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                          <button class="hr-action" type="button" aria-label="แก้ไข" id="editFirstRow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></button>
+                          <button class="hr-action hr-action--danger" type="button" aria-label="ลบ" data-toast="ต้องยืนยันก่อนลบวันหยุด"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/></svg></button>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><span class="hr-code">HOL-26002</span></td>
+                      <td><div class="hr-row-title"><strong>วันมาฆบูชา</strong><span>วันหยุดราชการประจำปี</span></div></td>
+                      <td>3 มี.ค. 2026</td>
+                      <td><span class="hr-badge hr-badge--indigo">ราชการ</span></td>
+                      <td>ทุกสาขา</td>
+                      <td>842 คน</td>
+                      <td>System Seed</td>
+                      <td>12 ธ.ค. 2025</td>
+                      <td><span class="hr-badge hr-badge--green">Active</span></td>
+                      <td><div class="hr-actions"><button class="hr-action" type="button" aria-label="ดูรายละเอียด" data-toast="ดูรายละเอียด HOL-26002"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="hr-action" type="button" aria-label="แก้ไข" data-toast="เปิดแก้ไขวันมาฆบูชา"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></button><button class="hr-action hr-action--danger" type="button" aria-label="ลบ" data-toast="ต้องยืนยันก่อนลบวันหยุด"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/></svg></button></div></td>
+                    </tr>
+                    <tr>
+                      <td><span class="hr-code">HOL-26003</span></td>
+                      <td><div class="hr-row-title"><strong>วันสงกรานต์</strong><span>วันหยุดต่อเนื่อง 13-15 เมษายน</span></div></td>
+                      <td>13-15 เม.ย. 2026</td>
+                      <td><span class="hr-badge hr-badge--indigo">ราชการ</span></td>
+                      <td>ทุกสาขา</td>
+                      <td>842 คน</td>
+                      <td>HR Admin</td>
+                      <td>18 ธ.ค. 2025</td>
+                      <td><span class="hr-badge hr-badge--green">Active</span></td>
+                      <td><div class="hr-actions"><button class="hr-action" type="button" aria-label="ดูรายละเอียด" data-toast="ดูรายละเอียด HOL-26003"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="hr-action" type="button" aria-label="แก้ไข" data-toast="เปิดแก้ไขวันสงกรานต์"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></button><button class="hr-action hr-action--danger" type="button" aria-label="ลบ" data-toast="ต้องยืนยันก่อนลบวันหยุด"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/></svg></button></div></td>
+                    </tr>
+                    <tr>
+                      <td><span class="hr-code">HOL-26004</span></td>
+                      <td><div class="hr-row-title"><strong>วันแรงงานแห่งชาติ</strong><span>ใช้กับพนักงานเอกชนทุกประเภท</span></div></td>
+                      <td>1 พ.ค. 2026</td>
+                      <td><span class="hr-badge hr-badge--indigo">ราชการ</span></td>
+                      <td>ทุกสาขา</td>
+                      <td>842 คน</td>
+                      <td>System Seed</td>
+                      <td>18 ธ.ค. 2025</td>
+                      <td><span class="hr-badge hr-badge--green">Active</span></td>
+                      <td><div class="hr-actions"><button class="hr-action" type="button" aria-label="ดูรายละเอียด" data-toast="ดูรายละเอียด HOL-26004"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="hr-action" type="button" aria-label="แก้ไข" data-toast="เปิดแก้ไขวันแรงงาน"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></button><button class="hr-action hr-action--danger" type="button" aria-label="ลบ" data-toast="ต้องยืนยันก่อนลบวันหยุด"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/></svg></button></div></td>
+                    </tr>
+                    <tr>
+                      <td><span class="hr-code">HOL-26005</span></td>
+                      <td><div class="hr-row-title"><strong>วันหยุดสาขาชลบุรี</strong><span>หยุดซ่อมบำรุงสายการผลิตประจำปี</span></div></td>
+                      <td>26 มิ.ย. 2026</td>
+                      <td><span class="hr-badge hr-badge--amber">เฉพาะสาขา</span></td>
+                      <td>โรงงานชลบุรี</td>
+                      <td>318 คน</td>
+                      <td>Plant HR</td>
+                      <td>9 ม.ค. 2026</td>
+                      <td><span class="hr-badge hr-badge--amber">Draft</span></td>
+                      <td><div class="hr-actions"><button class="hr-action" type="button" aria-label="ดูรายละเอียด" data-toast="ดูรายละเอียด HOL-26005"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="hr-action" type="button" aria-label="แก้ไข" data-toast="เปิดแก้ไขวันหยุดสาขา"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></button><button class="hr-action hr-action--danger" type="button" aria-label="ลบ" data-toast="ต้องยืนยันก่อนลบวันหยุด"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/></svg></button></div></td>
+                    </tr>
+                    <tr>
+                      <td><span class="hr-code">HOL-26006</span></td>
+                      <td><div class="hr-row-title"><strong>วันเฉลิมพระชนมพรรษารัชกาลที่ 10</strong><span>วันหยุดราชการประจำปี</span></div></td>
+                      <td>28 ก.ค. 2026</td>
+                      <td><span class="hr-badge hr-badge--indigo">ราชการ</span></td>
+                      <td>ทุกสาขา</td>
+                      <td>842 คน</td>
+                      <td>System Seed</td>
+                      <td>18 ธ.ค. 2025</td>
+                      <td><span class="hr-badge hr-badge--green">Active</span></td>
+                      <td><div class="hr-actions"><button class="hr-action" type="button" aria-label="ดูรายละเอียด" data-toast="ดูรายละเอียด HOL-26006"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="hr-action" type="button" aria-label="แก้ไข" data-toast="เปิดแก้ไขวันหยุด"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></button><button class="hr-action hr-action--danger" type="button" aria-label="ลบ" data-toast="ต้องยืนยันก่อนลบวันหยุด"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/></svg></button></div></td>
+                    </tr>
+                    <tr>
+                      <td><span class="hr-code">HOL-26007</span></td>
+                      <td><div class="hr-row-title"><strong>วันแม่แห่งชาติ</strong><span>วันหยุดราชการประจำปี</span></div></td>
+                      <td>12 ส.ค. 2026</td>
+                      <td><span class="hr-badge hr-badge--indigo">ราชการ</span></td>
+                      <td>ทุกสาขา</td>
+                      <td>842 คน</td>
+                      <td>System Seed</td>
+                      <td>18 ธ.ค. 2025</td>
+                      <td><span class="hr-badge hr-badge--green">Active</span></td>
+                      <td><div class="hr-actions"><button class="hr-action" type="button" aria-label="ดูรายละเอียด" data-toast="ดูรายละเอียด HOL-26007"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="hr-action" type="button" aria-label="แก้ไข" data-toast="เปิดแก้ไขวันแม่แห่งชาติ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></button><button class="hr-action hr-action--danger" type="button" aria-label="ลบ" data-toast="ต้องยืนยันก่อนลบวันหยุด"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/></svg></button></div></td>
+                    </tr>
+                    <tr>
+                      <td><span class="hr-code">HOL-26008</span></td>
+                      <td><div class="hr-row-title"><strong>วันคล้ายวันสวรรคตรัชกาลที่ 9</strong><span>วันหยุดราชการประจำปี</span></div></td>
+                      <td>13 ต.ค. 2026</td>
+                      <td><span class="hr-badge hr-badge--indigo">ราชการ</span></td>
+                      <td>ทุกสาขา</td>
+                      <td>842 คน</td>
+                      <td>System Seed</td>
+                      <td>18 ธ.ค. 2025</td>
+                      <td><span class="hr-badge hr-badge--green">Active</span></td>
+                      <td><div class="hr-actions"><button class="hr-action" type="button" aria-label="ดูรายละเอียด" data-toast="ดูรายละเอียด HOL-26008"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="hr-action" type="button" aria-label="แก้ไข" data-toast="เปิดแก้ไขวันหยุด"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></button><button class="hr-action hr-action--danger" type="button" aria-label="ลบ" data-toast="ต้องยืนยันก่อนลบวันหยุด"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/></svg></button></div></td>
+                    </tr>
+                    <tr>
+                      <td><span class="hr-code">HOL-26009</span></td>
+                      <td><div class="hr-row-title"><strong>Company Foundation Day</strong><span>วันหยุดบริษัทสำหรับสำนักงานใหญ่</span></div></td>
+                      <td>18 พ.ย. 2026</td>
+                      <td><span class="hr-badge hr-badge--slate">บริษัท</span></td>
+                      <td>สำนักงานใหญ่</td>
+                      <td>524 คน</td>
+                      <td>HR Admin</td>
+                      <td>6 ม.ค. 2026</td>
+                      <td><span class="hr-badge hr-badge--amber">Draft</span></td>
+                      <td><div class="hr-actions"><button class="hr-action" type="button" aria-label="ดูรายละเอียด" data-toast="ดูรายละเอียด HOL-26009"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="hr-action" type="button" aria-label="แก้ไข" data-toast="เปิดแก้ไข Foundation Day"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></button><button class="hr-action hr-action--danger" type="button" aria-label="ลบ" data-toast="ต้องยืนยันก่อนลบวันหยุด"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/></svg></button></div></td>
+                    </tr>
+                    <tr>
+                      <td><span class="hr-code">HOL-26010</span></td>
+                      <td><div class="hr-row-title"><strong>วันสิ้นปี</strong><span>วันหยุดราชการปลายปี</span></div></td>
+                      <td>31 ธ.ค. 2026</td>
+                      <td><span class="hr-badge hr-badge--indigo">ราชการ</span></td>
+                      <td>ทุกสาขา</td>
+                      <td>842 คน</td>
+                      <td>System Seed</td>
+                      <td>18 ธ.ค. 2025</td>
+                      <td><span class="hr-badge hr-badge--green">Active</span></td>
+                      <td><div class="hr-actions"><button class="hr-action" type="button" aria-label="ดูรายละเอียด" data-toast="ดูรายละเอียด HOL-26010"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button><button class="hr-action" type="button" aria-label="แก้ไข" data-toast="เปิดแก้ไขวันสิ้นปี"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg></button><button class="hr-action hr-action--danger" type="button" aria-label="ลบ" data-toast="ต้องยืนยันก่อนลบวันหยุด"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15"/><path d="M10 11v6M14 11v6"/></svg></button></div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="hr-pagination">
+                <span>10 รายการต่อหน้า</span>
+                <div class="hr-page-buttons" aria-label="pagination">
+                  <button class="hr-page-button" type="button" data-toast="ก่อนหน้า">ก่อน</button>
+                  <button class="hr-page-button is-active" type="button">1</button>
+                  <button class="hr-page-button" type="button">2</button>
+                  <button class="hr-page-button" type="button" data-toast="หน้าถัดไป">ถัดไป</button>
+                </div>
+              </div>
+            </section>
+
+            <aside class="hr-side-panel" aria-label="ภาพรวมปฏิทิน">
+              <div class="hr-panel-heading">
+                <div>
+                  <h3>ภาพรวมเมษายน 2026</h3>
+                  <p>วันหยุดและผลกระทบของสาขาที่เลือก</p>
+                </div>
+                <span class="hr-badge hr-badge--indigo">3 วัน</span>
+              </div>
+
+              <div class="hr-mini-calendar" aria-label="ปฏิทินเมษายน 2026">
+                <div class="hr-mini-calendar__head">
+                  <span>เมษายน 2026</span>
+                  <span>ทุกสาขา</span>
+                </div>
+                <div class="hr-mini-calendar__grid">
+                  <span class="is-label">จ.</span><span class="is-label">อ.</span><span class="is-label">พ.</span><span class="is-label">พฤ.</span><span class="is-label">ศ.</span><span class="is-label">ส.</span><span class="is-label">อา.</span>
+                  <span class="is-muted">30</span><span class="is-muted">31</span><span>1</span><span>2</span><span>3</span><span class="is-weekend">4</span><span class="is-weekend">5</span>
+                  <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span class="is-weekend">11</span><span class="is-weekend">12</span>
+                  <span class="is-holiday">13</span><span class="is-holiday">14</span><span class="is-holiday">15</span><span>16</span><span>17</span><span class="is-weekend">18</span><span class="is-weekend">19</span>
+                  <span>20</span><span>21</span><span>22</span><span>23</span><span>24</span><span class="is-weekend">25</span><span class="is-weekend">26</span>
+                  <span>27</span><span>28</span><span>29</span><span>30</span><span class="is-muted">1</span><span class="is-muted">2</span><span class="is-muted">3</span>
+                </div>
+              </div>
+
+              <div class="hr-setting-rows">
+                <div class="hr-setting-row">
+                  <span class="hr-setting-row__label">กะที่ถูกกระทบ</span>
+                  <span class="hr-setting-row__value">WC001, WC004</span>
+                </div>
+                <div class="hr-setting-row">
+                  <span class="hr-setting-row__label">วิธีคิดค่าแรง</span>
+                  <span class="hr-setting-row__value">จ่ายตามวันหยุด</span>
+                </div>
+                <div class="hr-setting-row">
+                  <span class="hr-setting-row__label">พนักงานที่ได้รับผล</span>
+                  <span class="hr-setting-row__value">842 คน</span>
+                </div>
+              </div>
+
+              <div class="hr-empty-state">
+                <div class="hr-empty-state__icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z"/><path d="M8 12h8"/></svg>
+                </div>
+                <h4>ไม่พบรายการที่ปิดใช้งาน</h4>
+                <p>ตัวกรองปัจจุบันไม่มีวันหยุดสถานะ Disabled</p>
+              </div>
+
+              <div class="hr-sync-row">
+                <span class="hr-spinner" aria-hidden="true"></span>
+                <span>กำลังตรวจสอบวันหยุดราชการล่าสุด...</span>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </section>
+  </div>
+
+  <div class="hr-drawer-backdrop" id="drawerBackdrop">
+    <aside class="hr-drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+      <header class="hr-drawer__header">
+        <div>
+          <h2 id="drawerTitle">เพิ่มวันหยุด</h2>
+          <p>สร้างรายการวันหยุดสำหรับบริษัทหรือเฉพาะสาขา</p>
+        </div>
+        <button class="hr-icon-button" type="button" id="closeDrawer" aria-label="ปิด drawer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </header>
+
+      <div class="hr-drawer__body">
+        <section class="hr-form-section">
+          <h3>ข้อมูลวันหยุด</h3>
+          <div class="hr-field-grid">
+            <div class="hr-field hr-field--wide">
+              <label class="hr-label-row" for="holidayName">Holiday name</label>
+              <input id="holidayName" class="hr-input is-invalid" type="text" placeholder="เช่น วันหยุดบริษัทประจำปี" aria-describedby="holidayNameError" />
+              <span id="holidayNameError" class="hr-error">กรุณาระบุชื่อวันหยุด</span>
+            </div>
+
+            <div class="hr-field">
+              <label class="hr-label-row" for="holidayDate">Date</label>
+              <input id="holidayDate" class="hr-input" type="text" value="13 เม.ย. 2026" />
+              <div class="hr-date-picker" aria-label="Date picker mock">
+                <div class="hr-date-picker__head">
+                  <span>เมษายน 2026</span>
+                  <span>เลือก 13</span>
+                </div>
+                <div class="hr-date-picker__grid">
+                  <span class="is-label">จ.</span><span class="is-label">อ.</span><span class="is-label">พ.</span><span class="is-label">พฤ.</span><span class="is-label">ศ.</span><span class="is-label">ส.</span><span class="is-label">อา.</span>
+                  <span class="is-muted">30</span><span class="is-muted">31</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                  <span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span>
+                  <span class="is-selected">13</span><span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="hr-field">
+              <div class="hr-label-row">Holiday type</div>
+              <div class="hr-custom-select" data-select>
+                <button class="hr-custom-select__trigger" type="button" aria-haspopup="listbox">
+                  <span class="hr-custom-select__value">บริษัท</span>
+                  <span class="hr-custom-select__chevron"></span>
+                </button>
+                <div class="hr-custom-select__menu" role="listbox">
+                  <button class="hr-custom-select__option" type="button" data-option="ราชการ">ราชการ</button>
+                  <button class="hr-custom-select__option is-selected" type="button" data-option="บริษัท">บริษัท</button>
+                  <button class="hr-custom-select__option" type="button" data-option="เฉพาะสาขา">เฉพาะสาขา</button>
+                </div>
+              </div>
+              <span class="hr-help-text">ใช้แบ่งสิทธิ์การคำนวณและรายงาน</span>
+            </div>
+
+            <div class="hr-field hr-field--wide">
+              <div class="hr-label-row">
+                Applies to branch
+                <button class="hr-help" type="button" aria-label="คำอธิบายสาขา">?
+                  <span class="hr-tooltip">เลือกทุกสาขาเมื่อเป็นวันหยุดกลางบริษัท หรือเลือกเฉพาะสาขาเพื่อให้กระทบเฉพาะพนักงานในสาขานั้น</span>
+                </button>
+              </div>
+              <div class="hr-custom-select" data-select>
+                <button class="hr-custom-select__trigger" type="button" aria-haspopup="listbox">
+                  <span class="hr-custom-select__value">ทุกสาขา</span>
+                  <span class="hr-custom-select__chevron"></span>
+                </button>
+                <div class="hr-custom-select__menu" role="listbox">
+                  <button class="hr-custom-select__option is-selected" type="button" data-option="ทุกสาขา">ทุกสาขา</button>
+                  <button class="hr-custom-select__option" type="button" data-option="สำนักงานใหญ่">สำนักงานใหญ่</button>
+                  <button class="hr-custom-select__option" type="button" data-option="โรงงานชลบุรี">โรงงานชลบุรี</button>
+                  <button class="hr-custom-select__option" type="button" data-option="เชียงใหม่">เชียงใหม่</button>
+                  <button class="hr-custom-select__option" type="button" data-option="ภูเก็ต">ภูเก็ต</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="hr-field">
+              <div class="hr-label-row">Status</div>
+              <div class="hr-segment" aria-label="สถานะวันหยุด">
+                <button class="is-active" type="button">Draft</button>
+                <button type="button">Active</button>
+                <button type="button">Disabled</button>
+              </div>
+            </div>
+
+            <div class="hr-field">
+              <label class="hr-label-row" for="affectedEmployees">จำนวนพนักงานที่ได้รับผล</label>
+              <input id="affectedEmployees" class="hr-input" type="text" value="842 คน" readonly />
+            </div>
+
+            <div class="hr-field hr-field--wide">
+              <label class="hr-label-row" for="holidayDescription">Description</label>
+              <textarea id="holidayDescription" class="hr-textarea" placeholder="รายละเอียดเพิ่มเติมสำหรับ HR หรือผู้อนุมัติ">วันหยุดนี้มีผลกับรอบการเข้างาน การลา และการคำนวณค่าจ้างของพนักงานที่อยู่ในสาขาที่เลือก</textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="hr-form-section">
+          <h3>ผลต่อระบบ</h3>
+          <div class="hr-field-box">
+            <button class="hr-checkbox" type="button" id="notifyCheck">
+              <span class="hr-checkbox__box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12 4 4L19 6"/></svg>
+              </span>
+              แจ้งเตือนพนักงานที่ได้รับผลเมื่อประกาศใช้งาน
+            </button>
+
+            <div class="hr-toggle-row">
+              <div>
+                <strong>นับเป็นวันหยุดแบบจ่ายค่าจ้าง</strong>
+                <span>ใช้กับการคำนวณเวลาทำงานและ Payroll</span>
+              </div>
+              <button class="hr-switch is-on" type="button" id="paidToggle" aria-label="Paid holiday">
+                <span></span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer class="hr-drawer__footer">
+        <button class="hr-button hr-button--danger" type="button" data-toast="ล้างข้อมูลในฟอร์ม">
+          ล้างฟอร์ม
+        </button>
+        <div class="hr-drawer__footer-group">
+          <button class="hr-button hr-button--ghost" type="button" id="cancelDrawer">ยกเลิก</button>
+          <button class="hr-button hr-button--secondary" type="button" data-toast="บันทึกเป็นร่างแล้ว">บันทึกร่าง</button>
+          <button class="hr-button hr-button--primary" type="button" id="saveHoliday" disabled>บันทึกและประกาศ</button>
+        </div>
+      </footer>
+    </aside>
+  </div>
+
+  <div class="hr-toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const drawer = document.getElementById('drawerBackdrop');
+    const openDrawer = document.getElementById('openDrawer');
+    const closeDrawer = document.getElementById('closeDrawer');
+    const cancelDrawer = document.getElementById('cancelDrawer');
+    const saveHoliday = document.getElementById('saveHoliday');
+    const holidayName = document.getElementById('holidayName');
+    const holidayNameError = document.getElementById('holidayNameError');
+    const toast = document.getElementById('toast');
+    let toastTimer;
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('is-open');
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => toast.classList.remove('is-open'), 1800);
+    }
+
+    function setDrawer(open) {
+      drawer.classList.toggle('is-open', open);
+    }
+
+    openDrawer.addEventListener('click', () => setDrawer(true));
+    closeDrawer.addEventListener('click', () => setDrawer(false));
+    cancelDrawer.addEventListener('click', () => setDrawer(false));
+
+    drawer.addEventListener('click', (event) => {
+      if (event.target === drawer) setDrawer(false);
+    });
+
+    document.getElementById('editFirstRow').addEventListener('click', () => {
+      setDrawer(true);
+      showToast('เปิด drawer เพื่อแก้ไขรายการ HOL-26001');
+    });
+
+    holidayName.addEventListener('input', () => {
+      const valid = holidayName.value.trim().length > 0;
+      holidayName.classList.toggle('is-invalid', !valid);
+      holidayNameError.style.display = valid ? 'none' : 'block';
+      saveHoliday.disabled = !valid;
+    });
+
+    saveHoliday.addEventListener('click', () => {
+      showToast('บันทึกวันหยุดและประกาศใช้งานแล้ว');
+      setDrawer(false);
+    });
+
+    document.querySelectorAll('[data-toast]').forEach((item) => {
+      item.addEventListener('click', () => showToast(item.getAttribute('data-toast')));
+    });
+
+    document.querySelectorAll('[data-select]').forEach((select) => {
+      const trigger = select.querySelector('.hr-custom-select__trigger');
+      const value = select.querySelector('.hr-custom-select__value');
+      const options = select.querySelectorAll('.hr-custom-select__option');
+
+      trigger.addEventListener('click', (event) => {
+        event.stopPropagation();
+        document.querySelectorAll('[data-select].is-open').forEach((openSelect) => {
+          if (openSelect !== select) openSelect.classList.remove('is-open');
+        });
+        select.classList.toggle('is-open');
+      });
+
+      options.forEach((option) => {
+        option.addEventListener('click', (event) => {
+          event.stopPropagation();
+          value.textContent = option.getAttribute('data-option') || option.textContent.trim();
+          options.forEach((item) => item.classList.remove('is-selected'));
+          option.classList.add('is-selected');
+          select.classList.remove('is-open');
+        });
+      });
+    });
+
+    document.querySelectorAll('.hr-segment').forEach((segment) => {
+      segment.querySelectorAll('button').forEach((button) => {
+        button.addEventListener('click', () => {
+          segment.querySelectorAll('button').forEach((item) => item.classList.remove('is-active'));
+          button.classList.add('is-active');
+        });
+      });
+    });
+
+    document.getElementById('paidToggle').addEventListener('click', (event) => {
+      event.currentTarget.classList.toggle('is-on');
+    });
+
+    document.getElementById('notifyCheck').addEventListener('click', (event) => {
+      const box = event.currentTarget.querySelector('.hr-checkbox__box');
+      const checked = box.style.background !== 'transparent';
+      box.style.background = checked ? 'transparent' : 'var(--hr-primary)';
+      box.style.color = checked ? 'transparent' : '#fff';
+      box.style.borderColor = checked ? 'var(--hr-border)' : 'var(--hr-primary)';
+    });
+
+    document.querySelectorAll('.hr-page-button').forEach((button) => {
+      button.addEventListener('click', () => {
+        if (button.textContent.trim() === '1' || button.textContent.trim() === '2') {
+          document.querySelectorAll('.hr-page-button').forEach((item) => item.classList.remove('is-active'));
+          button.classList.add('is-active');
+        }
+      });
+    });
+
+    document.addEventListener('click', () => {
+      document.querySelectorAll('[data-select].is-open').forEach((select) => select.classList.remove('is-open'));
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        document.querySelectorAll('[data-select].is-open').forEach((select) => select.classList.remove('is-open'));
+        if (drawer.classList.contains('is-open')) setDrawer(false);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -9,6 +9,37 @@ export type WorkConditions = {
   currency: string;            // 'THB'
   defaultWorkShiftId: string | null;  // → workShifts.id; reference only
   weeklyHolidays: number[];    // 0=Sun..6=Sat e.g. [0,6]
+
+  // ── Rough draft fields for the redesigned "เงื่อนไขการทำงาน" tab (all optional;
+  //    pending detailed audit). UI falls back to sensible defaults when undefined. ──
+
+  // 1) ชั่วโมงทำงานและสถานะการทำงาน
+  workDaysPerWeek?: number;
+
+  // 2) คะแนนการเข้างาน
+  attendanceScoringEnabled?: boolean;
+  attendanceBaseScore?: number;
+  attendanceDeductLate?: number;
+  attendanceDeductAbsent?: number;
+  attendanceDeductLeave?: number;
+
+  // 3) กะทำงาน
+  allowShiftChange?: boolean;
+  payShiftAllowance?: boolean;
+  nightShiftRate?: number;
+
+  // 4) การทดลองงาน
+  probationAlertDays?: number;
+  probationRequireReview?: boolean;
+
+  // 5) การเกษียณอายุ
+  retirementPolicy?: 'birthMonthEnd' | 'fiscalYearEnd' | 'exactDate';
+  retirementAlertDays?: number;
+
+  // 6) การพ้นสภาพ
+  resignNoticeDays?: number;
+  returnAssetsRequired?: boolean;
+  payoutRemainingLeave?: boolean;
 };
 
 export type Branch = {
@@ -18,6 +49,8 @@ export type Branch = {
   nameEn?: string;
   province?: string;
   isHeadOffice: boolean;
+  submitSocialSecurity?: boolean;  // นำส่งประกันสังคมในนามสาขานี้
+  branchSeq?: string;              // ลำดับที่สาขา (ประกันสังคม/ภงด.) e.g. '000000'
   active: boolean;
 };
 
@@ -68,9 +101,9 @@ export const COMPANY_SEED: Company[] = [
       weeklyHolidays: [0, 6],
     },
     branches: [
-      { id: 'BR001', code: 'BO0001', nameTh: 'สำนักงานใหญ่',   province: 'กรุงเทพฯ',  isHeadOffice: true,  active: true },
-      { id: 'BR002', code: 'BO0002', nameTh: 'สาขาเชียงใหม่', province: 'เชียงใหม่', isHeadOffice: false, active: true },
-      { id: 'BR003', code: 'BO0003', nameTh: 'สาขาภูเก็ต',    province: 'ภูเก็ต',    isHeadOffice: false, active: true },
+      { id: 'BR001', code: 'BO0001', nameTh: 'สำนักงานใหญ่',   province: 'กรุงเทพฯ',  isHeadOffice: true,  submitSocialSecurity: true, branchSeq: '000000', active: true },
+      { id: 'BR002', code: 'BO0002', nameTh: 'สาขาเชียงใหม่', province: 'เชียงใหม่', isHeadOffice: false, submitSocialSecurity: true, branchSeq: '000001', active: true },
+      { id: 'BR003', code: 'BO0003', nameTh: 'สาขาภูเก็ต',    province: 'ภูเก็ต',    isHeadOffice: false, submitSocialSecurity: true, branchSeq: '000002', active: true },
     ],
     signers: [
       { id: 'SG001', name: '—', positionTh: 'กรรมการผู้จัดการ', scope: 'เอกสารทั้งหมด', active: true },
@@ -98,7 +131,7 @@ export const COMPANY_SEED: Company[] = [
       weeklyHolidays: [0, 6],
     },
     branches: [
-      { id: 'BR004', code: 'BO0010', nameTh: 'สำนักงานใหญ่', isHeadOffice: true, active: true },
+      { id: 'BR004', code: 'BO0010', nameTh: 'สำนักงานใหญ่', isHeadOffice: true, submitSocialSecurity: true, branchSeq: '000000', active: true },
     ],
     signers: [],
   },

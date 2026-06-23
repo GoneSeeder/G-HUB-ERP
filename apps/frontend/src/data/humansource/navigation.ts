@@ -96,7 +96,6 @@ export const hrSettingsGroups: HrSettingsGroup[] = [
           { label: 'ค่าเริ่มต้นพนักงาน', path: '/humansource/settings/company/employee-defaults', description: 'รหัสพนักงาน วันที่เริ่มงาน และค่าเริ่มต้น' },
           { label: 'รหัสเอกสารและ Running No.', path: '/humansource/settings/company/running-number', description: 'รูปแบบเลขเอกสารและเลขอ้างอิง' },
           { label: 'ประเภทพนักงาน', path: '/humansource/organization/employee-type', description: 'รายเดือน รายวัน สัญญาจ้าง และ Part-time (ใช้กับ payroll และโควตาลา)' },
-          { label: 'ข้อมูลพื้นฐาน (คำนำหน้า/สัญชาติ/วุฒิ)', path: '/humansource/settings/master-personal', description: 'ตัวเลือกข้อมูลส่วนบุคคลในฟอร์มพนักงาน' },
         ],
       },
       {
@@ -117,10 +116,6 @@ export const hrSettingsGroups: HrSettingsGroup[] = [
         label: 'ประกาศ',
         path: '/humansource/settings/announcements',
         description: 'ข่าวสาร นโยบาย และประกาศที่แสดงหน้า Home',
-        children: [
-          { label: 'หมวดประกาศ', path: '/humansource/settings/announcement-categories', description: 'จัดกลุ่มข่าวสารและประกาศ' },
-          { label: 'กลุ่มผู้รับประกาศ', path: '/humansource/settings/announcement-audience', description: 'กำหนดบริษัท หน่วยงาน หรือพนักงานที่เห็น' },
-        ],
       },
     ],
   },

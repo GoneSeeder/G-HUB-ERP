@@ -14,12 +14,17 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const isHumansourceRoute = pathname.startsWith('/humansource');
   const isPublicDisplayRoute =
     pathname === '/information/lecture-room/display' ||
     pathname.startsWith('/information/lecture-room/display/');
 
   if (isPublicDisplayRoute) {
     return <div className="h-screen w-screen overflow-hidden bg-slate-950">{children}</div>;
+  }
+
+  if (isHumansourceRoute) {
+    return <div className="h-screen overflow-hidden bg-[#f6f8fb] text-slate-950">{children}</div>;
   }
 
   return <AuthenticatedLayout>{children}</AuthenticatedLayout>;

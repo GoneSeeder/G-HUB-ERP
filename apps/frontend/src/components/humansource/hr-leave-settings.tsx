@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeftIcon, EditIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '@/components/ui/icons';
 import {
   LEAVE_TYPE_SEED,
@@ -178,6 +178,66 @@ function emptyLeave(seedColor: string): LeaveType {
   };
 }
 
+// ─── FilterChipSelect ─────────────────────────────────────────────────────────
+
+function FilterChipSelect({
+  label, value, options, onChange, accent,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+  accent: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value);
+  if (selected) {
+    return (
+      <div className="hr-filter-chip hr-filter-chip--active" style={{ borderColor: accent, color: accent }}>
+        <span>{selected.label}</span>
+        <button type="button" className="hr-filter-chip__clear" aria-label="ล้างตัวกรอง" onClick={() => onChange('')}>
+          <XIcon className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div ref={wrapRef} className="hr-filter-chip-wrap">
+      <button type="button" className="hr-filter-chip" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        {label} <span aria-hidden>▾</span>
+      </button>
+      {open && (
+        <div className="hr-filter-chip-dropdown">
+          {options.map((o) => (
+            <button key={o.value} type="button" className="hr-filter-chip-dropdown__item"
+              onClick={() => { onChange(o.value); setOpen(false); }}>
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const LEAVE_STATUS_OPTIONS = [
+  { value: 'enabled',  label: 'ใช้งาน' },
+  { value: 'disabled', label: 'ไม่ใช้งาน' },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function LeaveSettings({ accent }: { accent: string }) {
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>(LEAVE_TYPE_SEED);
   const [hydrated, setHydrated] = useState(false);
@@ -185,6 +245,7 @@ export function LeaveSettings({ accent }: { accent: string }) {
   const [editingMode, setEditingMode] = useState<'create' | 'edit'>('create');
   const [confirmDelete, setConfirmDelete] = useState<LeaveType | null>(null);
   const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => {
     try {
@@ -260,22 +321,23 @@ export function LeaveSettings({ accent }: { accent: string }) {
     );
   };
 
-  const filtered = search.trim()
-    ? leaveTypes.filter(
-        (leave) =>
-          leave.nameTh.includes(search) ||
-          leave.nameEn.toLowerCase().includes(search.toLowerCase()) ||
-          leave.code.includes(search.toUpperCase())
-      )
-    : leaveTypes;
+  const filtered = leaveTypes
+    .filter((leave) =>
+      !search.trim() ||
+      leave.nameTh.includes(search) ||
+      leave.nameEn.toLowerCase().includes(search.toLowerCase()) ||
+      leave.code.includes(search.toUpperCase())
+    )
+    .filter((leave) => {
+      if (filterStatus === 'enabled') return leave.enabled;
+      if (filterStatus === 'disabled') return !leave.enabled;
+      return true;
+    });
 
   return (
     <div className="hr-leave-board">
       <header className="hr-leave-board__toolbar">
         <div className="hr-leave-board__toolbar-left">
-          <span className="hr-leave-board__toolbar-count">{leaveTypes.length} ประเภทการลา</span>
-        </div>
-        <div className="hr-leave-board__toolbar-right">
           <div className="hr-leave-board__search">
             <SearchIcon className="h-3.5 w-3.5" />
             <input
@@ -286,6 +348,15 @@ export function LeaveSettings({ accent }: { accent: string }) {
               className="hr-leave-board__search-input"
             />
           </div>
+        </div>
+        <div className="hr-leave-board__toolbar-right">
+          <FilterChipSelect
+            label="สถานะ"
+            value={filterStatus}
+            options={LEAVE_STATUS_OPTIONS}
+            onChange={setFilterStatus}
+            accent={accent}
+          />
           <button
             type="button"
             onClick={openCreate}

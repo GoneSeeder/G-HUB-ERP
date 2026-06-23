@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PlusIcon, EditIcon, TrashIcon, XIcon, CheckIcon } from '@/components/ui/icons';
 import {
   type OrgNode,
@@ -15,7 +15,6 @@ import {
   reorderSiblings,
 } from '@/data/humansource/org-structure';
 import {
-  type Branch,
   type Company,
   COMPANIES_STORAGE_KEY,
   COMPANY_SEED,
@@ -69,6 +68,43 @@ function getSiblings(nodes: OrgNode[], parentId: string | null): OrgNode[] {
   return findNode(nodes, parentId)?.children ?? [];
 }
 
+/** Find the id of a direct branch child of a company node, matched by name. */
+function findBranchNodeIdByName(nodes: OrgNode[], companyNodeId: string, branchName: string): string | null {
+  const company = findNode(nodes, companyNodeId);
+  const child = company?.children.find((n) => n.type === 'branch' && n.name === branchName);
+  return child?.id ?? null;
+}
+
+/**
+ * Align each company's branch records to its branch nodes in the tree (tree = source of
+ * truth for which branches exist). Keeps attributes for nodes that already have a matching
+ * record (by name), seeds a default record for new nodes, and drops orphan records whose
+ * branch node no longer exists. Deterministic (no Date.now) — safe to run in render/useMemo.
+ */
+function reconcileBranchesWithTree(companies: Company[], tree: OrgNode[]): Company[] {
+  return companies.map((c) => {
+    const companyNode = findNode(tree, c.orgNodeId);
+    if (!companyNode) return c;
+    const byName = new Map(c.branches.map((b) => [b.nameTh, b]));
+    const branches = companyNode.children
+      .filter((n) => n.type === 'branch')
+      .map((node) => {
+        const existing = byName.get(node.name);
+        if (existing) return existing;
+        return {
+          id: `br-node-${node.id}`,
+          code: '',
+          nameTh: node.name,
+          isHeadOffice: node.name.includes('สำนักงานใหญ่'),
+          submitSocialSecurity: true,
+          branchSeq: '',
+          active: node.active ?? true,
+        };
+      });
+    return { ...c, branches };
+  });
+}
+
 export function OrgStructureBoard({ accent }: { accent: string }) {
   const [tree, setTree] = useState<OrgNode[]>(ORG_STRUCTURE_SEED);
   const [companies, setCompanies] = useState<Company[]>(COMPANY_SEED);
@@ -112,6 +148,9 @@ export function OrgStructureBoard({ accent }: { accent: string }) {
     window.localStorage.setItem(COMPANIES_STORAGE_KEY, JSON.stringify(companies));
   }, [companies, hydrated]);
 
+  // Branch records aligned to the tree — what the detail modal displays (no orphans).
+  const displayCompanies = useMemo(() => reconcileBranchesWithTree(companies, tree), [companies, tree]);
+
   const selectedNode = selectedNodeId ? findNode(tree, selectedNodeId) : null;
   const branchOwner =
     selectedNode?.type === 'branch' ? findCompanyAncestor(tree, selectedNode.id) : null;
@@ -119,7 +158,7 @@ export function OrgStructureBoard({ accent }: { accent: string }) {
     branchOwner ? companies.find((c) => c.orgNodeId === branchOwner.id)?.id ?? null : null;
 
   const isExpanded = (node: OrgNode) =>
-    expanded[node.id] ?? (node.type === 'company' || node.type === 'branch');
+    expanded[node.id] ?? false;
 
   const toggleExpand = (id: string, current: boolean) =>
     setExpanded((m) => ({ ...m, [id]: !current }));
@@ -179,6 +218,7 @@ export function OrgStructureBoard({ accent }: { accent: string }) {
         }
       }
     } else {
+      const oldName = findNode(tree, draft.id)?.name ?? '';
       setTree((current) => renameNode(current, draft.id, name));
       if (draft.nodeType === 'company') {
         setCompanies((cs) =>
@@ -188,6 +228,18 @@ export function OrgStructureBoard({ accent }: { accent: string }) {
               : c,
           ),
         );
+      } else if (draft.nodeType === 'branch' && oldName && oldName !== name) {
+        // Keep the branch record's name in sync so its attributes aren't orphaned.
+        const owner = findCompanyAncestor(tree, draft.id);
+        if (owner) {
+          setCompanies((cs) =>
+            cs.map((c) =>
+              c.orgNodeId === owner.id
+                ? { ...c, branches: c.branches.map((b) => (b.nameTh === oldName ? { ...b, nameTh: name } : b)) }
+                : c,
+            ),
+          );
+        }
       }
     }
     setDraft(null);
@@ -207,6 +259,19 @@ export function OrgStructureBoard({ accent }: { accent: string }) {
     if (!confirmDelete) return;
     if (confirmDelete.type === 'company') {
       setCompanies((cs) => cs.filter((c) => c.orgNodeId !== confirmDelete.id));
+    } else if (confirmDelete.type === 'branch') {
+      // Remove the matching branch record so it doesn't linger in company settings.
+      const owner = findCompanyAncestor(tree, confirmDelete.id);
+      const delName = confirmDelete.name;
+      if (owner) {
+        setCompanies((cs) =>
+          cs.map((c) =>
+            c.orgNodeId === owner.id
+              ? { ...c, branches: c.branches.filter((b) => b.nameTh !== delName) }
+              : c,
+          ),
+        );
+      }
     }
     setTree((current) => removeNode(current, confirmDelete.id));
     if (selectedNodeId === confirmDelete.id) setSelectedNodeId(null);
@@ -263,24 +328,40 @@ export function OrgStructureBoard({ accent }: { accent: string }) {
   // ─── Detail pane callbacks ────────────────────────────────────────────────
 
   const handleCompanySave = (updated: Company) => {
+    const prev = companies.find((c) => c.id === updated.id);
     setCompanies((cs) => cs.map((c) => (c.id === updated.id ? updated : c)));
-    setTree((current) => renameNode(current, updated.orgNodeId, updated.tradeName || updated.legalNameTh));
-  };
+    setTree((current) => {
+      // Keep company node name in sync.
+      let next = renameNode(current, updated.orgNodeId, updated.tradeName || updated.legalNameTh);
+      if (!prev) return next;
 
-  const handleBranchSave = (companyId: string, branch: Branch) => {
-    setCompanies((cs) =>
-      cs.map((c) => {
-        if (c.id !== companyId) return c;
-        const idx = c.branches.findIndex((b) => b.id === branch.id || b.nameTh === selectedNode?.name);
-        if (idx === -1) return { ...c, branches: [...c.branches, branch] };
-        const updated = [...c.branches];
-        updated[idx] = branch;
-        return { ...c, branches: updated };
-      }),
-    );
-    if (selectedNodeId && branch.nameTh) {
-      setTree((current) => renameNode(current, selectedNodeId, branch.nameTh));
-    }
+      // Reconcile branch tree nodes from the saved branch records (diff by stable id).
+      const prevById = new Map(prev.branches.map((b) => [b.id, b]));
+      const nextById = new Map(updated.branches.map((b) => [b.id, b]));
+
+      // Renames: match the existing branch node by its OLD name under this company.
+      for (const b of updated.branches) {
+        const old = prevById.get(b.id);
+        if (old && old.nameTh !== b.nameTh) {
+          const nodeId = findBranchNodeIdByName(next, updated.orgNodeId, old.nameTh);
+          if (nodeId) next = renameNode(next, nodeId, b.nameTh);
+        }
+      }
+      // Additions: create a branch node under the company (so departments can hang under it).
+      for (const b of updated.branches) {
+        if (!prevById.has(b.id)) {
+          next = addChildNode(next, updated.orgNodeId, { id: newId(), name: b.nameTh, type: 'branch', children: [] });
+        }
+      }
+      // Deletions: remove the matching branch node (by name).
+      for (const b of prev.branches) {
+        if (!nextById.has(b.id)) {
+          const nodeId = findBranchNodeIdByName(next, updated.orgNodeId, b.nameTh);
+          if (nodeId) next = removeNode(next, nodeId);
+        }
+      }
+      return next;
+    });
   };
 
   // ─── Node click (company/branch → open fullscreen detail modal) ──────────
@@ -495,9 +576,8 @@ export function OrgStructureBoard({ accent }: { accent: string }) {
       <OrgNodeDetailModal
         selectedNode={selectedNode}
         branchOwnerCompanyId={branchOwnerCompanyId}
-        companies={companies}
+        companies={displayCompanies}
         onCompanySave={handleCompanySave}
-        onBranchSave={handleBranchSave}
         onClose={() => setSelectedNodeId(null)}
         accent={accent}
       />

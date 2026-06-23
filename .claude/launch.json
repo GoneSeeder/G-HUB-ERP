@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "apps/frontend", "run", "dev"],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "holiday-sample",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["design-samples/server.js"],
+      "port": 7351
+    }
+  ]
+}

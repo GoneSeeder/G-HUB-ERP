@@ -7,7 +7,9 @@ import {
   CheckIcon,
   DownloadIcon,
   EditIcon,
+  LinkIcon,
   PlusIcon,
+  RefreshIcon,
   TrashIcon,
   UsersIcon,
   XIcon,
@@ -45,6 +47,87 @@ const EMP_STATUS_COLOR: Record<Employee['status'], string> = {
   สิ้นสุดสัญญา: 'slate',
 };
 
+type EmployeeLinkCode = {
+  value: string;
+  createdAt: number;
+  expiresAt: number;
+};
+
+type EmployeeAccountState = {
+  hasHrProfileLink: boolean;
+  hasGhubLink: boolean;
+  code?: EmployeeLinkCode;
+};
+
+type EmployeeAccountStateMap = Record<string, EmployeeAccountState>;
+
+const LINK_CODE_TTL_MS = 10 * 60 * 1000;
+const LINK_CODE_LENGTH = 6;
+const LINK_CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+const LINK_CODE_DIGITS = '23456789';
+const LINK_CODE_ALPHABET = `${LINK_CODE_LETTERS}${LINK_CODE_DIGITS}`;
+
+function createInitialEmployeeAccountStates(): EmployeeAccountStateMap {
+  return employees.reduce<EmployeeAccountStateMap>((acc, employee, index) => {
+    const hasGhubLink = index % 5 === 0;
+    acc[employee.id] = {
+      hasGhubLink,
+      hasHrProfileLink: hasGhubLink || index % 4 !== 2,
+    };
+    return acc;
+  }, {});
+}
+
+function createEmployeeLinkCode() {
+  const randomValues = new Uint32Array(LINK_CODE_LENGTH + 2);
+
+  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(randomValues);
+  } else {
+    randomValues.forEach((_, index) => {
+      randomValues[index] = Math.floor(Math.random() * 0xffffffff);
+    });
+  }
+
+  const chars = Array.from({ length: LINK_CODE_LENGTH }, (_, index) => {
+    const randomValue = randomValues[index];
+    return LINK_CODE_ALPHABET[randomValue % LINK_CODE_ALPHABET.length];
+  });
+
+  if (!chars.some((char) => LINK_CODE_LETTERS.includes(char))) {
+    const replaceIndex = randomValues[LINK_CODE_LENGTH] % LINK_CODE_LENGTH;
+    chars[replaceIndex] = LINK_CODE_LETTERS[randomValues[LINK_CODE_LENGTH + 1] % LINK_CODE_LETTERS.length];
+  }
+
+  if (!chars.some((char) => LINK_CODE_DIGITS.includes(char))) {
+    const replaceIndex = randomValues[LINK_CODE_LENGTH] % LINK_CODE_LENGTH;
+    chars[replaceIndex] = LINK_CODE_DIGITS[randomValues[LINK_CODE_LENGTH + 1] % LINK_CODE_DIGITS.length];
+  }
+
+  return chars.join('');
+}
+
+function formatRemainingTime(remainingMs: number) {
+  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function isEmployeeLinkCodeActive(state: EmployeeAccountState | undefined, now: number) {
+  return Boolean(state?.code && now > 0 && state.code.expiresAt > now);
+}
+
+function CopyIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" className={`${className} fill-none stroke-current`} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  );
+}
+
 function formatEmploymentDuration(startDate: string, endDate: Date) {
   const match = startDate.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (!match) return '';
@@ -75,9 +158,20 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string[]>([]);
   const [today, setToday] = useState<Date | null>(null);
+  const [now, setNow] = useState(0);
+  const [accountStates, setAccountStates] = useState<EmployeeAccountStateMap>(() => createInitialEmployeeAccountStates());
+  const [linkCodeEmployeeId, setLinkCodeEmployeeId] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState('');
 
   useEffect(() => {
     setToday(new Date());
+  }, []);
+
+  useEffect(() => {
+    const updateNow = () => setNow(Date.now());
+    updateNow();
+    const timerId = window.setInterval(updateNow, 1000);
+    return () => window.clearInterval(timerId);
   }, []);
 
   const filtered = employees.filter((e) => {
@@ -107,6 +201,57 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
 
   const toggle = (id: string) => setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
   const toggleAll = () => setSelected(selected.length === rows.length ? [] : rows.map((e) => e.id));
+  const activeLinkEmployee = linkCodeEmployeeId ? employees.find((employee) => employee.id === linkCodeEmployeeId) : undefined;
+  const activeLinkState = activeLinkEmployee ? accountStates[activeLinkEmployee.id] : undefined;
+
+  const generateLinkCode = (employeeId: string) => {
+    const timestamp = Date.now();
+    const value = createEmployeeLinkCode();
+
+    setAccountStates((current) => {
+      const previous = current[employeeId] ?? { hasHrProfileLink: false, hasGhubLink: false };
+      return {
+        ...current,
+        [employeeId]: {
+          ...previous,
+          code: {
+            value,
+            createdAt: timestamp,
+            expiresAt: timestamp + LINK_CODE_TTL_MS,
+          },
+        },
+      };
+    });
+    setCopiedCode('');
+    setNow(timestamp);
+    setLinkCodeEmployeeId(employeeId);
+  };
+
+  const cancelLinkCode = (employeeId: string) => {
+    setAccountStates((current) => {
+      const previous = current[employeeId];
+      if (!previous) return current;
+      return {
+        ...current,
+        [employeeId]: {
+          hasHrProfileLink: previous.hasHrProfileLink,
+          hasGhubLink: previous.hasGhubLink,
+        },
+      };
+    });
+    setCopiedCode('');
+  };
+
+  const copyLinkCode = (code: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      void navigator.clipboard.writeText(code);
+    }
+
+    setCopiedCode(code);
+    window.setTimeout(() => {
+      setCopiedCode((current) => (current === code ? '' : current));
+    }, 1600);
+  };
 
   return (
     <div className="flex min-h-full flex-col bg-white">
@@ -178,7 +323,7 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
               <th className="w-10 px-4 py-3">
                 <input type="checkbox" checked={selected.length === rows.length && rows.length > 0} onChange={toggleAll} className="rounded border-gray-300 accent-primary" />
               </th>
-              {['ชื่อ', 'รหัส', 'ตำแหน่ง', 'สังกัด', 'กะการทำงาน', 'วันที่เริ่มงาน', 'ประเภท', 'สถานะ', ''].map((col) => (
+              {['ชื่อ', 'รหัส', 'ตำแหน่ง', 'สังกัด', 'กะการทำงาน', 'วันที่เริ่มงาน', 'ประเภท', 'การเชื่อม', 'สถานะ', ''].map((col) => (
                 <th key={col} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">{col}</th>
               ))}
             </tr>
@@ -218,6 +363,15 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-500">{emp.empType}</td>
                 <td className="px-4 py-3">
+                  <EmployeeConnectionCell
+                    employee={emp}
+                    state={accountStates[emp.id]}
+                    now={now}
+                    onCreate={generateLinkCode}
+                    onOpen={setLinkCodeEmployeeId}
+                  />
+                </td>
+                <td className="px-4 py-3">
                   <HrBadge tone={EMP_STATUS_COLOR[emp.status] as any}>{emp.status}</HrBadge>
                 </td>
                 <td className="px-4 py-3">
@@ -253,7 +407,318 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
         </div>
       </div>
 
+      {activeLinkEmployee && activeLinkState ? (
+        <EmployeeLinkCodeDrawer
+          employee={activeLinkEmployee}
+          state={activeLinkState}
+          now={now}
+          copiedCode={copiedCode}
+          onClose={() => setLinkCodeEmployeeId(null)}
+          onCreate={generateLinkCode}
+          onCancel={cancelLinkCode}
+          onCopy={copyLinkCode}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function IconTooltip({ label }: { label: string }) {
+  return (
+    <span className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 w-max max-w-[220px] -translate-x-1/2 rounded-md bg-gray-950 px-2 py-1 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100">
+      {label}
+    </span>
+  );
+}
+
+function IconChainLink({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={2.75} strokeLinecap="round" strokeLinejoin="round"
+      className={className} aria-hidden="true">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+
+function GhubStatusMark({ linked }: { linked: boolean }) {
+  const label = linked ? 'เชื่อมต่อ G-HUB แล้ว' : 'ยังไม่เชื่อมต่อ G-HUB';
+  return (
+    <span
+      role="img"
+      tabIndex={0}
+      aria-label={label}
+      onClick={(event) => event.stopPropagation()}
+      className={`hr-ghub-status-mark group ${linked ? 'hr-ghub-status-mark--linked' : 'hr-ghub-status-mark--muted'}`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo-ghub.png" alt="" aria-hidden="true" className="hr-ghub-status-mark__logo" />
+      <IconTooltip label={label} />
+    </span>
+  );
+}
+
+function EmployeeConnectionCell({
+  employee,
+  state,
+  now,
+  onCreate,
+  onOpen,
+}: {
+  employee: Employee;
+  state?: EmployeeAccountState;
+  now: number;
+  onCreate: (employeeId: string) => void;
+  onOpen: (employeeId: string) => void;
+}) {
+  const hasGhubLink = Boolean(state?.hasGhubLink);
+
+  return (
+    <div className="hr-connection-cell">
+      <GhubStatusMark linked={hasGhubLink} />
+      <EmployeeProfileLinkMark
+        employee={employee}
+        state={state}
+        now={now}
+        onCreate={onCreate}
+        onOpen={onOpen}
+      />
+    </div>
+  );
+}
+
+function EmployeeProfileLinkMark({
+  employee,
+  state,
+  now,
+  onCreate,
+  onOpen,
+}: {
+  employee: Employee;
+  state?: EmployeeAccountState;
+  now: number;
+  onCreate: (employeeId: string) => void;
+  onOpen: (employeeId: string) => void;
+}) {
+  const hasHrProfileLink = Boolean(state?.hasHrProfileLink);
+  const hasActiveCode = isEmployeeLinkCodeActive(state, now);
+  const hasExpiredCode = Boolean(state?.code && now > 0 && state.code.expiresAt <= now);
+
+  if (hasHrProfileLink) {
+    return (
+      <span
+        role="img"
+        tabIndex={0}
+        aria-label="ผูกบัญชี HR กับโปรไฟล์พนักงานแล้ว"
+        onClick={(event) => event.stopPropagation()}
+        className="hr-employee-link-mark hr-employee-link-mark--linked group"
+      >
+        <IconChainLink className="h-[1.05rem] w-[1.05rem]" />
+        <IconTooltip label="ผูกบัญชี HR กับโปรไฟล์พนักงานแล้ว" />
+      </span>
+    );
+  }
+
+  const label = hasActiveCode && state?.code
+    ? `มีรหัสผูกบัญชี HR ${state.code.value} · ${formatRemainingTime(state.code.expiresAt - now)}`
+    : hasExpiredCode
+      ? 'รหัสหมดอายุ กดเพื่อสร้างใหม่'
+      : 'ยังไม่ผูกบัญชี HR กดเพื่อสร้างรหัส';
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (hasActiveCode) {
+          onOpen(employee.id);
+          return;
+        }
+        onCreate(employee.id);
+      }}
+      className={`hr-employee-link-mark group ${
+        hasActiveCode ? 'hr-employee-link-mark--active' : hasExpiredCode ? 'hr-employee-link-mark--expired' : 'hr-employee-link-mark--muted'
+      }`}
+    >
+      <IconChainLink className="h-[1.05rem] w-[1.05rem]" />
+      <IconTooltip label={label} />
+    </button>
+  );
+}
+
+function EmployeeLinkCodeDrawer({
+  employee,
+  state,
+  now,
+  copiedCode,
+  onClose,
+  onCreate,
+  onCancel,
+  onCopy,
+}: {
+  employee: Employee;
+  state: EmployeeAccountState;
+  now: number;
+  copiedCode: string;
+  onClose: () => void;
+  onCreate: (employeeId: string) => void;
+  onCancel: (employeeId: string) => void;
+  onCopy: (code: string) => void;
+}) {
+  const hasActiveCode = isEmployeeLinkCodeActive(state, now);
+  const hasExpiredCode = Boolean(state.code && now > 0 && state.code.expiresAt <= now);
+  const remainingMs = state.code ? Math.max(0, state.code.expiresAt - now) : 0;
+  const employeeLinkStatus = state.hasHrProfileLink ? 'ผูกโปรไฟล์แล้ว' : 'รอพนักงานกรอกรหัส';
+  const primaryActionLabel = hasActiveCode || hasExpiredCode ? 'สร้างรหัสใหม่' : 'สร้างรหัสเชื่อมต่อ';
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
+  const codeCreated = hasActiveCode || hasExpiredCode;
+
+  return (
+    <>
+      <button type="button" className="hr-account-drawer-scrim" onClick={onClose} aria-label="ปิดแผงรหัสเชื่อมต่อ" />
+      <aside className="hr-account-drawer" role="dialog" aria-modal="true" aria-label="รหัสผูกบัญชี HR">
+
+        {/* ── Header ── */}
+        <header className="hr-account-drawer__head">
+          <div className="hr-link-head-main">
+            <div className="hr-link-head-avatar">{employee.name.slice(0, 1)}</div>
+            <div>
+              <h2 className="hr-account-drawer__title">ผูกบัญชี HR</h2>
+              <p className="hr-account-drawer__subtitle">{employee.name} · {employee.code}</p>
+            </div>
+          </div>
+          <button type="button" onClick={onClose} className="hr-account-drawer__close" aria-label="ปิด">
+            <XIcon className="h-4 w-4" />
+          </button>
+        </header>
+
+        {/* ── Body ── */}
+        <div className="hr-account-drawer__body hr-account-drawer__body--flush">
+
+          {/* Employee meta strip */}
+          <div className="hr-link-emp-strip">
+            <span>{employee.position}</span>
+            <span className="hr-link-strip-sep">·</span>
+            <span>G-HUB Enterprise</span>
+            <span className="hr-link-strip-sep">·</span>
+            <span>{employee.branch}</span>
+          </div>
+
+          {/* HR account status row */}
+          <div className="hr-link-status-row">
+            <span className="hr-link-status-label">สถานะบัญชี HR</span>
+            <span className={`hr-account-status ${state.hasHrProfileLink ? 'hr-account-status--green' : 'hr-account-status--slate'}`}>
+              <span className="hr-account-status__dot" />
+              {employeeLinkStatus}
+            </span>
+          </div>
+
+          {/* ── Unlinked: step flow + code ── */}
+          {!state.hasHrProfileLink && (
+            <>
+              {/* 3-step flow */}
+              <div className="hr-link-steps">
+                <div className={`hr-link-step ${codeCreated ? 'hr-link-step--done' : 'hr-link-step--active'}`}>
+                  <div className="hr-link-step__icon">
+                    {codeCreated ? <CheckIcon className="h-3 w-3" /> : '1'}
+                  </div>
+                  <span className="hr-link-step__label">สร้างรหัส</span>
+                </div>
+                <div className="hr-link-step__line" />
+                <div className={`hr-link-step ${hasActiveCode ? 'hr-link-step--active' : 'hr-link-step--pending'}`}>
+                  <div className="hr-link-step__icon">2</div>
+                  <span className="hr-link-step__label">แชร์ให้พนักงาน</span>
+                </div>
+                <div className="hr-link-step__line" />
+                <div className="hr-link-step hr-link-step--pending">
+                  <div className="hr-link-step__icon">3</div>
+                  <span className="hr-link-step__label">พนักงานกรอก</span>
+                </div>
+              </div>
+
+              {/* Code section */}
+              <div className="hr-link-code-section">
+                <div className="hr-link-code-section__head">
+                  <span className="hr-link-code-section__title">รหัสเชื่อมต่อ</span>
+                  {hasActiveCode && (
+                    <span className="hr-account-status hr-account-status--amber">
+                      <span className="hr-account-status__dot" />
+                      หมดอายุใน {formatRemainingTime(remainingMs)}
+                    </span>
+                  )}
+                  {hasExpiredCode && !hasActiveCode && (
+                    <span className="hr-account-status hr-account-status--slate">
+                      <span className="hr-account-status__dot" />
+                      หมดอายุแล้ว
+                    </span>
+                  )}
+                </div>
+
+                {hasActiveCode && state.code ? (
+                  <div className="hr-link-code-hero">
+                    <span className="hr-link-code-hero__value">{state.code.value}</span>
+                    <button type="button" className="hr-link-code-copy" onClick={() => onCopy(state.code?.value ?? '')}>
+                      {copiedCode === state.code.value ? <CheckIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
+                      {copiedCode === state.code.value ? 'คัดลอกแล้ว' : 'คัดลอก'}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="hr-link-code-empty">
+                    {hasExpiredCode
+                      ? 'รหัสหมดอายุ — กด "สร้างรหัสใหม่" เพื่อสร้างอีกครั้ง'
+                      : 'ยังไม่มีรหัส — กดปุ่มด้านล่างเพื่อสร้าง'}
+                  </div>
+                )}
+
+                <p className="hr-link-code-hint">ใช้ได้ครั้งเดียว · 10 นาที · สร้างใหม่จะยกเลิกรหัสเดิมทันที</p>
+              </div>
+            </>
+          )}
+
+          {/* ── Linked: success block ── */}
+          {state.hasHrProfileLink && (
+            <div className="hr-link-success">
+              <div className="hr-link-success__icon">
+                <CheckIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="hr-link-success__title">เชื่อมต่อสำเร็จ</div>
+                <div className="hr-link-success__desc">ผูกกับข้อมูลพนักงานนี้แล้ว ไม่ต้องสร้างรหัสเพิ่มเติม</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Footer ── */}
+        <footer className="hr-account-drawer__foot">
+          {!state.hasHrProfileLink && hasActiveCode ? (
+            <button type="button" className="hr-button hr-button--danger hr-account-drawer__danger" onClick={() => onCancel(employee.id)}>
+              <TrashIcon className="h-4 w-4" />
+              ยกเลิกรหัส
+            </button>
+          ) : <span />}
+          <div className="hr-account-drawer__actions">
+            <button type="button" className="hr-button hr-button--secondary" onClick={onClose}>ปิด</button>
+            {!state.hasHrProfileLink ? (
+              <button type="button" className="hr-button hr-button--primary" onClick={() => onCreate(employee.id)}>
+                {codeCreated ? <RefreshIcon className="h-4 w-4" /> : <LinkIcon className="h-4 w-4" />}
+                {primaryActionLabel}
+              </button>
+            ) : null}
+          </div>
+        </footer>
+      </aside>
+    </>
   );
 }
 
@@ -261,7 +726,7 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
 
 const ADD_STEPS = [
   { id: 1, label: 'ข้อมูลจำเป็น', description: 'ระบุตัวตนและช่องทางติดต่อ' },
-  { id: 2, label: 'การจ้างงานและสิทธิ์', description: 'สังกัด วันเริ่มงาน และบัญชี G-HUB' },
+  { id: 2, label: 'การจ้างงานและสิทธิ์', description: 'สังกัด วันเริ่มงาน และสิทธิ์พื้นฐาน' },
   { id: 3, label: 'ที่อยู่และผู้ติดต่อ', description: 'ที่อยู่ปัจจุบันและกรณีฉุกเฉิน' },
   { id: 4, label: 'ธนาคารและเงินเดือน', description: 'บัญชีรับเงินเดือนและกลุ่ม Payroll' },
   { id: 5, label: 'ประกันสังคมและภาษี', description: 'ข้อมูลนำส่งและวิธีคำนวณภาษี' },
@@ -289,8 +754,6 @@ type EmployeeDraft = {
   employeeType: string;
   startDate: string;
   workSchedule: string;
-  createAccount: boolean;
-  sendInvite: boolean;
   currentAddress: string;
   subdistrict: string;
   district: string;
@@ -336,8 +799,6 @@ const EMPTY_EMPLOYEE: EmployeeDraft = {
   employeeType: 'พนักงานรายเดือน',
   startDate: '',
   workSchedule: 'จันทร์ - ศุกร์ (08:30 - 17:30)',
-  createAccount: true,
-  sendInvite: false,
   currentAddress: '',
   subdistrict: '',
   district: '',
@@ -531,7 +992,7 @@ function AddEmployeeModal({ onClose }: { onClose: () => void }) {
           </div>
           <div>
             <h2 className="text-base font-semibold text-slate-950">เพิ่มพนักงาน</h2>
-            <p className="text-xs text-slate-500">สร้างประวัติและเตรียมบัญชี G-HUB ในขั้นตอนเดียว</p>
+            <p className="text-xs text-slate-500">สร้างประวัติพนักงานและข้อมูลตั้งต้นสำหรับ HR ในขั้นตอนเดียว</p>
           </div>
         </div>
         <button
@@ -779,7 +1240,7 @@ function StepPersonal({
             <FormRow
               label="รหัสพนักงาน"
               required
-              hint="ระบบจะใช้รหัสนี้เป็น username หากเปิดบัญชี G-HUB"
+              hint="ใช้เป็นรหัสหลักสำหรับอ้างอิงใน HR, Payroll และรายงาน"
               error={errors.employeeCode}
             >
               <TextInput
@@ -910,15 +1371,12 @@ function StepPersonal({
           </FormRow>
           <FormRow
             label="อีเมลส่วนตัว"
-            hint="หากไม่ระบุอีเมล ระบบจะยังไม่ส่งคำเชิญตั้งรหัสผ่าน"
+            hint="ใช้สำหรับติดต่อพนักงานและเอกสารที่เกี่ยวข้อง"
             error={errors.personalEmail}
           >
             <TextInput
               value={draft.personalEmail}
-              onChange={(value) => {
-                update('personalEmail', value);
-                update('sendInvite', Boolean(value.trim()));
-              }}
+              onChange={(value) => update('personalEmail', value)}
               placeholder="name@email.com"
               inputMode="email"
               error={Boolean(errors.personalEmail)}
@@ -1281,65 +1739,6 @@ function StepDocumentsAndReview({
         </dl>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">บัญชี G-HUB</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">สิทธิ์เริ่มต้นมีเฉพาะ HR Self-service ของตนเอง</p>
-        </div>
-        <div className="border-y border-slate-100 py-1">
-          <ReviewRow
-            label="ชื่อผู้ใช้"
-            value={draft.createAccount ? draft.employeeCode : 'ยังไม่สร้างบัญชี'}
-          />
-          <ReviewRow
-            label="การตั้งรหัสผ่าน"
-            value={
-              draft.createAccount && draft.sendInvite && draft.personalEmail.trim()
-                ? `ส่งคำเชิญไปยัง ${draft.personalEmail.trim()}`
-                : 'รอตั้งรหัสผ่านภายหลัง'
-            }
-          />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function AccessToggle({
-  checked,
-  onChange,
-  title,
-  description,
-  disabled = false,
-}: {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  title: string;
-  description: string;
-  disabled?: boolean;
-}) {
-  return (
-    <div className={`flex items-start justify-between gap-5 border-b border-slate-100 py-4 last:border-b-0 ${
-      disabled ? 'opacity-60' : ''
-    }`}>
-      <div>
-        <p className="text-sm font-medium text-slate-900">{title}</p>
-        <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
-      </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        disabled={disabled}
-        onClick={() => onChange(!checked)}
-        className={`relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition disabled:cursor-not-allowed ${
-          checked ? 'bg-indigo-600' : 'bg-slate-300'
-        }`}
-      >
-        <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
-          checked ? 'translate-x-5' : 'translate-x-0.5'
-        }`} />
-      </button>
     </div>
   );
 }
@@ -1435,31 +1834,6 @@ function StepEmployment({
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">บัญชีและการเข้าถึง</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">ระบบสร้างบัญชีจากประวัติพนักงานโดยอัตโนมัติ</p>
-        </div>
-        <div className="border-y border-slate-100">
-          <AccessToggle
-            checked={draft.createAccount}
-            onChange={(value) => update('createAccount', value)}
-            title="สร้างบัญชี G-HUB ให้พนักงาน"
-            description={`ใช้ ${draft.employeeCode || 'รหัสพนักงาน'} เป็น username และให้สิทธิ์เริ่มต้นเฉพาะ HR Self-service`}
-          />
-          <AccessToggle
-            checked={draft.sendInvite && Boolean(draft.personalEmail.trim())}
-            onChange={(value) => update('sendInvite', value)}
-            title="ส่งคำเชิญให้ตั้งรหัสผ่าน"
-            description={
-              draft.personalEmail.trim()
-                ? `ส่งลิงก์ตั้งรหัสผ่านไปยัง ${draft.personalEmail.trim()} โดยพนักงานเป็นผู้กำหนดรหัสผ่านด้วยตนเอง`
-                : 'ยังไม่มีอีเมล บัญชีจะอยู่ในสถานะรอตั้งรหัสผ่าน และ HR สามารถเพิ่มอีเมลหรือออกลิงก์ใช้งานครั้งเดียวภายหลังได้'
-            }
-            disabled={!draft.createAccount || !draft.personalEmail.trim()}
-          />
-        </div>
-      </section>
     </div>
   );
 }
@@ -1489,24 +1863,6 @@ function StepSocialSecurity({ draft, onClose }: { draft: EmployeeDraft; onClose:
           <div className="flex items-center justify-between gap-4 py-3">
             <span className="text-sm text-slate-600">ประวัติพนักงาน</span>
             <span className="text-xs font-semibold text-emerald-600">สร้างแล้ว</span>
-          </div>
-          <div className="flex items-center justify-between gap-4 border-t border-slate-100 py-3">
-            <span className="text-sm text-slate-600">บัญชี G-HUB</span>
-            <span className="text-xs font-semibold text-emerald-600">
-              {draft.createAccount
-                ? draft.sendInvite && draft.personalEmail.trim()
-                  ? 'รอพนักงานเปิดใช้งาน'
-                  : 'สร้างแล้ว รอตั้งรหัสผ่าน'
-                : 'ยังไม่เปิด'}
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-4 border-t border-slate-100 py-3">
-            <span className="text-sm text-slate-600">คำเชิญตั้งรหัสผ่าน</span>
-            <span className="text-xs font-semibold text-indigo-600">
-              {draft.createAccount && draft.sendInvite && draft.personalEmail.trim()
-                ? 'เตรียมส่งแล้ว'
-                : 'ยังไม่ได้ส่ง'}
-            </span>
           </div>
           <div className="flex items-center justify-between gap-4 border-t border-slate-100 py-3">
             <span className="text-sm text-slate-600">ข้อมูล Payroll</span>

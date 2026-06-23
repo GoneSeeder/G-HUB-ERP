@@ -198,7 +198,7 @@ export function TimeGeneralSettings({ accent }: { accent: string }) {
             </p>
           </div>
         </header>
-        <div className="hr-time-section__body">
+        <div className="hr-time-section__body hr-time-section__body--inline">
           <div className="hr-time-switch" role="tablist">
             <button
               type="button"
@@ -221,13 +221,6 @@ export function TimeGeneralSettings({ accent }: { accent: string }) {
           </div>
         </div>
       </section>
-
-      <div className="hr-time-actions">
-        <button type="button" className="hr-settings-filter">ยกเลิก</button>
-        <button type="button" className="hr-settings-primary-action" style={{ backgroundColor: accent }}>
-          บันทึกการตั้งค่า
-        </button>
-      </div>
     </div>
   );
 }

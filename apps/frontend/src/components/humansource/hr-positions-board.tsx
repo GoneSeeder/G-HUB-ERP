@@ -1,7 +1,7 @@
 'use client';
 
 import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { PlusIcon, EditIcon, TrashIcon, XIcon } from '@/components/ui/icons';
+import { PlusIcon, EditIcon, TrashIcon, XIcon, SearchIcon } from '@/components/ui/icons';
 import { HrCustomSelect } from './hr-ui';
 import {
   type JobLevel,
@@ -360,6 +360,7 @@ function JobLevelsBoard({ accent }: { accent: string }) {
   const [levels, setLevels] = useState<JobLevel[]>(JOB_LEVEL_SEED);
   const [hydrated, setHydrated] = useState(false);
   const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const [modal, setModal] = useState<JlDraft | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<JobLevel | null>(null);
   const counter = useRef(0);
@@ -381,9 +382,13 @@ function JobLevelsBoard({ accent }: { accent: string }) {
   }, [levels, hydrated]);
 
   const sorted = [...levels].sort((a, b) => a.rank - b.rank);
-  const filtered = search
-    ? sorted.filter((l) => l.nameTh.includes(search) || l.nameEn.toLowerCase().includes(search.toLowerCase()))
-    : sorted;
+  const filtered = sorted
+    .filter((l) => !search || l.nameTh.includes(search) || l.nameEn.toLowerCase().includes(search.toLowerCase()))
+    .filter((l) => {
+      if (filterStatus === 'enabled') return l.active;
+      if (filterStatus === 'disabled') return !l.active;
+      return true;
+    });
 
   const openAdd = () =>
     setModal({ id: '', nameTh: '', nameEn: '', rank: levels.length > 0 ? Math.max(...levels.map((l) => l.rank)) + 1 : 1, active: true });
@@ -410,18 +415,30 @@ function JobLevelsBoard({ accent }: { accent: string }) {
     <div className="hr-position-page">
       <div className="hr-settings-toolbar">
         <div className="hr-settings-toolbar__filters">
-          <input
-            className="hr-settings-search hr-position-search"
-            placeholder="ค้นหาระดับงาน"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <span className="hr-position-count">{filtered.length} ระดับ</span>
+          <div className="hr-leave-board__search">
+            <SearchIcon className="h-3.5 w-3.5" />
+            <input
+              type="search"
+              placeholder="ค้นหาระดับงาน"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="hr-leave-board__search-input"
+            />
+          </div>
         </div>
-        <button type="button" className="hr-settings-primary-action" style={{ backgroundColor: accent }} onClick={openAdd}>
-          <PlusIcon className="h-4 w-4" />
-          เพิ่มระดับงาน
-        </button>
+        <div className="hr-filter-chip-group">
+          <FilterChipSelect
+            label="สถานะ"
+            value={filterStatus}
+            options={[{ value: 'enabled', label: 'ใช้งาน' }, { value: 'disabled', label: 'ไม่ใช้งาน' }]}
+            onChange={setFilterStatus}
+            accent={accent}
+          />
+          <button type="button" className="hr-settings-primary-action" style={{ backgroundColor: accent }} onClick={openAdd}>
+            <PlusIcon className="h-4 w-4" />
+            เพิ่มระดับงาน
+          </button>
+        </div>
       </div>
 
       <div className="hr-settings-table-wrap">
@@ -470,6 +487,87 @@ function JobLevelsBoard({ accent }: { accent: string }) {
   );
 }
 
+// ─── Filter chip (dropdown-select chip for toolbar) ──────────────────────────
+
+function FilterChipSelect({
+  label,
+  value,
+  options,
+  onChange,
+  accent,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+  accent: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value);
+
+  if (selected) {
+    return (
+      <div
+        className="hr-filter-chip hr-filter-chip--active"
+        style={{ borderColor: accent, color: accent }}
+      >
+        <span>{selected.label}</span>
+        <button
+          type="button"
+          className="hr-filter-chip__clear"
+          aria-label="ล้างตัวกรอง"
+          onClick={() => onChange('')}
+        >
+          <XIcon className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={wrapRef} className="hr-filter-chip-wrap">
+      <button
+        type="button"
+        className="hr-filter-chip"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        {label} <span aria-hidden>▾</span>
+      </button>
+      {open && (
+        <div className="hr-filter-chip-dropdown">
+          {options.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              className="hr-filter-chip-dropdown__item"
+              onClick={() => { onChange(o.value); setOpen(false); }}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const STATUS_FILTER_CHIP_OPTIONS = [
+  { value: 'active',   label: 'ใช้งาน' },
+  { value: 'inactive', label: 'ปิดใช้งาน' },
+];
+
 // ─── Positions list ───────────────────────────────────────────────────────────
 
 function PositionsList({ accent }: { accent: string }) {
@@ -479,7 +577,7 @@ function PositionsList({ accent }: { accent: string }) {
   const [search, setSearch] = useState('');
   const [filterLevelId, setFilterLevelId] = useState('');
   const [filterCompanyId, setFilterCompanyId] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'active' | 'all'>('active');
+  const [filterStatus, setFilterStatus] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [drawer, setDrawer] = useState<PosDraft | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Position | null>(null);
@@ -509,13 +607,10 @@ function PositionsList({ accent }: { accent: string }) {
   }, [positions, hydrated]);
 
   const levelMap = Object.fromEntries(jobLevels.map((l) => [l.id, l]));
-  const levelFilterOptions = [
-    { value: '', label: 'ระดับทั้งหมด' },
-    ...jobLevels.map((l) => ({ value: l.id, label: l.nameTh })),
-  ];
 
   const filtered = positions.filter((p) => {
-    if (filterStatus === 'active' && !p.active) return false;
+    if (filterStatus === 'active'   && !p.active) return false;
+    if (filterStatus === 'inactive' &&  p.active) return false;
     if (filterLevelId && p.jobLevelId !== filterLevelId) return false;
     if (filterCompanyId && p.companyId !== filterCompanyId) return false;
     if (search) {
@@ -574,32 +669,44 @@ function PositionsList({ accent }: { accent: string }) {
     <div className="hr-position-page">
       <div className="hr-settings-toolbar">
         <div className="hr-settings-toolbar__filters">
-          <input
-            className="hr-settings-search hr-position-search"
-            placeholder="ค้นหาตำแหน่ง รหัส หรือชื่อ EN"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <div className="hr-position-filter-select">
-            <HrCustomSelect value={filterLevelId} options={levelFilterOptions} onChange={setFilterLevelId} />
+          <div className="hr-leave-board__search">
+            <SearchIcon className="h-3.5 w-3.5" />
+            <input
+              type="search"
+              placeholder="ค้นหาตำแหน่ง รหัส หรือชื่อ EN"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="hr-leave-board__search-input"
+            />
           </div>
-          <div className="hr-position-filter-select">
-            <HrCustomSelect value={filterCompanyId} options={COMPANY_OPTIONS} onChange={setFilterCompanyId} />
-          </div>
-          {filterStatus === 'active' ? (
-            <button type="button" className="hr-position-filter-chip" onClick={() => setFilterStatus('all')}>
-              ใช้งาน <XIcon className="h-3 w-3 ml-0.5" />
-            </button>
-          ) : (
-            <button type="button" className="hr-position-filter-btn" onClick={() => setFilterStatus('active')}>
-              สถานะ ▾
-            </button>
-          )}
         </div>
-        <button type="button" className="hr-settings-primary-action" style={{ backgroundColor: accent }} onClick={openAdd}>
-          <PlusIcon className="h-4 w-4" />
-          เพิ่มตำแหน่ง
-        </button>
+        <div className="hr-filter-chip-group">
+          <FilterChipSelect
+            label="ระดับ"
+            value={filterLevelId}
+            options={jobLevels.map((l) => ({ value: l.id, label: l.nameTh }))}
+            onChange={setFilterLevelId}
+            accent={accent}
+          />
+          <FilterChipSelect
+            label="บริษัท"
+            value={filterCompanyId}
+            options={COMPANY_OPTIONS.filter((o) => o.value !== '')}
+            onChange={setFilterCompanyId}
+            accent={accent}
+          />
+          <FilterChipSelect
+            label="สถานะ"
+            value={filterStatus}
+            options={STATUS_FILTER_CHIP_OPTIONS}
+            onChange={setFilterStatus}
+            accent={accent}
+          />
+          <button type="button" className="hr-settings-primary-action" style={{ backgroundColor: accent }} onClick={openAdd}>
+            <PlusIcon className="h-4 w-4" />
+            เพิ่มตำแหน่ง
+          </button>
+        </div>
       </div>
 
       <div className="hr-settings-table-wrap">

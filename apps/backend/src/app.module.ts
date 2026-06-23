@@ -14,6 +14,7 @@ import { AgentsModule } from './agents/agents.module';
 import { NameListsModule } from './name-lists/name-lists.module';
 import { LectureRoomsModule } from './lecture-rooms/lecture-rooms.module';
 import { ReferenceDataModule } from './reference-data/reference-data.module';
+import { HumansourceAuthModule } from './humansource-auth/humansource-auth.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ReferenceDataModule } from './reference-data/reference-data.module';
     NameListsModule,
     LectureRoomsModule,
     ReferenceDataModule,
+    HumansourceAuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

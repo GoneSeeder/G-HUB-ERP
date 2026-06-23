@@ -1,0 +1,67 @@
+<svg width="3840" height="2160" viewBox="0 0 3840 2160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="g1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(360 280) rotate(44) scale(1450 1200)">
+      <stop stop-color="#7C3CFF" stop-opacity="0.95"/>
+      <stop offset="0.36" stop-color="#34206F" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#120B2E" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(3170 1840) rotate(-135) scale(1450 980)">
+      <stop stop-color="#FF3FD8" stop-opacity="0.92"/>
+      <stop offset="0.45" stop-color="#6B167E" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#140B31" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="planetL" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(365 92) rotate(70) scale(470 620)">
+      <stop stop-color="#A85CFF"/>
+      <stop offset="0.38" stop-color="#6E2CFF"/>
+      <stop offset="0.72" stop-color="#351167"/>
+      <stop offset="1" stop-color="#15092E"/>
+    </radialGradient>
+    <radialGradient id="planetR" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(3180 1880) rotate(-42) scale(720 560)">
+      <stop stop-color="#FF7AF2"/>
+      <stop offset="0.42" stop-color="#D329CF"/>
+      <stop offset="1" stop-color="#681176"/>
+    </radialGradient>
+    <linearGradient id="base" x1="0" y1="0" x2="3840" y2="2160" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#16114B"/>
+      <stop offset="0.48" stop-color="#110A2E"/>
+      <stop offset="1" stop-color="#1B0634"/>
+    </linearGradient>
+    <filter id="blur80" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="80"/></filter>
+    <filter id="blur32" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="32"/></filter>
+    <filter id="glow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+
+  <rect width="3840" height="2160" fill="url(#base)"/>
+  <rect width="3840" height="2160" fill="url(#g1)"/>
+  <rect width="3840" height="2160" fill="url(#g2)"/>
+
+  <circle cx="520" cy="-130" r="615" fill="url(#planetL)" opacity="0.95"/>
+  <circle cx="520" cy="-130" r="680" stroke="#9A62FF" stroke-opacity="0.22" stroke-width="3"/>
+  <circle cx="520" cy="-130" r="745" stroke="#9A62FF" stroke-opacity="0.16" stroke-width="3"/>
+  <circle cx="520" cy="-130" r="835" stroke="#9A62FF" stroke-opacity="0.12" stroke-width="2"/>
+  <circle cx="520" cy="-130" r="940" stroke="#9A62FF" stroke-opacity="0.08" stroke-width="2"/>
+  <ellipse cx="350" cy="155" rx="700" ry="90" fill="#8B4CFF" opacity="0.22" filter="url(#blur80)"/>
+
+  <circle cx="3215" cy="2065" r="520" fill="url(#planetR)" opacity="0.82"/>
+  <circle cx="3668" cy="2145" r="270" fill="url(#planetR)" opacity="0.72"/>
+  <circle cx="3910" cy="2200" r="205" fill="#B411AD" opacity="0.52"/>
+  <ellipse cx="3170" cy="1845" rx="1050" ry="580" fill="#DC20CA" opacity="0.20" filter="url(#blur80)"/>
+
+  <path d="M2580 1710C2875 1525 3200 1460 3535 1515" stroke="#FF65EA" stroke-opacity="0.09" stroke-width="3"/>
+  <path d="M2520 1810C2910 1585 3295 1560 3690 1700" stroke="#FF65EA" stroke-opacity="0.06" stroke-width="3"/>
+  <path d="M2680 1615C2995 1475 3315 1448 3645 1534" stroke="#9F58FF" stroke-opacity="0.08" stroke-width="2"/>
+
+  <g filter="url(#glow)">
+    <circle cx="120" cy="205" r="4" fill="#FFFFFF" opacity="0.85"/>
+    <circle cx="390" cy="455" r="6" fill="#D7B7FF" opacity="0.9"/>
+    <circle cx="825" cy="250" r="5" fill="#C59BFF" opacity="0.88"/>
+    <circle cx="805" cy="545" r="3" fill="#A46BFF" opacity="0.6"/>
+    <circle cx="570" cy="825" r="3" fill="#C08CFF" opacity="0.68"/>
+    <circle cx="155" cy="1280" r="3" fill="#8D5CFF" opacity="0.65"/>
+    <circle cx="1040" cy="835" r="3" fill="#6F48FF" opacity="0.55"/>
+    <circle cx="2950" cy="705" r="3" fill="#FF74EA" opacity="0.58"/>
+    <circle cx="3450" cy="445" r="3" fill="#9B63FF" opacity="0.42"/>
+  </g>
+
+  <path d="M0 2160H3840V0H0V2160Z" fill="#000" opacity="0.08"/>
+</svg>
