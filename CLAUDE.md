@@ -67,6 +67,14 @@ preferences for any HR UI work — not just for the file that was being discusse
 - Reuse these patterns. If you write a new control, follow the same semantic
   class style.
 
+### 3.6 Drawer positioning (standing rule — confirmed by user)
+- **Drawers must cover the full viewport including the topbar.**
+  CSS: `top: 0; height: 100vh; z-index: var(--z-drawer)` where `--z-drawer: 116` (above topbar at 115).
+- Use `hr-drawer` + `data-open="true"` from the V2 layer. Do **not** use the old
+  `hr-position-drawer` classes for new work (they use `inset-block: 0` — fine, but
+  the V2 `.hr-drawer` is the canonical pattern going forward).
+- Scrim (`hr-scrim`, `z 100`) dims content only — it sits below the topbar intentionally.
+
 ### 3.5 Semantic CSS
 - All HR styles live in `apps/frontend/src/app/globals.css` under semantic class names
   prefixed `hr-*` (e.g. `hr-leave-*`, `hr-shift-*`, `hr-holiday-*`, `hr-settings-*`).

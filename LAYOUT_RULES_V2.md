@@ -9,7 +9,7 @@
 
 - CSS grid: `grid-template-columns: 4rem 1fr; grid-template-rows: 3.5rem 1fr;` areas `rail / topbar / main`.
 - Shell bg `#f6f7fa`; content surfaces are white. The shell, not a card, frames the page.
-- Stacking order (z): dropdown 50 < sticky 60 < drawer-backdrop 100 < drawer 110 < **topbar 115** < modal-backdrop 120 < modal 130 < tooltip 200. Define these tokens on `:root` (overlays render outside `.hr-shell`, so they must resolve there too).
+- Stacking order (z): dropdown 50 < sticky 60 < drawer-backdrop 100 < **topbar 115** < drawer 116 < modal-backdrop 120 < modal 130 < tooltip 200. Define these tokens on `:root` (overlays render outside `.hr-shell`, so they must resolve there too).
 
 ## Sidebar (icon rail)
 
@@ -20,9 +20,9 @@
 
 ## Header (topbar)
 
-- Height `3.5rem`, sticky, `z-index 115` (above drawer), border-bottom `#e2e8f0`.
+- Height `3.5rem`, sticky, `z-index 115`, border-bottom `#e2e8f0`.
 - Left: global search (`min(22rem,40vw)`). Right (pushed by a spacer): theme toggle, notification (with dot), user block (avatar + name/role).
-- Topbar stays fully visible and interactive while a drawer is open.
+- **Drawer (z 116) overlays the topbar** — topbar is intentionally hidden while a drawer is open.
 
 ## Toolbar (per page)
 
@@ -56,9 +56,9 @@
 
 ## Drawer Layout
 
-- Right-anchored, `width min(30rem,100vw)`, starts at **`top:3.5rem`** (under topbar), height `calc(100vh - 3.5rem)`.
+- Right-anchored, `width min(30rem,100vw)`, **`top: 0; height: 100vh`** — drawer covers the full viewport including the topbar.
 - Three regions: fixed head (title/subtitle/close), scrollable body (`padding 1.25rem`, `fgroup`s), fixed foot (draft toggle left, cancel + save right).
-- Scrim dims content (`z 100`); topbar (`z 115`) stays above. This is the **default** create/edit surface for HR.
+- Scrim dims content (`z 100`, under topbar); drawer itself (`z 116`) overlays topbar. This is the **default** create/edit surface for HR.
 
 ## Spacing rhythm
 

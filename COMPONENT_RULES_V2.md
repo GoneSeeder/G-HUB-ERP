@@ -110,8 +110,8 @@ Four variants. **Primary is dark, not indigo** (indigo is reserved for state).
 
 ## Drawer (primary create/edit surface)
 
-- Right-anchored, `width min(30rem,100vw)`, **`top: 3.5rem`** (under the sticky topbar) `height: calc(100vh - 3.5rem)`, border-left, shadow `-16px 0 40px rgba(15,23,42,.14)`, `z-index 110`.
-- Topbar sits at `z-index 115` so it stays visible/usable while the drawer is open; the scrim (`z 100`, `rgba(15,23,42,.42)`) dims content beneath.
+- Right-anchored, `width min(30rem,100vw)`, **`top: 0; height: 100vh`**, border-left, shadow `-16px 0 40px rgba(15,23,42,.14)`, **`z-index 116`** (above topbar at 115).
+- Drawer overlays the topbar completely; the scrim (`z 100`, `rgba(15,23,42,.42)`) dims content but sits below the topbar.
 - Enter: `transform translateX` 240ms expo-out.
 - Anatomy: head (title `1rem/600` + subtitle `0.75rem/300` + close `×`), scrollable body (`fgroup` + field grid + setting-rows), foot (draft toggle on the left, cancel + primary on the right).
 - **Required:** Esc closes, scrim click closes, **explicit Save/Cancel — never auto-save**, form resets on open.

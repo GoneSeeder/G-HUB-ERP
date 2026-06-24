@@ -158,7 +158,7 @@ export const hrSettingsGroups: HrSettingsGroup[] = [
     title: 'ตั้งค่าเงินเดือนและสวัสดิการ (Payroll)',
     description: 'ตั้งค่า master data ที่ใช้สร้างและคำนวณเงินเดือนจริง แยกข้อมูลตามบริษัทผ่านตัวกรองบริษัท',
     color: '#059669',
-    progress: '0 / 4 ตั้งค่า',
+    progress: '1 / 4 ตั้งค่า',
     items: [
       {
         label: 'การตั้งค่าทั่วไป',
