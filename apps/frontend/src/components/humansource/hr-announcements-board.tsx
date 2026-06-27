@@ -4,6 +4,7 @@ import { type CSSProperties, type ChangeEvent, type FormEvent, useEffect, useLay
 import { createPortal } from 'react-dom';
 import { ArrowLeftIcon, ArrowRightIcon, CalendarIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
+import { publicApiFetch } from '@/lib/api';
 import { HrCustomSelect } from './hr-ui';
 import {
   type Announcement,
@@ -11,15 +12,12 @@ import {
   type AnnouncementStatus,
   type AttachmentFile,
   ANNOUNCEMENT_CATEGORY_SEED,
-  ANNOUNCEMENT_CATEGORIES_STORAGE_KEY,
   ANNOUNCEMENT_SEED,
-  ANNOUNCEMENTS_STORAGE_KEY,
   STATUS_LABELS,
 } from '@/data/humansource/announcements';
 import {
   type EmployeeType,
   EMPLOYEE_TYPE_SEED,
-  EMPLOYEE_TYPES_STORAGE_KEY,
 } from '@/data/humansource/employee-types';
 
 // ─── constants ─────────────────────────────────────────────────────────────
@@ -443,7 +441,7 @@ function DateTimePicker({
               <button key={m} type="button"
                 onClick={() => { setViewDate(new Date(year, i, 1)); setView('days'); }}
                 className={cn('h-10 rounded-md text-xs transition',
-                  i === viewDate.getMonth() ? 'bg-indigo-600 font-semibold text-white' : 'text-slate-600 hover:bg-indigo-50')}>
+                  i === viewDate.getMonth() ? 'bg-indigo-600 font-semibold text-white' : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700')}>
                 {m}
               </button>
             ))}
@@ -455,7 +453,7 @@ function DateTimePicker({
               <button key={y} type="button"
                 onClick={() => { setViewDate(new Date(y, viewDate.getMonth(), 1)); setView('months'); }}
                 className={cn('h-10 rounded-md text-xs transition',
-                  y === year ? 'bg-indigo-600 font-semibold text-white' : 'text-slate-600 hover:bg-indigo-50')}>
+                  y === year ? 'bg-indigo-600 font-semibold text-white' : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700')}>
                 {y + 543}
               </button>
             ))}
@@ -584,8 +582,9 @@ function AnnounceDrawer({
   const [empTypes,  setEmpTypes]  = useState<EmployeeType[]>([]);
 
   useEffect(() => {
-    const raw = typeof window !== 'undefined' ? localStorage.getItem(EMPLOYEE_TYPES_STORAGE_KEY) : null;
-    setEmpTypes(raw ? (JSON.parse(raw) as EmployeeType[]) : EMPLOYEE_TYPE_SEED);
+    publicApiFetch<EmployeeType[]>('/api/humansource/employee-types')
+      .then((r) => setEmpTypes(r.length ? r : EMPLOYEE_TYPE_SEED))
+      .catch(() => setEmpTypes(EMPLOYEE_TYPE_SEED));
   }, []);
 
   const toggleEt = (id: string) =>
@@ -875,24 +874,29 @@ function FilterChipSelect({
 function AnnouncementsList({ accent }: { accent: string }) {
   const [items,        setItems]        = useState<Announcement[]>([]);
   const [cats,         setCats]         = useState<AnnouncementCategory[]>([]);
-  const [hydrated,     setHydrated]     = useState(false);
   const [search,       setSearch]       = useState('');
   const [filterSt,     setFilterSt]     = useState('');
   const [drawer,       setDrawer]       = useState<'create' | Announcement | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null);
   const [selected,     setSelected]     = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const rawA = localStorage.getItem(ANNOUNCEMENTS_STORAGE_KEY);
-    const rawC = localStorage.getItem(ANNOUNCEMENT_CATEGORIES_STORAGE_KEY);
-    setItems(rawA ? (JSON.parse(rawA) as Announcement[]) : ANNOUNCEMENT_SEED);
-    setCats(rawC  ? (JSON.parse(rawC) as AnnouncementCategory[]) : ANNOUNCEMENT_CATEGORY_SEED);
-    setHydrated(true);
-  }, []);
+  const isMounted = useRef(true);
+  useEffect(() => { isMounted.current = true; return () => { isMounted.current = false; }; }, []);
 
   useEffect(() => {
-    if (hydrated) localStorage.setItem(ANNOUNCEMENTS_STORAGE_KEY, JSON.stringify(items));
-  }, [items, hydrated]);
+    Promise.all([
+      publicApiFetch<Announcement[]>('/api/humansource/announcements'),
+      publicApiFetch<AnnouncementCategory[]>('/api/humansource/announcements/categories'),
+    ]).then(([ann, cats]) => {
+      if (!isMounted.current) return;
+      setItems(ann.length ? ann : ANNOUNCEMENT_SEED);
+      setCats(cats.length ? cats : ANNOUNCEMENT_CATEGORY_SEED);
+    }).catch(() => {
+      if (!isMounted.current) return;
+      setItems(ANNOUNCEMENT_SEED);
+      setCats(ANNOUNCEMENT_CATEGORY_SEED);
+    });
+  }, []);
 
   const q = search.toLowerCase();
   const filtered = items.filter((a) => {
@@ -921,16 +925,20 @@ function AnnouncementsList({ accent }: { accent: string }) {
   const toggleOne = (id: string) =>
     setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-  const handleSave = (saved: Announcement) => {
-    setItems((prev) =>
-      prev.some((a) => a.id === saved.id)
-        ? prev.map((a) => (a.id === saved.id ? saved : a))
-        : [...prev, saved],
-    );
+  const handleSave = async (saved: Announcement) => {
+    const isEdit = items.some((a) => a.id === saved.id);
+    if (isEdit) {
+      const updated = await publicApiFetch<Announcement>(`/api/humansource/announcements/${saved.id}`, { method: 'PATCH', body: JSON.stringify(saved) });
+      setItems((prev) => prev.map((a) => a.id === saved.id ? updated : a));
+    } else {
+      const created = await publicApiFetch<Announcement>('/api/humansource/announcements', { method: 'POST', body: JSON.stringify(saved) });
+      setItems((prev) => [...prev, created]);
+    }
     setDrawer(null);
   };
 
-  const handleDelete = (target: Announcement) => {
+  const handleDelete = async (target: Announcement) => {
+    await publicApiFetch(`/api/humansource/announcements/${target.id}`, { method: 'DELETE' });
     setItems((prev) => prev.filter((a) => a.id !== target.id));
     setSelected((prev) => { const n = new Set(prev); n.delete(target.id); return n; });
     setDeleteTarget(null);

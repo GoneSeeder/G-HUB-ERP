@@ -5,9 +5,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { LogOutIcon, SearchIcon } from '@/components/ui/icons';
+import { LogOutIcon } from '@/components/ui/icons';
 import { clearAuthTokenCookie, getAuthTokenFromCookie } from '@/lib/auth';
 import { clearHrSessionSnapshot, getHrSessionSnapshot, setHrSessionSnapshot, type HrSession } from '@/lib/hr-auth';
+import { HrEmployeeLinkOverlay } from './hr-auth-flow-pages';
 import { queryOptions } from '@/lib/queries';
 import { cn } from '@/lib/cn';
 import {
@@ -104,6 +105,13 @@ function SelfServiceIcon({ className, style }: { className?: string; style?: Rea
     </svg>
   );
 }
+function DocumentIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="9" y1="13" x2="15" y2="13" /><line x1="9" y1="17" x2="15" y2="17" />
+    </svg>
+  );
+}
 function ChevronIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
@@ -174,6 +182,7 @@ const LEGACY_NAV: NavItem[] = [
 const NAV_ICONS: Record<HrNavigationItem['icon'], NavItem['icon']> = {
   home: HomeIcon,
   dashboard: DashboardIcon,
+  documents: DocumentIcon,
   organization: OrgIcon,
   time: TimeIcon,
   recruitment: RecruitIcon,
@@ -254,6 +263,7 @@ export function HrShell({ children }: { children: ReactNode }) {
   const [userOpen, setUserOpen] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [hasGhubLink, setHasGhubLink] = useState(false);
+  const [linkCheckDone, setLinkCheckDone] = useState(false);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const submenuTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const collapseAfterSubmenu = useRef(false);
@@ -303,10 +313,22 @@ export function HrShell({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
     const readSession = () => {
       const nextSession = getHrSessionSnapshot();
-      setHrSession(nextSession);
       setHasGhubToken(Boolean(getAuthTokenFromCookie()));
+
+      // Expire sessions older than 8 hours
+      if (nextSession?.createdAt) {
+        const age = new Date().getTime() - new Date(nextSession.createdAt).getTime();
+        if (age > SESSION_TTL_MS) {
+          clearHrSessionSnapshot();
+          setHrSession(null);
+          return;
+        }
+      }
+
+      setHrSession(nextSession);
       if (nextSession?.hasGhubLink) setHasGhubLink(true);
     };
 
@@ -315,9 +337,18 @@ export function HrShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('g-hub.hr.session-changed', readSession);
   }, []);
 
+  // Redirect to HR login when no active HR session exists
+  useEffect(() => {
+    if (!linkCheckDone) return;
+    if (!hrSession) {
+      router.replace('/humansource/login');
+    }
+  }, [linkCheckDone, hrSession, router]);
+
   useEffect(() => {
     const readGhubLinkState = (value: string | null) => {
       setHasGhubLink(Boolean(hrSession?.hasGhubLink) || value === 'true' || value === '1' || value === 'linked');
+      setLinkCheckDone(true);
     };
 
     readGhubLinkState(window.localStorage.getItem(GHUB_LINK_STORAGE_KEY));
@@ -426,7 +457,7 @@ export function HrShell({ children }: { children: ReactNode }) {
             aria-hidden="true"
             width={32}
             height={32}
-            className="h-8 w-8 flex-shrink-0 rounded-xl object-cover shadow-[0_8px_18px_rgba(147,51,234,0.22)]"
+            className="h-8 w-8 flex-shrink-0 rounded-xl object-cover"
             style={{
               marginLeft: (COLLAPSED_W - 28) / 2, // 12px — centers 28px button in 52px bar
             }}
@@ -708,15 +739,7 @@ export function HrShell({ children }: { children: ReactNode }) {
           willChange: 'left',
         }}
       >
-        <header className="z-10 flex h-14 flex-shrink-0 items-center justify-between border-b border-gray-200 bg-white px-6">
-          <div className="flex w-64 items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
-            <SearchIcon className="h-4 w-4 text-gray-400" />
-            <input
-              placeholder="ค้นหา..."
-              className="flex-1 bg-transparent text-xs text-gray-700 outline-none placeholder:text-gray-400"
-            />
-          </div>
-
+        <header className="z-10 flex h-11 flex-shrink-0 items-center justify-end border-b border-gray-200 bg-white px-6">
           <div className="flex items-center gap-2">
             {/* Bell */}
             <button
@@ -851,6 +874,9 @@ export function HrShell({ children }: { children: ReactNode }) {
         </header>
         <main className="hr-custom-scrollbar min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable]">{children}</main>
       </div>
+      {linkCheckDone && !!hrSession && !hasGhubLink && hrSession.authSource !== 'hr' && (
+        <HrEmployeeLinkOverlay onSuccess={() => updateGhubLinkMock(true)} />
+      )}
     </div>
   );
 }

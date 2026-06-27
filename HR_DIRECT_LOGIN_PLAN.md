@@ -307,34 +307,24 @@ Action:
 - `สร้างรหัสเชื่อมต่อ` — flow หลักในการผูกบัญชี
 - (optional ในอนาคต) `คัดลอก invitation link` ถ้าจะรองรับการเชิญทางอีเมลด้วย
 
-## Design Conformance (ใช้ Design System V2)
+## Design Conformance (ใช้ Design System จาก DESIGN.md)
 
 > ทุกหน้าใหม่ของ flow นี้ (`/humansource/login`, `signup`, `invite`, `link-ghub`, `pending`, `no-company`)
-> ต้องสร้างจาก **Design System V2** ซึ่งสกัดจาก Holiday Management UI ที่อนุมัติแล้ว
-> — ไม่ออกแบบสไตล์ใหม่เอง (ดู `DESIGN_GOVERNANCE_V2.md` → Future Rule)
+> ต้องสร้างจาก design system ใน [`DESIGN.md`](DESIGN.md) ซึ่งสกัดจาก Holiday Management UI ที่อนุมัติแล้ว
+> — ไม่ออกแบบสไตล์ใหม่เอง (ดู [`DESIGN.md`](DESIGN.md) §14 → Future Rule)
 
-### ลำดับชั้นของเอกสาร (สำคัญ — V2 ไม่ได้แทนที่ของเดิม)
+### ลำดับชั้นของเอกสาร
 
-**ยังยึดของเดิมครบ** สำหรับ Product Direction / UX Philosophy / กฎเชิงกระบวนการ:
+- [`DESIGN.md`](DESIGN.md) — **single UI source of truth**: philosophy, tokens, ทั้ง 14 component, layout, governance, anti-tells (รวมเนื้อหา V2 เดิมทั้งหมดไว้แล้ว)
+- [`DESIGN_TOKENS_V2.json`](DESIGN_TOKENS_V2.json) — token appendix (hex/rem/z-index)
 - [`PRODUCT.md`](PRODUCT.md) — users, brand personality, design principles, anti-references
-- [`DESIGN.md`](DESIGN.md) — design philosophy, HR UI standard, สิ่งที่ห้าม (ยังอ้างอิงได้)
-- [`CLAUDE.md`](CLAUDE.md) — กฎพฤติกรรม/process **ทั้งหมดยังบังคับ**: verification (tsc/eslint), routing convention, Thai-first, localStorage conventions, semantic `hr-*` classes, ห้าม native `<select>`, model strategy
+- [`CLAUDE.md`](CLAUDE.md) — กฎพฤติกรรม/process **ทั้งหมดยังบังคับ**: verification (tsc/eslint), routing, Thai-first, localStorage, semantic `hr-*`, ห้าม native `<select>`, model strategy
 - [`humansource/AGENTS.md`](apps/frontend/src/components/humansource/AGENTS.md) — hard rules ฝั่ง HR
 
-**V2 เป็น authority เฉพาะด้าน visual** (สี / typography / spacing / radius / shadow / motion / รูปลักษณ์ component):
-- [`DESIGN_V2.md`](DESIGN_V2.md) — philosophy / visual language / density
-- [`DESIGN_TOKENS_V2.json`](DESIGN_TOKENS_V2.json) — color / type / spacing / radius / shadow / motion / z-index / sizes
-- [`COMPONENT_RULES_V2.md`](COMPONENT_RULES_V2.md) — Button … Loading
-- [`LAYOUT_RULES_V2.md`](LAYOUT_RULES_V2.md) — App Shell / Toolbar / Form / Modal / Drawer
-- [`DESIGN_GOVERNANCE_V2.md`](DESIGN_GOVERNANCE_V2.md) — เมื่อไรใช้ Modal / Drawer / Table / Card / Empty / Detail Panel
+> **กฎตัดสินเมื่อขัดกัน:** visual → [`DESIGN.md`](DESIGN.md) / Holiday UI · product/UX/process/โครงสร้างโค้ด → `PRODUCT.md` / `CLAUDE.md` / `AGENTS.md`
 
-> **กฎตัดสินเมื่อขัดกัน:**
-> - ขัดกันเรื่อง **หน้าตา (visual)** → ยึด **V2** (เพราะสกัดจาก UI ที่อนุมัติแล้ว)
-> - เรื่อง **product / UX / process / โครงสร้างโค้ด** → ยึด `PRODUCT.md` / `DESIGN.md` / `CLAUDE.md` / `AGENTS.md` เหมือนเดิม
-> - ในทางปฏิบัติแทบไม่ขัดกัน เพราะ V2 ถูกสกัดจาก UI ที่ทำตาม CLAUDE.md §3 อยู่แล้ว (flat, indigo accent เดียว, ห้าม native select)
-
-การ map ของ flow นี้กับ V2 (ห้ามคิด component ใหม่):
-- **หน้า Login / Signup / Forgot** → focused auth surface (ไม่ใช่ landing; ห้าม hero/gradient/orb ตาม V2 §8) — ใช้ token color/type/spacing เดิม, ปุ่มเข้าสู่ระบบ = Button `--primary` (ดำ `#111827`), `เข้าสู่ระบบด้วย G-HUB` = `--secondary`, ลิงก์รอง = `--ghost`
+การ map ของ flow นี้ (ห้ามคิด component ใหม่):
+- **หน้า Login / Signup / Forgot** → focused auth surface (ไม่ใช่ landing; ห้าม hero/gradient/orb) — ใช้ token color/type/spacing, ปุ่มเข้าสู่ระบบ = Button `--primary` (indigo `#4f46e5`), `เข้าสู่ระบบด้วย G-HUB` = `--secondary`, ลิงก์รอง = `--ghost`
 - **Field email/password** → Input + Error state ตาม Component Rules (red border **ต้องมีข้อความ** เสมอ)
 - **`ไม่มีข้อมูลบริษัท` / `pending`** → **Empty State** (dashed indigo + icon box + title + desc + action) ตาม V2 ไม่ใช่ card ลอย
 - **กรอก employee link code** → Input + states (expired / invalid / already used) เป็น inline error message

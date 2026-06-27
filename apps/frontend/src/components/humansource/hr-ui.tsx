@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CalendarIcon, CheckIcon, SearchIcon, XIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 
@@ -118,28 +119,43 @@ export function HrCustomSelect({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [openAbove, setOpenAbove] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; left: number; minWidth: number }>({ left: 0, minWidth: 0 });
   const rootRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const normalizedOptions = options.map((option) => (
     typeof option === 'string' ? { value: option, label: option } : option
   ));
   const selectedOption = normalizedOptions.find((option) => option.value === value) ?? normalizedOptions[0];
 
+  function openMenu() {
+    const rect = rootRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const above = window.innerHeight - rect.bottom < 260 && rect.top > 260;
+    setMenuPos(above
+      ? { bottom: window.innerHeight - rect.top + 4, left: rect.left, minWidth: rect.width }
+      : { top: rect.bottom + 4, left: rect.left, minWidth: rect.width }
+    );
+    setOpen(true);
+  }
+
   useEffect(() => {
     if (!open) return;
-
     const closeOnOutsideClick = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(event.target as Node) && !menuRef.current?.contains(event.target as Node)) setOpen(false);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false);
     };
-
+    const close = () => setOpen(false);
     document.addEventListener('mousedown', closeOnOutsideClick);
     document.addEventListener('keydown', closeOnEscape);
+    document.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
     return () => {
       document.removeEventListener('mousedown', closeOnOutsideClick);
       document.removeEventListener('keydown', closeOnEscape);
+      document.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
     };
   }, [open]);
 
@@ -151,20 +167,21 @@ export function HrCustomSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         className="hr-custom-select__trigger"
-        onClick={() => {
-          if (!open) {
-            const rect = rootRef.current?.getBoundingClientRect();
-            setOpenAbove(Boolean(rect && window.innerHeight - rect.bottom < 260 && rect.top > 260));
-          }
-          setOpen((current) => !current);
-        }}
+        onClick={() => open ? setOpen(false) : openMenu()}
       >
-        <span className="hr-custom-select__value">{selectedOption?.label ?? value}</span>
+        <span className={`hr-custom-select__value${!value ? ' hr-custom-select__value--placeholder' : ''}`}>
+          {value ? (selectedOption?.label ?? value) : 'กรุณาเลือก'}
+        </span>
         <span className="hr-custom-select__chevron" aria-hidden="true" />
       </button>
 
-      {open ? (
-        <div className={cn('hr-custom-select__menu', openAbove ? 'hr-custom-select__menu--above' : 'hr-custom-select__menu--below')} role="listbox">
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          className="hr-custom-select__menu"
+          style={{ position: 'fixed', zIndex: 9999, width: 'max-content', maxWidth: '28rem', ...menuPos }}
+          role="listbox"
+        >
           {normalizedOptions.map((option) => {
             const selected = option.value === value;
             return (
@@ -187,8 +204,9 @@ export function HrCustomSelect({
               </button>
             );
           })}
-        </div>
-      ) : null}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
@@ -454,7 +472,7 @@ export function HrTabs({ tabs, active }: { tabs: string[]; active: string }) {
         <button
           key={tab}
           type="button"
-          className={cn('rounded-xl px-3 py-2 text-sm font-medium text-slate-500 transition', tab === active && 'bg-indigo-600 text-white shadow-sm')}
+          className={cn('rounded-xl px-3 py-2 text-sm font-medium transition', tab === active ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500')}
         >
           {tab}
         </button>

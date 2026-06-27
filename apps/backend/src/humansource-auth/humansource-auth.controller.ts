@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { HrLinkCodeDto, HrLoginDto, HrRegisterDto } from './dto/hr-auth.dto';
 import { HumansourceAuthService } from './humansource-auth.service';
 
@@ -19,5 +19,10 @@ export class HumansourceAuthController {
   @Post('link-code')
   linkCode(@Body() body: HrLinkCodeDto) {
     return this.humansourceAuthService.linkCode(body.email, body.code);
+  }
+
+  @Get('generate-link-code')
+  generateCode(@Query('email') email: string) {
+    return this.humansourceAuthService.generateLinkCode(email);
   }
 }

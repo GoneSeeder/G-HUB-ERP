@@ -15,7 +15,7 @@ export type HrNavigationItem = {
   label: string;
   description?: string;
   color: string;
-  icon: 'home' | 'dashboard' | 'organization' | 'time' | 'recruitment' | 'payroll' | 'performance' | 'self-service' | 'reports' | 'settings';
+  icon: 'home' | 'dashboard' | 'organization' | 'time' | 'recruitment' | 'payroll' | 'performance' | 'self-service' | 'reports' | 'settings' | 'documents';
   path?: string;
   sections?: HrNavSection[];
 };
@@ -45,6 +45,14 @@ export const hrNavigation: HrNavigationItem[] = [
     color: '#6366f1',
     icon: 'dashboard',
     path: '/humansource/dashboard',
+  },
+  {
+    key: 'documents',
+    label: 'เอกสาร',
+    description: 'จัดการเอกสารและแบบฟอร์ม HR',
+    color: '#f97316',
+    icon: 'documents',
+    path: '/humansource/documents',
   },
   {
     key: 'organization',

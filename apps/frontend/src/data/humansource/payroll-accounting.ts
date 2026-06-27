@@ -1,39 +1,17 @@
-// 3.4 ข้อมูลบัญชี — map รายได้/รายหักไปยังหมวดบัญชี (GL), per company.
-
-export type AccountCodeType = 'asset' | 'liability' | 'expense' | 'revenue';
+// 3.4 ข้อมูลบัญชี — user-defined GL account categories.
+// Each enabled category becomes a column in the accounting mapping table.
 
 export type AccountCategory = {
   id: string;
   nameTh: string;
-  codeType: AccountCodeType;
-};
-
-export type AccountingMap = {
-  id: string;
-  payItemId: string;          // FK → IncomeItem.id | DeductionItem.id
-  kind: 'income' | 'deduction';
-  accountCategoryId: string;  // ประเภทรหัสบัญชี
-  office: string;             // สำนักงาน
-  factory: string;            // โรงงาน
+  enabled: boolean;
+  updatedAt: string; // ISO date string
 };
 
 export const ACCOUNT_CATEGORIES_STORAGE_BASE = 'account-categories';
-export const ACCOUNTING_MAP_STORAGE_BASE = 'accounting-map';
-
-export const ACCOUNT_CODE_TYPE_LABELS: Record<AccountCodeType, string> = {
-  asset: 'สินทรัพย์',
-  liability: 'หนี้สิน',
-  expense: 'ค่าใช้จ่าย',
-  revenue: 'รายได้',
-};
+export const ACCOUNT_CAT_SEED_VER = 1;
 
 export const ACCOUNT_CATEGORY_SEED: AccountCategory[] = [
-  { id: 'ACCCAT-payroll-expense', nameTh: 'ค่าใช้จ่ายเงินเดือน', codeType: 'expense' },
-  { id: 'ACCCAT-ot-expense', nameTh: 'ค่าใช้จ่ายล่วงเวลา', codeType: 'expense' },
-  { id: 'ACCCAT-payroll-payable', nameTh: 'เจ้าหนี้เงินเดือน', codeType: 'liability' },
-  { id: 'ACCCAT-tax-payable', nameTh: 'ภาษีหัก ณ ที่จ่ายค้างจ่าย', codeType: 'liability' },
-  { id: 'ACCCAT-sso-payable', nameTh: 'ประกันสังคมค้างจ่าย', codeType: 'liability' },
-  { id: 'ACCCAT-pf-payable', nameTh: 'กองทุนสำรองเลี้ยงชีพค้างจ่าย', codeType: 'liability' },
+  { id: 'cat-office',  nameTh: 'สำนักงาน', enabled: true, updatedAt: '2021-03-26T08:50:00.000Z' },
+  { id: 'cat-factory', nameTh: 'โรงงาน',   enabled: true, updatedAt: '2021-03-26T08:51:00.000Z' },
 ];
-
-export const ACCOUNTING_MAP_SEED: AccountingMap[] = [];

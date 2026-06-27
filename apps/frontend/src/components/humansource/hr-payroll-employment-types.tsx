@@ -7,16 +7,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { HrCustomSelect } from './hr-ui';
-import { payrollKey } from '@/data/humansource/payroll-common';
+import { publicApiFetch } from '@/lib/api';
 import { TrashIcon } from '@/components/ui/icons';
 import {
   ALL_CALC_CONDITION_KEYS,
   CALC_CONDITION_LABELS,
   DEDUCT_MODE_OPTIONS,
   PAY_TYPE_OPTIONS,
-  PAYROLL_EMPLOYMENT_TYPES_STORAGE_BASE,
   PAYROLL_EMPLOYMENT_TYPE_SEED,
-  defaultCalcConditionConfig,
   defaultCalcConditions,
   visibleCalcConditions,
   type CalcByMode,
@@ -42,47 +40,6 @@ const BREAK_LATE_OPTIONS: { value: DeductMode; label: string }[] = [
 // seed items are protected — no delete allowed
 const SEED_IDS = new Set(PAYROLL_EMPLOYMENT_TYPE_SEED.map((e) => e.id));
 
-// ── migration: upgrade any stored calcConditions missing new fields ───────────
-
-function migrateCalcConditions(raw: unknown): CalcConditionConfig[] {
-  const arr = Array.isArray(raw) ? raw : [];
-  return ALL_CALC_CONDITION_KEYS.map((key) => {
-    const found = arr.find((c) => c && typeof c === 'object' && (c as { key?: string }).key === key) as Partial<CalcConditionConfig> | undefined;
-    const defaults = defaultCalcConditionConfig(key);
-    if (!found) return defaults;
-    return {
-      ...defaults,
-      ...found,
-      // guard arrays that may be absent in old data
-      otRates: Array.isArray(found.otRates) && found.otRates.length > 0
-        ? found.otRates
-        : defaults.otRates,
-    };
-  });
-}
-
-function migrateTypes(list: PayrollEmploymentType[]): PayrollEmploymentType[] {
-  return list.map((emp) => ({
-    ...emp,
-    calcConditions: migrateCalcConditions(emp.calcConditions),
-  }));
-}
-
-// ── persistence — global (not per-company) ───────────────────────────────────
-
-const GLOBAL_KEY = payrollKey(PAYROLL_EMPLOYMENT_TYPES_STORAGE_BASE, 'global');
-
-function loadTypes(): PayrollEmploymentType[] {
-  try {
-    const raw = window.localStorage.getItem(GLOBAL_KEY);
-    if (raw) return migrateTypes(JSON.parse(raw) as PayrollEmploymentType[]);
-  } catch { /* fall back to seed */ }
-  return structuredClone(PAYROLL_EMPLOYMENT_TYPE_SEED);
-}
-
-function saveTypes(list: PayrollEmploymentType[]): void {
-  window.localStorage.setItem(GLOBAL_KEY, JSON.stringify(list));
-}
 
 // ── form state ────────────────────────────────────────────────────────────────
 
@@ -125,7 +82,6 @@ function empToForm(emp: PayrollEmploymentType): EmpForm {
 
 export function PayrollEmploymentTypes({ accent: _accent }: { accent: string }) {
   const [types, setTypes]           = useState<PayrollEmploymentType[]>([]);
-  const [hydrated, setHydrated]     = useState(false);
   const [panelMode, setPanelMode]   = useState<'idle' | 'create' | 'edit'>('idle');
   const [editingId, setEditingId]   = useState<string | null>(null);
   const [form, setForm]             = useState<EmpForm>(BLANK_FORM);
@@ -134,16 +90,14 @@ export function PayrollEmploymentTypes({ accent: _accent }: { accent: string }) 
   const [toast, setToast]           = useState('');
   const nameRef = useRef<HTMLInputElement>(null);
 
-  // 3-effect hydration pattern
-  useEffect(() => {
-    setTypes(loadTypes());
-    setHydrated(true);
-  }, []);
+  const isMounted = useRef(true);
+  useEffect(() => { isMounted.current = true; return () => { isMounted.current = false; }; }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    saveTypes(types);
-  }, [hydrated, types]);
+    publicApiFetch<PayrollEmploymentType[]>('/api/humansource/payroll/employment-types')
+      .then((r) => { if (isMounted.current) setTypes(r.length ? r : structuredClone(PAYROLL_EMPLOYMENT_TYPE_SEED)); })
+      .catch(() => { if (isMounted.current) setTypes(structuredClone(PAYROLL_EMPLOYMENT_TYPE_SEED)); });
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -192,47 +146,33 @@ export function PayrollEmploymentTypes({ accent: _accent }: { accent: string }) 
 
   const closePanel = () => { setPanelMode('idle'); setEditingId(null); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.nameTh.trim() || !form.code.trim()) return;
+    const dto = {
+      code: form.code.trim().toUpperCase(),
+      nameTh: form.nameTh.trim(),
+      nameEn: form.nameEn.trim(),
+      payType: form.payType,
+      paidPublicHoliday: form.paidPublicHoliday,
+      paidHourly: form.paidHourly,
+      calcConditions: form.calcConditions,
+      active: form.active,
+    };
     if (panelMode === 'create') {
-      const next: PayrollEmploymentType = {
-        id: `PET-${Date.now()}`,
-        code: form.code.trim().toUpperCase(),
-        nameTh: form.nameTh.trim(),
-        nameEn: form.nameEn.trim(),
-        payType: form.payType as PayrollEmploymentType['payType'],
-        paidPublicHoliday: form.paidPublicHoliday,
-        paidHourly: form.paidHourly,
-        calcConditions: form.calcConditions,
-        active: form.active,
-      };
-      setTypes((prev) => [...prev, next]);
-      setEditingId(next.id);
+      const created = await publicApiFetch<PayrollEmploymentType>('/api/humansource/payroll/employment-types', { method: 'POST', body: JSON.stringify(dto) });
+      setTypes((prev) => [...prev, created]);
+      setEditingId(created.id);
       setPanelMode('edit');
       setToast('เพิ่มประเภทการจ้างแล้ว');
     } else if (editingId) {
-      setTypes((prev) =>
-        prev.map((t) =>
-          t.id === editingId
-            ? {
-                ...t,
-                code: form.code.trim().toUpperCase(),
-                nameTh: form.nameTh.trim(),
-                nameEn: form.nameEn.trim(),
-                payType: form.payType as PayrollEmploymentType['payType'],
-                paidPublicHoliday: form.paidPublicHoliday,
-                paidHourly: form.paidHourly,
-                calcConditions: form.calcConditions,
-                active: form.active,
-              }
-            : t,
-        ),
-      );
+      const updated = await publicApiFetch<PayrollEmploymentType>(`/api/humansource/payroll/employment-types/${editingId}`, { method: 'PATCH', body: JSON.stringify(dto) });
+      setTypes((prev) => prev.map((t) => t.id === editingId ? updated : t));
       setToast('บันทึกการแก้ไขแล้ว');
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    await publicApiFetch(`/api/humansource/payroll/employment-types/${id}`, { method: 'DELETE' });
     setTypes((prev) => prev.filter((t) => t.id !== id));
     setDeleteId(null);
     if (editingId === id) closePanel();
@@ -243,7 +183,7 @@ export function PayrollEmploymentTypes({ accent: _accent }: { accent: string }) 
   const currentCond  = form.calcConditions.find((c) => c.key === condTab);
   const payTypeLabel = (v: string) => PAY_TYPE_OPTIONS.find((o) => o.value === v)?.label ?? v;
 
-  if (!hydrated) return null;
+  if (!types.length) return null;
 
   return (
     <div className="hr-payroll-page hr-emptype-page">

@@ -425,3 +425,541 @@ model LectureHistory {
 
   bonusCard BonusCard? @relation(fields: [bonusCardId], references: [id], onDelete: SetNull)
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// HUMANSOURCE (HR) — added 2026-06-27. See HR_BACKEND_PLAN.md.
+// Slice 0: core master tables + denormalized Employee (frozen frontend contract).
+// Employee *Id columns are soft references (no enforced FK yet) — relations get
+// added in a later slice after the position/employee-type taxonomy is reconciled.
+// ──────────────────────────────────────────────────────────────────────────────
+
+model HrOrgNode {
+  id       String      @id
+  name     String
+  type     String      // company | branch | department | team
+  code     String?
+  active   Boolean     @default(true)
+  parentId String?
+  parent   HrOrgNode?  @relation("HrOrgTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children HrOrgNode[] @relation("HrOrgTree")
+
+  @@map("hr_org_node")
+}
+
+model HrCompany {
+  id                 String  @id
+  orgNodeId          String  @unique
+  legalNameTh        String
+  tradeName          String
+  taxId              String
+  socialSecurityCode String
+  address            String?
+  active             Boolean @default(true)
+  workConditions     Json    @default("{}")
+
+  @@map("hr_company")
+}
+
+model HrJobLevel {
+  id     String  @id
+  nameTh String
+  nameEn String
+  rank   Int
+  active Boolean @default(true)
+
+  @@map("hr_job_level")
+}
+
+model HrPosition {
+  id               String  @id
+  code             String
+  nameTh           String
+  nameEn           String
+  level            String  // legacy display; use jobLevelId going forward
+  jobLevelId       String  @default("")
+  companyId        String  @default("")
+  employeeTypes    Json    @default("[]")
+  salaryMin        Int     @default(0)
+  salaryMax        Int     @default(0)
+  overview         String  @default("")
+  responsibilities String  @default("")
+  qualifications   String  @default("")
+  hasBenefits      Boolean @default(false)
+  active           Boolean @default(true)
+
+  @@map("hr_position")
+}
+
+model HrEmployeeType {
+  id     String  @id
+  code   String
+  nameTh String
+  nameEn String
+  tax    String
+  active Boolean @default(true)
+
+  @@map("hr_employee_type")
+}
+
+model HrShift {
+  id                     String   @id
+  code                   String   @unique
+  name                   String
+  type                   String   @default("")
+  time                   String   @default("")
+  companyScope           String   @default("")
+  groupKey               String   @default("same-day")
+  enabled                Boolean  @default(true)
+  description            String?
+  timezone               String?
+  color                  String?
+  attendanceRule         String?
+  flexibleEntryEnabled   Boolean?
+  flexibleMinutes        Int?
+  minimumWorkHours       Float?
+  trackBreak             Boolean?
+  shiftAllowanceEnabled  Boolean?
+  shiftAllowanceAmount   Float?
+  prorateShiftAllowance  Boolean?
+  holidayPremiumEnabled  Boolean?
+  overtimePremiumEnabled Boolean?
+  updatedBy              String?
+  updatedAt              DateTime @updatedAt
+
+  @@map("hr_shift")
+}
+
+model HrLeaveType {
+  id          String  @id
+  code        String  @unique
+  nameTh      String
+  nameEn      String  @default("")
+  tag         String  @default("")
+  color       String  @default("#6366f1")
+  unit        String  @default("day")
+  statutory   Boolean @default(false)
+  enabled     Boolean @default(true)
+  rules       Json    @default("{}")
+  eligibility Json    @default("{}")
+  quota       Json    @default("{}")
+  approval    Json    @default("{}")
+
+  @@map("hr_leave_type")
+}
+
+model HrDocumentApprovalConfig {
+  docType   String @id
+  labelTh   String
+  mechanism String @default("position_structure")
+  steps     String @default("1")
+
+  @@map("hr_document_approval_config")
+}
+
+model HrPersonApprover {
+  employeeId String  @id
+  approverId String?
+
+  @@map("hr_person_approver")
+}
+
+model HrHolidayCalendar {
+  id        String           @id
+  name      String
+  color     String
+  isDefault Boolean          @default(false)
+  entries   HrHolidayEntry[]
+
+  @@map("hr_holiday_calendar")
+}
+
+model HrHolidayEntry {
+  id          String            @id
+  calendarId  String
+  calendar    HrHolidayCalendar @relation(fields: [calendarId], references: [id])
+  year        Int
+  date        String
+  title       String
+  type        String            @default("company")
+  country     String            @default("")
+  appliesTo   String            @default("")
+  description String            @default("")
+  source      String            @default("custom")
+
+  @@index([calendarId, year])
+  @@map("hr_holiday_entry")
+}
+
+model HrHolidayOverride {
+  officialId  String   @id
+  date        String?
+  title       String?
+  description String?
+  type        String?
+  deleted     Boolean  @default(false)
+
+  @@map("hr_holiday_override")
+}
+
+model HrAnnouncementCategory {
+  id            String           @id
+  nameTh        String
+  color         String
+  active        Boolean          @default(true)
+  announcements HrAnnouncement[]
+
+  @@map("hr_announcement_category")
+}
+
+model HrAnnouncement {
+  id          String                 @id @default(cuid())
+  title       String
+  bodyMd      String                 @default("")
+  imageBase64 String                 @default("")
+  attachments Json                   @default("[]")
+  categoryId  String
+  category    HrAnnouncementCategory @relation(fields: [categoryId], references: [id])
+  audience    Json                   @default("{\"scope\":\"all\",\"companyIds\":[],\"orgNodeIds\":[],\"employeeTypeIds\":[],\"employeeIds\":[]}")
+  status      String                 @default("draft")
+  publishAt   String?
+  publishEnd  String?
+  pinned      Boolean                @default(false)
+
+  @@map("hr_announcement")
+}
+
+model HrEmployeeDefaults {
+  id                    String @id @default(cuid())
+  codePrefix            String @default("EMP")
+  codePadding           Int    @default(4)
+  defaultEmployeeTypeId String @default("ET001")
+  defaultStatus         String @default("NORMAL")
+  startDateMode         String @default("today")
+
+  @@map("hr_employee_defaults")
+}
+
+model HrRunningNumberConfig {
+  id         String  @id
+  docLabelTh String
+  prefix     String
+  dateToken  String  @default("none")
+  padding    Int     @default(4)
+  nextNumber Int     @default(1)
+  active     Boolean @default(true)
+
+  @@map("hr_running_number_config")
+}
+
+model HrMasterOption {
+  id       String  @id
+  category String
+  nameTh   String
+  nameEn   String  @default("")
+  active   Boolean @default(true)
+
+  @@index([category])
+  @@map("hr_master_option")
+}
+
+model HrJsonStore {
+  key   String @id
+  value Json   @default("{}")
+
+  @@map("hr_json_store")
+}
+
+model HrPayrollGeneralConfig {
+  id                 String  @id @default(cuid())
+  cycleStartDay      String  @default("1")
+  cycleEndDay        String  @default("EOM")
+  ssoEmployeeRate    Float   @default(5)
+  ssoEmployerRate    Float   @default(5)
+  ssoMonthlyWageFloor Float  @default(1650)
+  ssoMonthlyWageCap  Float   @default(17500)
+  ssoIncludeOT       Boolean @default(true)
+  ssoIncludeBonus    Boolean @default(true)
+  ssoIncludeWelfare  Boolean @default(true)
+  currency           String  @default("THB")
+  moneyRounding      String  @default("nearest-baht")
+  preventWrongOtType Boolean @default(true)
+
+  @@map("hr_payroll_general_config")
+}
+
+model HrPayrollEmploymentType {
+  id                String  @id
+  code              String
+  nameTh            String
+  nameEn            String  @default("")
+  payType           String
+  paidPublicHoliday Boolean @default(true)
+  paidHourly        Boolean @default(false)
+  calcConditions    Json    @default("[]")
+  employeeTypeId    String?
+  active            Boolean @default(true)
+
+  @@map("hr_payroll_employment_type")
+}
+
+model HrPayItem {
+  id                   String   @id
+  kind                 String
+  code                 String
+  nameTh               String
+  nameEn               String   @default("")
+  revenueCategory      String?
+  rounding             String   @default("none")
+  taxCalcMethod        String?
+  payoutScope          String   @default("every-period")
+  taxable              Boolean  @default(false)
+  linkSSO              Boolean  @default(false)
+  linkProvidentFund    Boolean  @default(false)
+  offCycle             Boolean  @default(false)
+  carryPrevPeriod      Boolean  @default(false)
+  payOnce              Boolean?
+  payoutScopeOnce      Boolean?
+  calcByActualWorkdays Boolean?
+  linkOvertime         Boolean?
+  linkLateAbsent       Boolean?
+  isWelfare            Boolean  @default(false)
+  enabled              Boolean  @default(true)
+  isSystem             Boolean  @default(false)
+  isCustom             Boolean  @default(false)
+  accountMapping       Json     @default("{}")
+
+  @@map("hr_pay_item")
+}
+
+model HrAccountCategory {
+  id        String   @id
+  nameTh    String
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  @@map("hr_account_category")
+}
+
+model HrPayPeriodConfig {
+  id                 String              @id @default(cuid())
+  year               Int
+  frequency          String              @default("monthly")
+  firstPeriodStart   String
+  payDayOfMonth      String              @default("EOM")
+  payNextMonth       Boolean             @default(false)
+  payBeforeIfHoliday Boolean             @default(false)
+  hasOffCycle        Boolean             @default(false)
+  offCycleStart      String?
+  employmentTypeIds  Json                @default("[]")
+  generatedPeriods   HrGeneratedPeriod[]
+
+  @@map("hr_pay_period_config")
+}
+
+model HrGeneratedPeriod {
+  id          String            @id
+  configId    String
+  config      HrPayPeriodConfig @relation(fields: [configId], references: [id])
+  index       Int
+  label       String
+  periodStart String
+  periodEnd   String
+  payDate     String
+
+  @@map("hr_generated_period")
+}
+
+model HrEmployee {
+  id               String   @id
+  code             String   @unique
+  name             String
+  email            String
+  phone            String
+  position         String
+  department       String
+  branch           String
+  empType          String
+  schedule         String
+  startDate        String
+  salary           Int
+  status           String
+  active           Boolean  @default(true)
+  companyId        String
+  branchNodeId     String
+  departmentNodeId String
+  positionId       String
+  employeeTypeId   String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([branchNodeId])
+  @@index([departmentNodeId])
+  @@map("hr_employee")
+}
+
+model HrAccount {
+  id               String   @id @default(cuid())
+  email            String   @unique
+  displayName      String
+  passwordHash     String
+  authSource       String   @default("hr")
+  accountStatus    String   @default("pending")
+  membershipStatus String   @default("none")
+  hasGhubLink      Boolean  @default(false)
+  employeeId       String?  @unique
+  userId           String?
+  createdAt        DateTime @default(now())
+  linkCodes        HrLinkCode[]
+
+  @@map("hr_account")
+}
+
+model HrLinkCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  accountId String
+  account   HrAccount @relation(fields: [accountId], references: [id])
+  used      Boolean   @default(false)
+  expiresAt DateTime
+
+  @@map("hr_link_code")
+}
+
+// ─────────────────────────────────────────────────────────────
+// LAYER B — RUNTIME / TRANSACTIONAL
+// ─────────────────────────────────────────────────────────────
+
+model HrShiftAssignment {
+  id         String   @id @default(cuid())
+  employeeId String
+  date       String   // YYYY-MM-DD
+  shiftId    String?
+  isOff      Boolean  @default(false)
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@unique([employeeId, date])
+  @@index([date])
+  @@index([employeeId])
+  @@map("hr_shift_assignment")
+}
+
+model HrAttendanceRecord {
+  id         String   @id @default(cuid())
+  employeeId String
+  date       String   // YYYY-MM-DD
+  clockIn    String?  // HH:MM or full ISO
+  clockOut   String?
+  source     String   @default("manual") // 'scan' | 'manual' | 'mobile'
+  lat        Float?
+  lng        Float?
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@unique([employeeId, date])
+  @@index([employeeId])
+  @@index([date])
+  @@map("hr_attendance_record")
+}
+
+model HrLeaveRequest {
+  id          String   @id @default(cuid())
+  employeeId  String
+  leaveTypeId String
+  startDate   String   // YYYY-MM-DD
+  endDate     String
+  unitCount   Float
+  reason      String?
+  status      String   @default("pending") // draft|pending|approved|rejected|cancelled
+  attachments Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  approval    HrApprovalInstance?
+
+  @@index([employeeId])
+  @@index([status])
+  @@map("hr_leave_request")
+}
+
+model HrLeaveBalance {
+  id          String @id @default(cuid())
+  employeeId  String
+  leaveTypeId String
+  year        Int
+  entitled    Float  @default(0)
+  used        Float  @default(0)
+  carriedOver Float  @default(0)
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@index([employeeId])
+  @@map("hr_leave_balance")
+}
+
+model HrDocumentRequest {
+  id         String   @id @default(cuid())
+  docType    String   // 'ot' | 'time-adjust' | 'cert' | 'petty-cash' | ...
+  employeeId String
+  payload    Json     @default("{}")
+  status     String   @default("pending") // draft|pending|approved|rejected
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  approval   HrApprovalInstance?
+
+  @@index([employeeId])
+  @@index([docType, status])
+  @@map("hr_document_request")
+}
+
+model HrApprovalInstance {
+  id             String  @id @default(cuid())
+  docType        String
+  leaveRequestId String? @unique
+  leaveRequest   HrLeaveRequest?   @relation(fields: [leaveRequestId], references: [id])
+  docRequestId   String? @unique
+  docRequest     HrDocumentRequest? @relation(fields: [docRequestId], references: [id])
+  state          String  @default("pending") // pending|approved|rejected
+  createdAt      DateTime @default(now())
+  steps          HrApprovalStep[]
+
+  @@map("hr_approval_instance")
+}
+
+model HrApprovalStep {
+  id         String   @id @default(cuid())
+  instanceId String
+  instance   HrApprovalInstance @relation(fields: [instanceId], references: [id])
+  stepOrder  Int
+  approverId String
+  state      String   @default("pending")
+  actedAt    DateTime?
+  comment    String?
+
+  @@index([instanceId])
+  @@map("hr_approval_step")
+}
+
+model HrPayrollRun {
+  id        String   @id @default(cuid())
+  periodId  String
+  status    String   @default("draft") // draft|calculated|approved|paid
+  createdAt DateTime @default(now())
+  payslips  HrPayslip[]
+
+  @@index([periodId])
+  @@map("hr_payroll_run")
+}
+
+model HrPayslip {
+  id         String      @id @default(cuid())
+  runId      String
+  run        HrPayrollRun @relation(fields: [runId], references: [id])
+  employeeId String
+  gross      Float       @default(0)
+  deductions Float       @default(0)
+  net        Float       @default(0)
+  lines      Json        @default("[]")
+
+  @@unique([runId, employeeId])
+  @@index([employeeId])
+  @@map("hr_payslip")
+}

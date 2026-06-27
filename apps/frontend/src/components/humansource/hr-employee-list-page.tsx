@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type SVGProps } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
   CheckIcon,
-  DownloadIcon,
-  EditIcon,
   LinkIcon,
   PlusIcon,
   RefreshIcon,
@@ -15,29 +14,122 @@ import {
   XIcon,
 } from '@/components/ui/icons';
 import { DatePicker } from '@/components/ui/date-picker';
-import { HrBadge } from '@/components/humansource/hr-ui';
+import { HrBadge, HrCustomSelect, HrDatePicker } from '@/components/humansource/hr-ui';
 import { employees, type Employee } from '@/data/humansource/mock';
+import { publicApiFetch } from '@/lib/api';
 
 export function HrEmployeeListPage() {
   const [showAddEmployee, setShowAddEmployee] = useState(false);
+  const [openTabs, setOpenTabs] = useState<Employee[]>([]);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+  const [profileMinimized, setProfileMinimized] = useState(false);
+
+  const handleSelectEmployee = (emp: Employee) => {
+    setOpenTabs(prev => prev.find(e => e.id === emp.id) ? prev : [...prev, emp]);
+    setActiveTabId(emp.id);
+    setProfileMinimized(false);
+  };
+
+  const handleCloseTab = (id: string) => {
+    setOpenTabs(prev => {
+      const idx = prev.findIndex(e => e.id === id);
+      const next = prev.filter(e => e.id !== id);
+      if (activeTabId === id) {
+        setActiveTabId(next[Math.max(0, idx - 1)]?.id ?? null);
+      }
+      return next;
+    });
+  };
 
   return (
     <>
-      <EmployeeListPage onAdd={() => setShowAddEmployee(true)} />
+      <EmployeeListPage
+        onAdd={() => setShowAddEmployee(true)}
+        onSelectEmployee={handleSelectEmployee}
+      />
       {showAddEmployee ? <AddEmployeeModal onClose={() => setShowAddEmployee(false)} /> : null}
+      {openTabs.length > 0 && activeTabId ? (
+        <HrEmployeeProfileOverlay
+          tabs={openTabs}
+          activeId={activeTabId}
+          minimized={profileMinimized}
+          onSwitch={(id) => { setActiveTabId(id); setProfileMinimized(false); }}
+          onCloseTab={handleCloseTab}
+          onMinimize={() => setProfileMinimized(m => !m)}
+          onCloseAll={() => { setOpenTabs([]); setActiveTabId(null); }}
+        />
+      ) : null}
     </>
   );
 }
 
 // ─── Employee list ────────────────────────────────────────────────────────────
 
-const STATUS_TABS = [
-  { key: 'all',       label: 'ทั้งหมด'       },
-  { key: 'active',    label: 'ปัจจุบัน'      },
-  { key: 'trial',     label: 'ทดลองงาน'     },
-  { key: 'leave',     label: 'ลาออก'         },
-  { key: 'contract',  label: 'สิ้นสุดสัญญา' },
+const PRIMARY_TABS = [
+  { key: 'all',        label: 'ทั้งหมด'         },
+  { key: 'pending',    label: 'รอเริ่มงาน'      },
+  { key: 'trial',      label: 'ทดลองงาน'        },
+  { key: 'permanent',  label: 'บรรจุ'            },
+  { key: 'terminated', label: 'พ้นสภาพ'          },
+  { key: 'invited',    label: 'ตอบรับคำเชิญ'    },
 ];
+
+const SMART_TABS_MAP: Record<string, { key: string; label: string }[]> = {
+  all: [
+    { key: 'all',        label: 'ทั้งหมด'       },
+    { key: 'update',     label: 'รออัปเดต'      },
+    { key: 'incomplete', label: 'รอเพิ่มข้อมูล' },
+    { key: 'month',      label: 'ภายในเดือนนี้' },
+    { key: 'recent',     label: 'แก้ไขล่าสุด'   },
+  ],
+  pending: [
+    { key: 'all',          label: 'ทั้งหมด'              },
+    { key: 'scheduled',    label: 'กำหนดการเริ่มงาน'     },
+    { key: 'missing-data', label: 'ข้อมูลไม่ครบ'         },
+    { key: 'no-fill',      label: 'ยังไม่ได้กรอกข้อมูล' },
+  ],
+  trial: [
+    { key: 'all',          label: 'ทั้งหมด'                  },
+    { key: 'not-due',      label: 'ยังไม่ถึงกำหนดประเมิน'   },
+    { key: 'pending-eval', label: 'รอประเมิน'               },
+    { key: 'evaluated',    label: 'ประเมินแล้ว'              },
+    { key: 'passed',       label: 'สำเร็จ'                   },
+  ],
+  permanent: [
+    { key: 'all',         label: 'ทั้งหมด'           },
+    { key: 'near-expiry', label: 'ใกล้หมดสัญญาจ้าง' },
+  ],
+  terminated: [
+    { key: 'all', label: 'ทั้งหมด' },
+  ],
+  invited: [
+    { key: 'pending-approval', label: 'รออนุมัติ' },
+  ],
+};
+
+type FilterKey = 'tenure' | 'age' | 'level' | 'dept' | 'group' | 'emptype' | 'location' | 'position' | 'shift';
+type FilterDim =
+  | { key: FilterKey; label: string; type: 'list'; options: string[] }
+  | { key: FilterKey; label: string; type: 'range'; units: string[]; presets: string[] };
+
+const FILTER_DIMS: FilterDim[] = [
+  { key: 'tenure',   label: 'อายุงาน',       type: 'range', units: ['เดือน', 'ปี'], presets: ['น้อยกว่า 1 เดือน', 'น้อยกว่า 3 เดือน', 'น้อยกว่า 6 เดือน', 'น้อยกว่า 1 ปี', 'มากกว่า 1 ปี', 'มากกว่า 3 ปี', 'มากกว่า 5 ปี'] },
+  { key: 'age',      label: 'อายุ',           type: 'range', units: ['ปี'], presets: ['น้อยกว่า 25 ปี', '25–35 ปี', '35–45 ปี', 'มากกว่า 45 ปี'] },
+  { key: 'level',    label: 'ระดับ',          type: 'list', options: ['ระดับบริหาร', 'ระดับผู้จัดการ', 'ระดับหัวหน้างาน', 'ระดับพนักงาน'] },
+  { key: 'dept',     label: 'สังกัด',         type: 'list', options: ['ฝ่ายบุคคล', 'ฝ่ายบัญชี', 'ฝ่ายขาย', 'IT', 'Operations', 'สำนักงานใหญ่', 'สาขาเชียงใหม่', 'สาขาภูเก็ต'] },
+  { key: 'group',    label: 'กลุ่ม',          type: 'list', options: ['กลุ่ม A', 'กลุ่ม B', 'กลุ่ม C'] },
+  { key: 'emptype',  label: 'ประเภท',         type: 'list', options: ['รายเดือน', 'รายวัน', 'พาร์ทไทม์'] },
+  { key: 'location', label: 'สถานที่ทำงาน', type: 'list', options: ['สำนักงานใหญ่', 'สาขาเชียงใหม่', 'สาขาภูเก็ต'] },
+  { key: 'position', label: 'ตำแหน่ง',       type: 'list', options: ['CEO', 'ผู้จัดการ', 'หัวหน้างาน', 'พนักงานขาย', 'พนักงานบัญชี', 'พนักงานทั่วไป', 'ผู้อำนวยการ'] },
+  { key: 'shift',    label: 'กะการทำงาน',    type: 'list', options: ['ทำงาน 08:30 – 17:30'] },
+];
+
+const POS_LEVEL: Record<string, string> = {
+  'CEO': 'ระดับบริหาร', 'ผู้อำนวยการ': 'ระดับบริหาร',
+  'ผู้จัดการ': 'ระดับผู้จัดการ',
+  'หัวหน้างาน': 'ระดับหัวหน้างาน',
+  'พนักงานขาย': 'ระดับพนักงาน', 'พนักงานบัญชี': 'ระดับพนักงาน', 'พนักงานทั่วไป': 'ระดับพนักงาน',
+};
 
 const EMP_STATUS_COLOR: Record<Employee['status'], string> = {
   ปกติ:         'green',
@@ -152,19 +244,32 @@ function formatEmploymentDuration(startDate: string, endDate: Date) {
   return `${years} ปี ${months} เดือน ${days} วัน`;
 }
 
-function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
+function EmployeeListPage({ onAdd, onSelectEmployee }: { onAdd: () => void; onSelectEmployee: (emp: Employee) => void }) {
   const [tab, setTab] = useState('all');
+  const [smartTab, setSmartTab] = useState('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<string[]>([]);
   const [today, setToday] = useState<Date | null>(null);
+  const [activeFilters, setActiveFilters] = useState<Partial<Record<FilterKey, string[]>>>({});
+  const [showFilter, setShowFilter] = useState(false);
+  const [activeDim, setActiveDim] = useState<FilterKey | null>(null);
   const [now, setNow] = useState(0);
   const [accountStates, setAccountStates] = useState<EmployeeAccountStateMap>(() => createInitialEmployeeAccountStates());
   const [linkCodeEmployeeId, setLinkCodeEmployeeId] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState('');
+  // Real backend (Slice 0). Falls back to the seed array if the API is unreachable.
+  const [employeeList, setEmployeeList] = useState<Employee[]>(employees);
 
   useEffect(() => {
     setToday(new Date());
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    publicApiFetch<Employee[]>('/api/humansource/employees')
+      .then((data) => { if (alive && Array.isArray(data) && data.length) setEmployeeList(data); })
+      .catch(() => { /* keep seed fallback */ });
+    return () => { alive = false; };
   }, []);
 
   useEffect(() => {
@@ -174,16 +279,59 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
     return () => window.clearInterval(timerId);
   }, []);
 
-  const filtered = employees.filter((e) => {
+  const matchPrimary = (e: Employee) => {
+    switch (tab) {
+      case 'pending':    return false;
+      case 'trial':      return e.status === 'ทดลองงาน';
+      case 'permanent':  return e.status === 'ปกติ' || e.status === 'ลาพักร้อน';
+      case 'terminated': return e.status === 'ลาออก' || e.status === 'สิ้นสุดสัญญา';
+      case 'invited':    return false;
+      default:           return true;
+    }
+  };
+
+  const matchSmartFn = (e: Employee) => {
+    switch (smartTab) {
+      // all-tab smart filters
+      case 'update':     return e.status !== 'ปกติ';
+      case 'incomplete': return e.startDate === '01/01/2025';
+      case 'month':      return e.startDate === '10/06/2025';
+      case 'recent':     return e.startDate === '04/05/2025';
+      // pending smart filters (no real data → show empty)
+      case 'scheduled':    return false;
+      case 'missing-data': return false;
+      case 'no-fill':      return false;
+      // trial smart filters (proxy by startDate)
+      case 'not-due':      return e.startDate === '04/05/2025';
+      case 'pending-eval': return e.startDate === '10/06/2025';
+      case 'evaluated':    return e.startDate === '01/01/2025';
+      case 'passed':       return false;
+      // permanent
+      case 'near-expiry':  return e.empType === 'รายวัน';
+      // invited
+      case 'pending-approval': return false;
+      default:             return true;
+    }
+  };
+
+  const matchFilterFn = (e: Employee) =>
+    Object.entries(activeFilters).every(([key, values]) => {
+      if (!values || values.length === 0) return true;
+      switch (key as FilterKey) {
+        case 'dept':     return values.includes(e.department) || values.includes(e.branch);
+        case 'emptype':  return values.includes(e.empType);
+        case 'location': return values.includes(e.branch);
+        case 'position': return values.includes(e.position);
+        case 'shift':    return values.some((v) => e.schedule.includes(v.replace('ทำงาน ', '')));
+        case 'level':    return values.includes(POS_LEVEL[e.position] ?? '');
+        default:         return true;
+      }
+    });
+
+  const filtered = employeeList.filter((e) => {
     const q = search.toLowerCase();
     const matchSearch = !q || e.name.toLowerCase().includes(q) || e.code.includes(q) || e.department.toLowerCase().includes(q);
-    const matchTab =
-      tab === 'all'      ? true :
-      tab === 'active'   ? e.status === 'ปกติ' :
-      tab === 'trial'    ? e.status === 'ทดลองงาน' :
-      tab === 'leave'    ? e.status === 'ลาออก' :
-      tab === 'contract' ? e.status === 'สิ้นสุดสัญญา' : true;
-    return matchSearch && matchTab;
+    return matchSearch && matchPrimary(e) && matchSmartFn(e) && matchFilterFn(e);
   });
 
   const PER_PAGE = 10;
@@ -191,16 +339,49 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
   const rows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   const countFor = (key: string) => {
-    if (key === 'all') return employees.length;
-    if (key === 'active') return employees.filter((e) => e.status === 'ปกติ').length;
-    if (key === 'trial') return employees.filter((e) => e.status === 'ทดลองงาน').length;
-    if (key === 'leave') return employees.filter((e) => e.status === 'ลาออก').length;
-    if (key === 'contract') return employees.filter((e) => e.status === 'สิ้นสุดสัญญา').length;
+    if (key === 'all')        return employeeList.length;
+    if (key === 'trial')      return employeeList.filter((e) => e.status === 'ทดลองงาน').length;
+    if (key === 'permanent')  return employeeList.filter((e) => e.status === 'ปกติ' || e.status === 'ลาพักร้อน').length;
+    if (key === 'terminated') return employeeList.filter((e) => e.status === 'ลาออก' || e.status === 'สิ้นสุดสัญญา').length;
     return 0;
   };
 
-  const toggle = (id: string) => setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
-  const toggleAll = () => setSelected(selected.length === rows.length ? [] : rows.map((e) => e.id));
+  const smartCountFor = (key: string) => {
+    const base = employeeList.filter(matchPrimary);
+    switch (key) {
+      case 'all':              return base.length;
+      // all-tab
+      case 'update':           return base.filter((e) => e.status !== 'ปกติ').length;
+      case 'incomplete':       return base.filter((e) => e.startDate === '01/01/2025').length;
+      case 'month':            return base.filter((e) => e.startDate === '10/06/2025').length;
+      case 'recent':           return base.filter((e) => e.startDate === '04/05/2025').length;
+      // trial
+      case 'not-due':          return base.filter((e) => e.startDate === '04/05/2025').length;
+      case 'pending-eval':     return base.filter((e) => e.startDate === '10/06/2025').length;
+      case 'evaluated':        return base.filter((e) => e.startDate === '01/01/2025').length;
+      // permanent
+      case 'near-expiry':      return base.filter((e) => e.empType === 'รายวัน').length;
+      // stubs
+      default:                 return 0;
+    }
+  };
+
+  const totalActiveFilters = Object.values(activeFilters).filter((v) => v && v.length > 0).length;
+
+  const toggleFilter = (key: FilterKey, value: string) => {
+    setActiveFilters((prev) => {
+      const current = prev[key] ?? [];
+      const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [key]: next };
+    });
+    setPage(1);
+  };
+
+  const clearDim = (key: FilterKey) => {
+    setActiveFilters((prev) => { const next = { ...prev }; delete next[key]; return next; });
+    setPage(1);
+  };
+
   const activeLinkEmployee = linkCodeEmployeeId ? employees.find((employee) => employee.id === linkCodeEmployeeId) : undefined;
   const activeLinkState = activeLinkEmployee ? accountStates[activeLinkEmployee.id] : undefined;
 
@@ -256,84 +437,118 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="flex min-h-full flex-col bg-white">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pb-0 pt-5">
-        <div>
-          <h1 className="text-lg font-bold text-gray-800">บริหารข้อมูลพนักงาน</h1>
-          <p className="mt-0.5 text-xs text-gray-400">จัดการประวัติ สถานะ และข้อมูลการจ้างงานของพนักงาน</p>
-        </div>
-        <button
-          type="button"
-          onClick={onAdd}
-          className="flex h-9 items-center gap-2 rounded-lg bg-gray-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-gray-800"
-        >
-          <PlusIcon className="h-4 w-4" />
-          เพิ่มพนักงาน
-        </button>
+      <div className="px-6 pb-0 pt-3">
+        <h1 className="text-sm font-semibold text-gray-800">บริหารข้อมูลพนักงาน</h1>
+        <p className="mt-0.5 text-xs text-gray-400">จัดการประวัติ สถานะ และข้อมูลการจ้างงานของพนักงาน</p>
       </div>
 
-      {/* Tabs */}
-      <div className="mt-3 flex items-center gap-0 border-b border-gray-200 px-6">
-        {STATUS_TABS.map((t) => (
+      {/* Primary tabs */}
+      <div className="hr-emp-primary-tabs">
+        {PRIMARY_TABS.map((t) => (
           <button
             key={t.key}
-            onClick={() => { setTab(t.key); setPage(1); }}
-            className={`flex items-center gap-1.5 border-b-2 -mb-px px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
-              tab === t.key ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
+            onClick={() => {
+              const firstSmart = SMART_TABS_MAP[t.key]?.[0]?.key ?? 'all';
+              setTab(t.key);
+              setSmartTab(firstSmart);
+              setPage(1);
+            }}
+            className={`hr-emp-primary-tab${tab === t.key ? ' hr-emp-primary-tab--active' : ''}`}
           >
             {t.label}
             {countFor(t.key) > 0 && (
-              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tab === t.key ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>
-                {countFor(t.key)}
-              </span>
+              <span className="hr-emp-tab-badge">{countFor(t.key)}</span>
             )}
           </button>
         ))}
       </div>
 
+      {/* Smart / sub-filter tabs */}
+      <div className="hr-emp-smart-tabs">
+        {(SMART_TABS_MAP[tab] ?? SMART_TABS_MAP['all']).map((t) => {
+          const cnt = smartCountFor(t.key);
+          return (
+            <button
+              key={t.key}
+              onClick={() => { setSmartTab(t.key); setPage(1); }}
+              className={`hr-emp-smart-tab${smartTab === t.key ? ' hr-emp-smart-tab--active' : ''}`}
+            >
+              {t.label}
+              {cnt > 0 && <span className="hr-emp-tab-badge">{cnt}</span>}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-gray-100 px-6 py-3">
-        <div className="relative">
-          <svg className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-2">
+        <div className="hr-emp-search">
+          <svg className="hr-emp-search__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="ค้นหาพนักงาน..."
-            className="w-52 rounded-lg border border-gray-200 bg-gray-50 py-1.5 pl-8 pr-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="hr-emp-search__input"
           />
         </div>
-        <span className="text-sm font-light text-gray-400">{filtered.length} รายการ</span>
         <div className="ml-auto flex items-center gap-2">
-          {selected.length > 0 && (
-            <button className="flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50">
-              <TrashIcon className="h-3.5 w-3.5" />ลบ ({selected.length})
+          {/* Filter button + panel */}
+          <div className="relative" style={showFilter ? { zIndex: 201 } : undefined}>
+            <button
+              type="button"
+              onClick={() => setShowFilter((f) => !f)}
+              className={`hr-emp-filter-btn${showFilter ? ' hr-emp-filter-btn--open' : ''}${totalActiveFilters > 0 ? ' hr-emp-filter-btn--has' : ''}`}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M7 8h10M10 12h4" /></svg>
+              ตัวกรอง
+              {totalActiveFilters > 0 && <span className="hr-emp-filter-count">{totalActiveFilters}</span>}
+            </button>
+            {showFilter && (
+              <>
+                <div
+                  className="fixed inset-0"
+                  style={{ zIndex: 200 }}
+                  onClick={() => { setShowFilter(false); setActiveDim(null); }}
+                />
+                <FilterPanel
+                  activeFilters={activeFilters}
+                  activeDim={activeDim}
+                  onSetDim={setActiveDim}
+                  onToggle={toggleFilter}
+                  onClearDim={clearDim}
+                />
+              </>
+            )}
+          </div>
+          {totalActiveFilters > 0 && (
+            <button
+              type="button"
+              onClick={() => { setActiveFilters({}); setPage(1); }}
+              className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-gray-500 hover:bg-gray-50"
+            >
+              <XIcon className="h-3 w-3" />ล้างตัวกรอง
             </button>
           )}
-          <button className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
-            <DownloadIcon className="h-3.5 w-3.5" />ดูข้อมูล
+          <button type="button" onClick={onAdd} className="hr-button hr-button--primary hr-button--sm">
+            <PlusIcon className="h-4 w-4" />
+            เพิ่มพนักงาน
           </button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-x-auto">
+      <div className="flex-1">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50/60">
-              <th className="w-10 px-4 py-3">
-                <input type="checkbox" checked={selected.length === rows.length && rows.length > 0} onChange={toggleAll} className="rounded border-gray-300 accent-primary" />
-              </th>
-              {['ชื่อ', 'รหัส', 'ตำแหน่ง', 'สังกัด', 'กะการทำงาน', 'วันที่เริ่มงาน', 'ประเภท', 'การเชื่อม', 'สถานะ', ''].map((col) => (
+              {['ชื่อ', 'รหัส', 'ตำแหน่ง', 'สังกัด', 'กะการทำงาน', 'วันที่เริ่มงาน', 'ประเภท', 'การเชื่อมต่อ', 'สถานะ'].map((col) => (
                 <th key={col} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">{col}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {rows.map((emp) => (
-              <tr key={emp.id} onClick={() => toggle(emp.id)} className={`cursor-pointer border-b border-gray-100 transition-colors ${selected.includes(emp.id) ? 'bg-indigo-50/40' : 'hover:bg-gray-50/50'}`}>
-                <td className="px-4 py-3">
-                  <input type="checkbox" checked={selected.includes(emp.id)} onChange={() => toggle(emp.id)} onClick={(e) => e.stopPropagation()} className="rounded border-gray-300 accent-primary" />
-                </td>
+              <tr key={emp.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50/50 cursor-pointer" onClick={() => onSelectEmployee(emp)}>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-600">
@@ -373,11 +588,6 @@ function EmployeeListPage({ onAdd }: { onAdd: () => void }) {
                 </td>
                 <td className="px-4 py-3">
                   <HrBadge tone={EMP_STATUS_COLOR[emp.status] as any}>{emp.status}</HrBadge>
-                </td>
-                <td className="px-4 py-3">
-                  <button className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700" onClick={(e) => e.stopPropagation()}>
-                    <EditIcon className="h-4 w-4" />
-                  </button>
                 </td>
               </tr>
             ))}
@@ -651,7 +861,7 @@ function EmployeeLinkCodeDrawer({
                 <div className="hr-link-code-section__head">
                   <span className="hr-link-code-section__title">รหัสเชื่อมต่อ</span>
                   {hasActiveCode && (
-                    <span className="hr-account-status hr-account-status--amber">
+                    <span className="hr-account-status hr-account-status--orange">
                       <span className="hr-account-status__dot" />
                       หมดอายุใน {formatRemainingTime(remainingMs)}
                     </span>
@@ -702,8 +912,8 @@ function EmployeeLinkCodeDrawer({
         {/* ── Footer ── */}
         <footer className="hr-account-drawer__foot">
           {!state.hasHrProfileLink && hasActiveCode ? (
-            <button type="button" className="hr-button hr-button--danger hr-account-drawer__danger" onClick={() => onCancel(employee.id)}>
-              <TrashIcon className="h-4 w-4" />
+            <button type="button" className="hr-account-drawer__cancel-btn" onClick={() => onCancel(employee.id)}>
+              <TrashIcon className="h-3.5 w-3.5" />
               ยกเลิกรหัส
             </button>
           ) : <span />}
@@ -719,6 +929,160 @@ function EmployeeLinkCodeDrawer({
         </footer>
       </aside>
     </>
+  );
+}
+
+// ─── Multi-level Filter Panel ────────────────────────────────────────────────
+
+function FilterPanel({
+  activeFilters,
+  activeDim,
+  onSetDim,
+  onToggle,
+  onClearDim,
+}: {
+  activeFilters: Partial<Record<FilterKey, string[]>>;
+  activeDim: FilterKey | null;
+  onSetDim: (key: FilterKey) => void;
+  onToggle: (key: FilterKey, value: string) => void;
+  onClearDim: (key: FilterKey) => void;
+}) {
+  const [dimSearch, setDimSearch] = useState('');
+  const [rangeMin, setRangeMin] = useState('');
+  const [rangeMax, setRangeMax] = useState('');
+  const [rangeUnit, setRangeUnit] = useState(0);
+
+  const currentDim = FILTER_DIMS.find((d) => d.key === activeDim);
+
+  const handleSetDim = (key: FilterKey) => {
+    onSetDim(key);
+    setDimSearch('');
+    setRangeMin('');
+    setRangeMax('');
+    setRangeUnit(0);
+  };
+
+  return (
+    <div className="hr-emp-filter-panel">
+      {/* Left: value picker */}
+      <div className="hr-emp-filter-panel__left">
+        {!activeDim && (
+          <div className="hr-emp-filter-hint">เลือกหมวดหมู่จากด้านขวา</div>
+        )}
+
+        {activeDim && currentDim?.type === 'range' && (
+          <>
+            {/* Range row */}
+            <div className="hr-emp-filter-range">
+              <svg className="hr-emp-filter-range__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4 4 4M17 8v12m0 0 4-4m-4 4-4-4"/></svg>
+              <input
+                className="hr-emp-filter-range__input"
+                type="number"
+                placeholder="0"
+                value={rangeMin}
+                onChange={(e) => setRangeMin(e.target.value)}
+                min={0}
+              />
+              <span className="hr-emp-filter-range__sep">-</span>
+              <input
+                className="hr-emp-filter-range__input"
+                type="number"
+                placeholder="99"
+                value={rangeMax}
+                onChange={(e) => setRangeMax(e.target.value)}
+                min={0}
+              />
+              {/* Unit toggle */}
+              <div className="hr-emp-filter-range__units">
+                {currentDim.units.map((u, i) => (
+                  <button
+                    key={u}
+                    type="button"
+                    className={`hr-emp-filter-range__unit${rangeUnit === i ? ' hr-emp-filter-range__unit--active' : ''}`}
+                    onClick={() => setRangeUnit(i)}
+                  >{u}</button>
+                ))}
+              </div>
+            </div>
+            {/* Presets */}
+            <div className="hr-emp-filter-options">
+              {currentDim.presets.map((p) => {
+                const checked = activeFilters[activeDim]?.includes(p) ?? false;
+                return (
+                  <label key={p} className={`hr-emp-filter-option${checked ? ' hr-emp-filter-option--checked' : ''}`}>
+                    <input type="checkbox" checked={checked} onChange={() => onToggle(activeDim, p)} className="hr-emp-filter-option__check" />
+                    {p}
+                  </label>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {activeDim && currentDim?.type === 'list' && (
+          <>
+            <div className="hr-emp-filter-search">
+              <svg className="hr-emp-filter-search__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input
+                className="hr-emp-filter-search__input"
+                placeholder="ค้นหา"
+                value={dimSearch}
+                onChange={(e) => setDimSearch(e.target.value)}
+              />
+            </div>
+            <div className="hr-emp-filter-options">
+              {(() => {
+                const opts = currentDim.options.filter(
+                  (o) => !dimSearch || o.toLowerCase().includes(dimSearch.toLowerCase()),
+                );
+                if (opts.length === 0) return <p className="hr-emp-filter-empty">ไม่มีข้อมูล</p>;
+                return opts.map((opt) => {
+                  const checked = activeFilters[activeDim]?.includes(opt) ?? false;
+                  return (
+                    <label key={opt} className={`hr-emp-filter-option${checked ? ' hr-emp-filter-option--checked' : ''}`}>
+                      <input type="checkbox" checked={checked} onChange={() => onToggle(activeDim, opt)} className="hr-emp-filter-option__check" />
+                      {opt}
+                    </label>
+                  );
+                });
+              })()}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Right: dimension list */}
+      <div className="hr-emp-filter-panel__right">
+        {FILTER_DIMS.map((dim) => {
+          const count = activeFilters[dim.key]?.length ?? 0;
+          return (
+            <button
+              key={dim.key}
+              type="button"
+              onClick={() => handleSetDim(dim.key)}
+              className={`hr-emp-filter-dim${activeDim === dim.key ? ' hr-emp-filter-dim--active' : ''}`}
+            >
+              <span className="hr-emp-filter-dim__label">{dim.label}</span>
+              {count > 0 && (
+                <span className="hr-emp-filter-dim__end">
+                  <span className="hr-emp-filter-dim__count">{count}</span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="hr-emp-filter-dim__clear"
+                    aria-label={`ล้างตัวกรอง ${dim.label}`}
+                    onClick={(e) => { e.stopPropagation(); onClearDim(dim.key); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onClearDim(dim.key); } }}
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </span>
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -1645,7 +2009,7 @@ function DocumentUploadRow({
     <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 py-4 last:border-b-0">
       <div className="flex min-w-0 items-center gap-3">
         <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
-          selected ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
+          selected ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-600'
         }`}>
           {selected ? <CheckIcon className="h-4 w-4" /> : 'DOC'}
         </span>
@@ -1894,6 +2258,1591 @@ function StepSocialSecurity({ draft, onClose }: { draft: EmployeeDraft; onClose:
             เปิดโปรไฟล์พนักงาน
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Employee Profile Overlay ─────────────────────────────────────── */
+
+const PROFILE_TABS = [
+  { key: 'overview', label: 'ภาพรวม', children: [] as { key: string; label: string; sectionKey?: string }[] },
+  { key: 'employment', label: 'การจ้างงาน', children: [
+    { key: 'emp-info', label: 'ข้อมูลการจ้างงาน', sectionKey: 'employment' },
+    { key: 'emp-shift', label: 'กะการทำงาน' },
+    { key: 'emp-org', label: 'โครงสร้างองค์กร' },
+    { key: 'emp-action', label: 'การดำเนินการ' },
+  ]},
+  { key: 'workin', label: 'เวิร์กอิน', children: [
+    { key: 'wi-time', label: 'เวลาทาบบัตร' },
+    { key: 'wi-calendar', label: 'ปฎิทินการเข้างาน' },
+    { key: 'wi-checkin', label: 'เวิร์กอิน' },
+    { key: 'wi-location', label: 'สถานที่เวิร์กอิน' },
+    { key: 'wi-leave', label: 'สิทธิ์การลา' },
+  ]},
+  { key: 'docs', label: 'เอกสาร', children: [
+    { key: 'doc-docs', label: 'เอกสาร', sectionKey: 'docs' },
+    { key: 'doc-letter', label: 'หนังสือเตือน' },
+  ]},
+  { key: 'payroll', label: 'ข้อมูลเงินเดือน', children: [
+    { key: 'pay-salary', label: 'เงินเดือน', sectionKey: 'salary' },
+    { key: 'pay-annual', label: 'เงินสะสมประจำปี' },
+    { key: 'pay-docs', label: 'เอกสารเงินเดือน' },
+    { key: 'pay-sso', label: 'ประกันสังคม', sectionKey: 'insurance' },
+    { key: 'pay-deduct', label: 'ลดหย่อน' },
+  ]},
+  { key: 'benefits', label: 'สวัสดิการ', children: [
+    { key: 'ben-debt', label: 'ภาระหนี้สิน' },
+    { key: 'ben-welfare', label: 'สวัสดิการ' },
+  ]},
+  { key: 'tasks', label: 'งาน', children: [] as { key: string; label: string; sectionKey?: string }[] },
+];
+
+const SIDE_SECTIONS = [
+  { key: 'overview', label: 'ภาพรวม' },
+  { key: 'personal', label: 'ข้อมูลส่วนตัว' },
+  { key: 'account', label: 'ข้อมูลบัญชี' },
+  { key: 'contact', label: 'ข้อมูลติดต่อ' },
+  { key: 'family', label: 'ครอบครัว' },
+  { key: 'workexp', label: 'ประสบการณ์ทำงาน' },
+  { key: 'education', label: 'การศึกษา' },
+  { key: 'background', label: 'ตรวจสอบประวัติ' },
+  { key: 'employment', label: 'การจ้างงาน' },
+  { key: 'salary', label: 'ข้อมูลเงินเดือน' },
+  { key: 'insurance', label: 'ประกันสังคม' },
+  { key: 'docs', label: 'เอกสาร' },
+];
+
+const LEAVE_STUBS = [
+  { type: 'ลาพักร้อน', used: 3, quota: 10 },
+  { type: 'ลาป่วย', used: 1, quota: 30 },
+  { type: 'ลากิจ', used: 2, quota: 6 },
+  { type: 'ลาคลอด', used: 0, quota: 98 },
+  { type: 'ลาอุปสมบท', used: 0, quota: 15 },
+];
+
+function IconId(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <path d="M8 15s.5-3 4-3 4 3 4 3" />
+      <circle cx="12" cy="9" r="2" />
+    </svg>
+  );
+}
+function IconBuilding(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14" />
+      <path d="M9 21V12h6v9" />
+      <path d="M9 7h.01M15 7h.01M9 11h.01M15 11h.01" />
+    </svg>
+  );
+}
+function IconCalendarCheck(p: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+      <path d="M9 16l2 2 4-4" />
+    </svg>
+  );
+}
+
+function ProfileSectionCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="hr-profile-section">
+      <div className="hr-profile-section__header">
+        <span className="hr-profile-section__title">{title}</span>
+      </div>
+      <div className="hr-profile-section__body">{children}</div>
+    </div>
+  );
+}
+
+function Field({ label, value, mono, muted, placeholder }: { label: string; value?: string; mono?: boolean; muted?: boolean; placeholder?: boolean }) {
+  return (
+    <div className="hr-profile-field">
+      <span className="hr-profile-field__label">{label}</span>
+      <span className={`hr-profile-field__value${mono ? ' hr-profile-field__value--mono' : muted ? ' hr-profile-field__value--muted' : placeholder ? ' hr-profile-field__value--placeholder' : ''}`}>
+        {value ?? '—'}
+      </span>
+    </div>
+  );
+}
+
+function SectionEmpty() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 0', gap: '0' }}>
+      <img src="/hr-empty-state.svg" alt="ไม่มีข้อมูล" style={{ width: '13rem', height: 'auto', display: 'block' }} />
+      <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: 0, marginTop: '0.75rem', textAlign: 'center', fontWeight: 300 }}>ไม่มีข้อมูล</p>
+    </div>
+  );
+}
+
+// ─── Work Experience Section ─────────────────────────────────────────────────
+
+type WorkExpItem = {
+  id: string; company: string; position: string; salary: string;
+  fromMonth: string; fromYear: string; toMonth: string; toYear: string;
+  responsibilities: string;
+};
+
+const WE_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'].map((m, i) => ({ value: String(i + 1).padStart(2, '0'), label: m }));
+const WE_YEARS = Array.from({ length: 35 }, (_, i) => { const y = 2025 - i; return { value: String(y), label: String(y) }; });
+const EDU_LEVEL_OPTS = ['ต่ำกว่าปริญญาตรี','ปริญญาตรี','ปริญญาโท','ปริญญาเอก','ประกาศนียบัตร','อื่นๆ'].map((v) => ({ value: v, label: v }));
+
+function WorkExpSection() {
+  const [items, setItems] = useState<WorkExpItem[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [company, setCompany] = useState('');
+  const [position, setPosition] = useState('');
+  const [salary, setSalary] = useState('');
+  const [fromMonth, setFromMonth] = useState('');
+  const [fromYear, setFromYear] = useState('');
+  const [toMonth, setToMonth] = useState('');
+  const [toYear, setToYear] = useState('');
+  const [responsibilities, setResponsibilities] = useState('');
+
+  const resetForm = () => { setCompany(''); setPosition(''); setSalary(''); setFromMonth(''); setFromYear(''); setToMonth(''); setToYear(''); setResponsibilities(''); };
+  const handleSave = () => {
+    if (!company.trim()) return;
+    const id = String(Date.now());
+    setItems((prev) => [...prev, { id, company, position, salary, fromMonth, fromYear, toMonth, toYear, responsibilities }]);
+    setAdding(false); resetForm();
+  };
+
+  return (
+    <div className="hr-profile-flat-section">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+        <p className="hr-profile-flat-section__title" style={{ margin: 0 }}>ประสบการณ์ทำงาน</p>
+        {!adding && <button type="button" className="hr-button hr-button--primary" style={{ fontSize: '0.875rem', padding: '0.375rem 0.875rem' }} onClick={() => { setAdding(true); resetForm(); }}>+ เพิ่มรายการ</button>}
+      </div>
+
+      {!adding && items.length === 0 && <SectionEmpty />}
+
+      {!adding && items.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {items.map((item) => (
+            <div key={item.id} style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1rem 1.125rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <p style={{ fontWeight: 500, color: '#111827', fontSize: '0.9375rem', marginBottom: '0.2rem' }}>{item.position || '—'}</p>
+                <p style={{ color: '#4f46e5', fontSize: '0.875rem', marginBottom: '0.2rem' }}>{item.company}</p>
+                <p style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>
+                  {item.fromYear ? `${item.fromMonth ? WE_MONTHS.find(m => m.value === item.fromMonth)?.label + ' ' : ''}${item.fromYear}` : ''}
+                  {(item.fromYear || item.toYear) ? ' – ' : ''}
+                  {item.toYear ? `${item.toMonth ? WE_MONTHS.find(m => m.value === item.toMonth)?.label + ' ' : ''}${item.toYear}` : 'ปัจจุบัน'}
+                </p>
+              </div>
+              <button type="button" onClick={() => setItems((prev) => prev.filter((x) => x.id !== item.id))} style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', lineHeight: 1, padding: '0.125rem 0.25rem' }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {adding && (
+        <div className="hr-pif-body">
+          <div className="hr-field">
+            <label className="hr-field__label">ชื่อบริษัท<span className="hr-field__req">*</span></label>
+            <input className="hr-field__ctrl" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="กรอกชื่อบริษัท" />
+          </div>
+          <div className="hr-pif-grid">
+            <div className="hr-field">
+              <label className="hr-field__label">ตำแหน่งสุดท้าย<span className="hr-field__req">*</span></label>
+              <input className="hr-field__ctrl" value={position} onChange={(e) => setPosition(e.target.value)} placeholder="กรอกตำแหน่งสุดท้าย" />
+            </div>
+            <div className="hr-field">
+              <label className="hr-field__label">เงินเดือนล่าสุด</label>
+              <input className="hr-field__ctrl" value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="กรอกเงินเดือนล่าสุด" style={{ textAlign: 'right' }} />
+            </div>
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ระยะเวลาทำงาน<span className="hr-field__req">*</span></label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 7rem' }}><HrCustomSelect value={fromMonth} onChange={setFromMonth} options={WE_MONTHS} /></div>
+              <div style={{ flex: '1 1 5.5rem' }}><HrCustomSelect value={fromYear} onChange={setFromYear} options={WE_YEARS} /></div>
+              <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>ถึง</span>
+              <div style={{ flex: '1 1 7rem' }}><HrCustomSelect value={toMonth} onChange={setToMonth} options={WE_MONTHS} /></div>
+              <div style={{ flex: '1 1 5.5rem' }}><HrCustomSelect value={toYear} onChange={setToYear} options={WE_YEARS} /></div>
+            </div>
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">หน้าที่ความรับผิดชอบ</label>
+            <textarea className="hr-field__ctrl" value={responsibilities} onChange={(e) => setResponsibilities(e.target.value)} placeholder="ระบุความรับผิดชอบและหน้าที่ที่ได้รับมอบหมาย" rows={4} style={{ height: 'auto', resize: 'vertical' }} />
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <button type="button" className="hr-button hr-button--ghost" style={{ border: '1px solid #374151', color: '#374151' }} onClick={() => { setAdding(false); resetForm(); }}>ยกเลิก</button>
+            <button type="button" className="hr-button hr-button--primary" onClick={handleSave}>เพิ่ม</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Education Section ────────────────────────────────────────────────────────
+
+type EduItem = {
+  id: string; institution: string; level: string; country: 'domestic' | 'abroad';
+  faculty: string; major: string; fromYear: string; toYear: string; gpa: string;
+};
+
+function EduSection() {
+  const [items, setItems] = useState<EduItem[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [institution, setInstitution] = useState('');
+  const [level, setLevel] = useState('');
+  const [country, setCountry] = useState<'domestic' | 'abroad'>('domestic');
+  const [faculty, setFaculty] = useState('');
+  const [major, setMajor] = useState('');
+  const [fromYear, setFromYear] = useState('');
+  const [toYear, setToYear] = useState('');
+  const [gpa, setGpa] = useState('');
+
+  const resetForm = () => { setInstitution(''); setLevel(''); setCountry('domestic'); setFaculty(''); setMajor(''); setFromYear(''); setToYear(''); setGpa(''); };
+  const handleSave = () => {
+    if (!institution.trim()) return;
+    const id = String(Date.now());
+    setItems((prev) => [...prev, { id, institution, level, country, faculty, major, fromYear, toYear, gpa }]);
+    setAdding(false); resetForm();
+  };
+
+  return (
+    <div className="hr-profile-flat-section">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+        <p className="hr-profile-flat-section__title" style={{ margin: 0 }}>ข้อมูลประวัติการศึกษา</p>
+        {!adding && <button type="button" className="hr-button hr-button--primary" style={{ fontSize: '0.875rem', padding: '0.375rem 0.875rem' }} onClick={() => { setAdding(true); resetForm(); }}>+ เพิ่มรายการ</button>}
+      </div>
+
+      {!adding && items.length === 0 && <SectionEmpty />}
+
+      {!adding && items.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {items.map((item) => (
+            <div key={item.id} style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1rem 1.125rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <p style={{ fontWeight: 500, color: '#111827', fontSize: '0.9375rem', marginBottom: '0.2rem' }}>{item.institution}</p>
+                <p style={{ color: '#4f46e5', fontSize: '0.875rem', marginBottom: '0.2rem' }}>{[item.level, item.faculty, item.major].filter(Boolean).join(' · ')}</p>
+                <p style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>
+                  {item.fromYear || ''}
+                  {(item.fromYear || item.toYear) ? ' – ' : ''}
+                  {item.toYear || ''}
+                  {item.gpa ? ` · GPA ${item.gpa}` : ''}
+                </p>
+              </div>
+              <button type="button" onClick={() => setItems((prev) => prev.filter((x) => x.id !== item.id))} style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', lineHeight: 1, padding: '0.125rem 0.25rem' }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {adding && (
+        <div className="hr-pif-body">
+          <div className="hr-field">
+            <label className="hr-field__label">สถานศึกษา<span className="hr-field__req">*</span></label>
+            <input className="hr-field__ctrl" value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="กรอกสถานศึกษา" />
+          </div>
+          <div className="hr-pif-grid">
+            <div className="hr-field">
+              <label className="hr-field__label">ระดับการศึกษา<span className="hr-field__req">*</span></label>
+              <HrCustomSelect value={level} onChange={setLevel} options={EDU_LEVEL_OPTS} />
+            </div>
+            <div className="hr-field">
+              <label className="hr-field__label">จบการศึกษาจาก<span className="hr-field__req">*</span></label>
+              <div className="hr-pif-type-group">
+                <button type="button" className={`hr-pif-type-btn${country === 'domestic' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setCountry('domestic')}>ในประเทศ</button>
+                <button type="button" className={`hr-pif-type-btn${country === 'abroad' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setCountry('abroad')}>ต่างประเทศ</button>
+              </div>
+            </div>
+            <div className="hr-field">
+              <label className="hr-field__label">คณะ</label>
+              <input className="hr-field__ctrl" value={faculty} onChange={(e) => setFaculty(e.target.value)} placeholder="กรอกคณะ" />
+            </div>
+            <div className="hr-field">
+              <label className="hr-field__label">วิชาเอก</label>
+              <input className="hr-field__ctrl" value={major} onChange={(e) => setMajor(e.target.value)} placeholder="กรอกวิชาเอก" />
+            </div>
+          </div>
+          <div className="hr-pif-grid">
+            <div className="hr-field">
+              <label className="hr-field__label">ปีการศึกษา<span className="hr-field__req">*</span></label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <input className="hr-field__ctrl" value={fromYear} onChange={(e) => setFromYear(e.target.value)} placeholder="กรอกปีที่เริ่มต้น" />
+                <span style={{ color: '#6b7280', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>ถึง</span>
+                <input className="hr-field__ctrl" value={toYear} onChange={(e) => setToYear(e.target.value)} placeholder="กรอกปีที่สิ้นสุด" />
+              </div>
+            </div>
+            <div className="hr-field">
+              <label className="hr-field__label">เกรดเฉลี่ย</label>
+              <input className="hr-field__ctrl" value={gpa} onChange={(e) => setGpa(e.target.value)} placeholder="กรอกเกรดเฉลี่ย" style={{ textAlign: 'right' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <button type="button" className="hr-button hr-button--ghost" style={{ border: '1px solid #374151', color: '#374151' }} onClick={() => { setAdding(false); resetForm(); }}>ยกเลิก</button>
+            <button type="button" className="hr-button hr-button--primary" onClick={handleSave}>เพิ่ม</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Family Section ───────────────────────────────────────────────────────────
+
+type FamilyItem = {
+  id: string; name: string; relation: string; birthDate: string; occupation: string; workPhone: string;
+};
+
+const FAM_RELATION_OPTS = ['คู่สมรส', 'บิดา', 'มารดา', 'บุตร', 'บุตรี', 'พี่', 'น้อง', 'อื่นๆ'].map((v) => ({ value: v, label: v }));
+const FAM_OCCUPATION_OPTS = ['พนักงานเอกชน', 'ข้าราชการ', 'นักเรียน/นักศึกษา', 'ค้าขาย', 'เกษตรกร', 'ประกอบธุรกิจส่วนตัว', 'อื่นๆ'].map((v) => ({ value: v, label: v }));
+
+function FamilySection() {
+  const [items, setItems] = useState<FamilyItem[]>([]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [relation, setRelation] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [occupation, setOccupation] = useState('');
+  const [workPhone, setWorkPhone] = useState('');
+
+  const resetForm = () => { setName(''); setRelation(''); setBirthDate(''); setOccupation(''); setWorkPhone(''); };
+  const handleOpen = () => { resetForm(); setDrawerOpen(true); };
+  const handleClose = () => { setDrawerOpen(false); resetForm(); };
+  const handleSave = () => {
+    if (!name.trim()) return;
+    const id = String(Date.now());
+    setItems((prev) => [...prev, { id, name, relation, birthDate, occupation, workPhone }]);
+    handleClose();
+  };
+
+  return (
+    <div className="hr-profile-flat-section">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+        <p className="hr-profile-flat-section__title" style={{ margin: 0 }}>ครอบครัว</p>
+        <button type="button" className="hr-button hr-button--primary" style={{ fontSize: '0.875rem', padding: '0.375rem 0.875rem' }} onClick={handleOpen}>+ เพิ่มรายการ</button>
+      </div>
+
+      {items.length === 0 && <SectionEmpty />}
+
+      {items.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {items.map((item) => (
+            <div key={item.id} style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', padding: '1rem 1.125rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <p style={{ fontWeight: 500, color: '#111827', fontSize: '0.9375rem', marginBottom: '0.2rem' }}>{item.name}</p>
+                <p style={{ color: '#4f46e5', fontSize: '0.875rem', marginBottom: '0.2rem' }}>{item.relation}</p>
+                {item.occupation && <p style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>{item.occupation}</p>}
+              </div>
+              <button type="button" onClick={() => setItems((prev) => prev.filter((x) => x.id !== item.id))} style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem', lineHeight: 1, padding: '0.125rem 0.25rem' }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Scrim */}
+      <div className="hr-scrim" data-open={drawerOpen ? 'true' : 'false'} onClick={handleClose} />
+
+      {/* Drawer */}
+      <div className="hr-drawer" data-open={drawerOpen ? 'true' : 'false'} role="dialog" aria-modal="true">
+        <div className="hr-drawer__head">
+          <div>
+            <p className="hr-drawer__title">เพิ่มสมาชิกครอบครัว</p>
+          </div>
+          <button type="button" className="hr-drawer__close" onClick={handleClose} aria-label="ปิด">
+            <svg style={{ width: '1rem', height: '1rem' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="hr-drawer__body">
+          <div className="hr-field">
+            <label className="hr-field__label">ชื่อ - นามสกุล<span className="hr-field__req">*</span></label>
+            <input className="hr-field__ctrl" value={name} onChange={(e) => setName(e.target.value)} placeholder="กรอกชื่อ - นามสกุล" />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ความสัมพันธ์<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={relation} onChange={setRelation} options={FAM_RELATION_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">วันเกิด</label>
+            <HrDatePicker value={birthDate} onChange={setBirthDate} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">อาชีพ</label>
+            <HrCustomSelect value={occupation} onChange={setOccupation} options={FAM_OCCUPATION_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">เบอร์ที่ทำงาน</label>
+            <input className="hr-field__ctrl" value={workPhone} onChange={(e) => setWorkPhone(e.target.value)} placeholder="กรอกเบอร์ที่ทำงาน" />
+          </div>
+        </div>
+        <div className="hr-drawer__foot">
+          <button type="button" className="hr-button hr-button--ghost" style={{ border: '1px solid #d1d5db', color: '#374151' }} onClick={handleClose}>ยกเลิก</button>
+          <button type="button" className="hr-button hr-button--primary" onClick={handleSave}>เพิ่ม</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TITLE_OPTIONS = [
+  { value: 'นาย', label: 'นาย' },
+  { value: 'นาง', label: 'นาง' },
+  { value: 'นางสาว', label: 'นางสาว' },
+  { value: 'ดร.', label: 'ดร.' },
+  { value: 'อื่นๆ', label: 'อื่นๆ' },
+];
+
+// ─── Confirm Dialog ───────────────────────────────────────────────────────────
+
+function ConfirmMascot() {
+  return (
+    <svg viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="24" cy="34" rx="10" ry="11" fill="#fed7aa" />
+      <ellipse cx="24" cy="34" rx="6.5" ry="7.5" fill="#fdba74" />
+      <ellipse cx="64" cy="34" rx="10" ry="11" fill="#fed7aa" />
+      <ellipse cx="64" cy="34" rx="6.5" ry="7.5" fill="#fdba74" />
+      <ellipse cx="44" cy="46" rx="28" ry="26" fill="#fff7ed" />
+      <ellipse cx="44" cy="43" rx="25" ry="22" fill="#fffbf7" />
+      <ellipse cx="35.5" cy="41" rx="3.5" ry="4" fill="#1f2937" />
+      <ellipse cx="52.5" cy="41" rx="3.5" ry="4" fill="#1f2937" />
+      <circle cx="36.8" cy="39.5" r="1.1" fill="white" />
+      <circle cx="53.8" cy="39.5" r="1.1" fill="white" />
+      <ellipse cx="44" cy="48" rx="5.5" ry="3.5" fill="#fecdd3" />
+      <circle cx="42.3" cy="47.8" r="1.1" fill="#f9a8d4" />
+      <circle cx="45.7" cy="47.8" r="1.1" fill="#f9a8d4" />
+      <ellipse cx="31" cy="49" rx="5" ry="2.8" fill="#fecdd3" opacity="0.5" />
+      <ellipse cx="57" cy="49" rx="5" ry="2.8" fill="#fecdd3" opacity="0.5" />
+      <path d="M39 52 Q44 56 49 52" stroke="#f9a8d4" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+      <circle cx="66" cy="19" r="12" fill="#f97316" />
+      <text x="66" y="24" textAnchor="middle" fill="white" fontSize="12" fontWeight="bold" fontFamily="Arial, sans-serif">!?</text>
+    </svg>
+  );
+}
+
+function HrConfirmDialog({
+  open,
+  title,
+  description,
+  cancelLabel,
+  confirmLabel,
+  onCancel,
+  onConfirm,
+  variant = 'save',
+}: {
+  open: boolean;
+  title: string;
+  description?: string;
+  cancelLabel: string;
+  confirmLabel: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+  variant?: 'save' | 'danger';
+}) {
+  if (!open) return null;
+  return createPortal(
+    <div
+      className="hr-confirm-dialog-scrim"
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div className="hr-confirm-dialog">
+        <div className="hr-confirm-dialog__mascot"><ConfirmMascot /></div>
+        <div className="hr-confirm-dialog__content">
+          <p className="hr-confirm-dialog__title">{title}</p>
+          {description && <p className="hr-confirm-dialog__desc">{description}</p>}
+          <div className="hr-confirm-dialog__actions">
+            <button type="button" className="hr-confirm-dialog__btn hr-confirm-dialog__btn--cancel" onClick={onCancel}>
+              {cancelLabel}
+            </button>
+            <button
+              type="button"
+              className={`hr-confirm-dialog__btn hr-confirm-dialog__btn--${variant === 'danger' ? 'danger' : 'save'}`}
+              onClick={onConfirm}
+            >
+              {confirmLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function PersonalInfoForm({ employee, onDirtyChange }: { employee: Employee; onDirtyChange?: (dirty: boolean) => void }) {
+  const nameParts = employee.name.split(' ');
+  const [nationality, setNationality] = useState<'thai' | 'foreign'>('thai');
+  const [title, setTitle] = useState('');
+  const [firstNameTh, setFirstNameTh] = useState(nameParts[0] ?? '');
+  const [lastNameTh, setLastNameTh] = useState(nameParts[1] ?? '');
+  const [firstNameEn, setFirstNameEn] = useState(nameParts[0] ?? '');
+  const [lastNameEn, setLastNameEn] = useState(nameParts[1] ?? '');
+  const [nicknameTh, setNicknameTh] = useState('');
+  const [nicknameEn, setNicknameEn] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [gender, setGender] = useState<'ชาย' | 'หญิง' | 'อื่นๆ' | ''>('');
+  const [idCard, setIdCard] = useState('');
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const dirtyRef = useRef(false);
+  const initials = employee.name.slice(0, 2);
+
+  function markDirty() {
+    if (!dirtyRef.current) {
+      dirtyRef.current = true;
+      onDirtyChange?.(true);
+    }
+  }
+  function handleSaveClick() { setShowSaveConfirm(true); }
+  function confirmSave() {
+    setShowSaveConfirm(false);
+    dirtyRef.current = false;
+    onDirtyChange?.(false);
+  }
+
+  return (
+    <div className="hr-pif-wrap" onInput={markDirty}>
+      <HrConfirmDialog
+        open={showSaveConfirm}
+        title="กรุณายืนยันการดำเนินการ"
+        description="คุณแน่ใจที่จะแก้ไขข้อมูลใช่หรือไม่?"
+        cancelLabel="ยกเลิก"
+        confirmLabel="ยืนยัน"
+        onCancel={() => setShowSaveConfirm(false)}
+        onConfirm={confirmSave}
+        variant="save"
+      />
+      {/* Avatar */}
+      <div className="hr-pif-avatar-row">
+        <div className="hr-pif-avatar">
+          <div className="hr-pif-avatar__img">{initials}</div>
+          <div className="hr-pif-avatar__cam">
+            <svg style={{ width: '0.75rem', height: '0.75rem' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div className="hr-pif-body">
+        {/* Section title */}
+        <p className="hr-pif-section-title">ข้อมูลทั่วไป</p>
+
+        {/* Nationality toggle */}
+        <div className="hr-field">
+          <label className="hr-field__label">ประเภท<span className="hr-field__req">*</span></label>
+          <div className="hr-pif-type-group">
+            <button type="button" className={`hr-pif-type-btn${nationality === 'thai' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => { setNationality('thai'); markDirty(); }}>คนไทย</button>
+            <button type="button" className={`hr-pif-type-btn${nationality === 'foreign' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => { setNationality('foreign'); markDirty(); }}>ชาวต่างชาติ</button>
+          </div>
+        </div>
+
+        {/* Title — narrow, above name row */}
+        <div style={{ maxWidth: '11rem' }}>
+          <div className="hr-field">
+            <label className="hr-field__label">คำนำหน้า<span className="hr-field__req">*</span></label>
+            <HrCustomSelect
+              value={title}
+              onChange={(v) => { setTitle(v); markDirty(); }}
+              options={TITLE_OPTIONS}
+            />
+          </div>
+        </div>
+
+        {/* Name TH / Last TH */}
+        <div className="hr-pif-grid">
+          <div className="hr-field">
+            <label className="hr-field__label">ชื่อ (TH)<span className="hr-field__req">*</span></label>
+            <input className="hr-field__ctrl" value={firstNameTh} onChange={(e) => setFirstNameTh(e.target.value)} placeholder="กรอกชื่อภาษาไทย" />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">นามสกุล (TH)<span className="hr-field__req">*</span></label>
+            <input className="hr-field__ctrl" value={lastNameTh} onChange={(e) => setLastNameTh(e.target.value)} placeholder="กรอกนามสกุลภาษาไทย" />
+          </div>
+        </div>
+
+        {/* Name EN / Last EN */}
+        <div className="hr-pif-grid">
+          <div className="hr-field">
+            <label className="hr-field__label">ชื่อ (EN)<span className="hr-field__req">*</span></label>
+            <input className="hr-field__ctrl" value={firstNameEn} onChange={(e) => setFirstNameEn(e.target.value)} placeholder="กรอกชื่อภาษาอังกฤษ" />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">นามสกุล (EN)<span className="hr-field__req">*</span></label>
+            <input className="hr-field__ctrl" value={lastNameEn} onChange={(e) => setLastNameEn(e.target.value)} placeholder="กรอกนามสกุลภาษาอังกฤษ" />
+          </div>
+        </div>
+
+        {/* Nickname TH / EN */}
+        <div className="hr-pif-grid">
+          <div className="hr-field">
+            <label className="hr-field__label">ชื่อเล่น</label>
+            <input className="hr-field__ctrl" value={nicknameTh} onChange={(e) => setNicknameTh(e.target.value)} placeholder="กรอกชื่อเล่นภาษาไทย" />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ชื่อเล่น (EN)</label>
+            <input className="hr-field__ctrl" value={nicknameEn} onChange={(e) => setNicknameEn(e.target.value)} placeholder="กรอกชื่อเล่นอังกฤษ" />
+          </div>
+        </div>
+
+        {/* Birth date / Gender */}
+        <div className="hr-pif-grid">
+          <div className="hr-field">
+            <label className="hr-field__label">วันเกิด<span className="hr-field__req">*</span></label>
+            <HrDatePicker value={birthDate} onChange={(v) => { setBirthDate(v); markDirty(); }} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">เพศ<span className="hr-field__req">*</span></label>
+            <div className="hr-pif-type-group">
+              {(['ชาย', 'หญิง', 'อื่นๆ'] as const).map((g) => (
+                <button key={g} type="button" className={`hr-pif-type-btn${gender === g ? ' hr-pif-type-btn--active' : ''}`} onClick={() => { setGender(g); markDirty(); }}>{g}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ID card */}
+        <div className="hr-field">
+          <label className="hr-field__label">เลขบัตรประชาชน<span className="hr-field__req">*</span></label>
+          <input className="hr-field__ctrl" value={idCard} onChange={(e) => setIdCard(e.target.value)} placeholder="X-XXXX-XXXXX-XX-X" maxLength={17} />
+        </div>
+
+        {/* Divider */}
+        <hr className="hr-profile-divider" />
+        <p className="hr-pif-section-title">ข้อมูลส่วนตัว</p>
+
+        {/* Ethnicity / Nationality */}
+        <div className="hr-pif-grid">
+          <div className="hr-field">
+            <label className="hr-field__label">เชื้อชาติ</label>
+            <HrCustomSelect value="" onChange={() => {}} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'thai', label: 'ไทย' }, { value: 'chinese', label: 'จีน' }, { value: 'other', label: 'อื่นๆ' }]} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">สัญชาติ</label>
+            <HrCustomSelect value="" onChange={() => {}} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'thai', label: 'ไทย' }, { value: 'other', label: 'อื่นๆ' }]} />
+          </div>
+        </div>
+
+        {/* Religion / Marital status */}
+        <div className="hr-pif-grid">
+          <div className="hr-field">
+            <label className="hr-field__label">ศาสนา</label>
+            <HrCustomSelect value="" onChange={() => {}} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'buddhism', label: 'พุทธ' }, { value: 'islam', label: 'อิสลาม' }, { value: 'christianity', label: 'คริสต์' }, { value: 'none', label: 'ไม่มีศาสนา' }]} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">สถานภาพสมรส</label>
+            <HrCustomSelect value="" onChange={() => {}} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'single', label: 'โสด' }, { value: 'married', label: 'สมรส' }, { value: 'divorced', label: 'หย่าร้าง' }, { value: 'widowed', label: 'หม้าย' }]} />
+          </div>
+        </div>
+
+        {/* Military / Blood type */}
+        <div className="hr-pif-grid">
+          <div className="hr-field">
+            <label className="hr-field__label">สถานภาพเกณฑ์ทหาร</label>
+            <HrCustomSelect value="" onChange={() => {}} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'exempted', label: 'ได้รับการยกเว้น' }, { value: 'completed', label: 'ผ่านการเกณฑ์แล้ว' }, { value: 'na', label: 'ไม่เกี่ยวข้อง' }]} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">หมู่เลือด</label>
+            <HrCustomSelect value="" onChange={() => {}} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'AB', label: 'AB' }, { value: 'O', label: 'O' }]} />
+          </div>
+        </div>
+
+        {/* Weight / Height */}
+        <div className="hr-pif-grid">
+          <div className="hr-field">
+            <label className="hr-field__label">น้ำหนัก (กก.)</label>
+            <input className="hr-field__ctrl" type="number" placeholder="เช่น 65" />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ส่วนสูง (ซม.)</label>
+            <input className="hr-field__ctrl" type="number" placeholder="เช่น 170" />
+          </div>
+        </div>
+
+        {/* Note */}
+        <div className="hr-field">
+          <label className="hr-field__label">หมายเหตุ</label>
+          <textarea className="hr-field__ctrl" placeholder="หมายเหตุเพิ่มเติม" rows={3} />
+        </div>
+
+        {/* Face scan photo */}
+        <hr className="hr-profile-divider" />
+        <div className="hr-field">
+          <label className="hr-field__label" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            รูปสำหรับใช้ตรวจสอบสแกนใบหน้า
+          </label>
+          <p style={{ fontSize: '0.75rem', color: '#4f46e5', marginBottom: '0.5rem' }}>
+            ในกรณีที่ไม่มีรูป ระบบจะให้ถ่ายรูปตอนเวิร์กอิน เพื่อบันทึกเก็บภาพใบหน้าไว้ให้โดยอัตโนมัติ
+          </p>
+          <div className="hr-pif-dropzone">
+            <svg className="hr-pif-dropzone__icon" style={{ width: '2rem', height: '2rem' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="16 16 12 12 8 16" />
+              <line x1="12" y1="12" x2="12" y2="21" />
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+            </svg>
+            <span className="hr-pif-dropzone__text">เลือกไฟล์หรือลากวางไฟล์รูปที่นี่</span>
+          </div>
+        </div>
+
+        {/* Save action */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem' }}>
+          <button type="button" className="hr-button hr-button--primary" onClick={handleSaveClick}>บันทึกข้อมูล</button>
+        </div>
+      </div>
+
+    </div>
+  );
+}
+
+// ─── Employment Info Form ────────────────────────────────────────────────────
+
+const EI_COMPANY_OPTS = [{ value: 'G-HUB Enterprise', label: 'G-HUB Enterprise' }, { value: 'G-HUB (Thailand)', label: 'G-HUB (Thailand)' }];
+const EI_DEPT_OPTS = ['ฝ่ายบุคคล', 'ฝ่ายบัญชี', 'ฝ่ายขาย', 'IT', 'Operations'].map((v) => ({ value: v, label: v }));
+const EI_LEVEL_OPTS = ['ระดับบริหาร', 'ระดับผู้จัดการ', 'ระดับหัวหน้างาน', 'ระดับพนักงาน', 'CEO (ประธานเจ้าหน้าที่บริหาร)'].map((v) => ({ value: v, label: v }));
+const EI_POSITION_OPTS = ['กรรมการผู้จัดการ', 'ผู้จัดการฝ่าย', 'หัวหน้างาน', 'พนักงาน', 'นักวิเคราะห์', 'นักบัญชี', 'เจ้าหน้าที่ขาย'].map((v) => ({ value: v, label: v }));
+const EI_LOCATION_OPTS = ['สำนักงานใหญ่', 'สาขาเชียงใหม่', 'สาขาภูเก็ต', 'Work from home'].map((v) => ({ value: v, label: v }));
+const EI_SHIFT_OPTS = ['ทำงาน 08:30 – 17:30', 'S2 - บ่าย 14:00-22:00', 'S3 - เช้า 06:00-14:00', 'S4 - กะดึก 22:00-06:00'].map((v) => ({ value: v, label: v }));
+const EI_STATUS_OPTS = ['ปกติ', 'ทดลองงาน', 'ลาพักร้อน', 'สิ้นสุดสัญญา', 'ลาออก'].map((v) => ({ value: v, label: v }));
+const EI_EMPTYPE_OPTS = ['รายเดือน', 'รายวัน', 'พาร์ทไทม์', 'ประจำ'].map((v) => ({ value: v, label: v }));
+const EI_SUPERVISOR_OPTS = ['สมหญิง ไพศาล', 'อนุภัทร ใจเที่ยงแท้', 'มณี ใจดี', 'สมศักดิ์ มั่งคั่ง'].map((v) => ({ value: v, label: v }));
+const EI_HOLIDAY_OPTS = ['วันหยุดพนักงานขาย', 'วันหยุดสำนักงาน', 'วันหยุดโรงงาน', 'กำหนดเอง'].map((v) => ({ value: v, label: v }));
+const EI_CONTRACT_OPTS = ['รายวัน', 'รายสัปดาห์', 'รายเดือน', 'โครงการ', 'ไม่มีกำหนด'].map((v) => ({ value: v, label: v }));
+const EI_BANK_OPTS = ['ธนาคารกสิกรไทย (KBANK)', 'ธนาคารไทยพาณิชย์ (SCB)', 'ธนาคารกรุงไทย (KTB)', 'ธนาคารกรุงเทพ (BBL)', 'ธนาคารทหารไทย (TTB)'].map((v) => ({ value: v, label: v }));
+
+function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; onDirtyChange?: (dirty: boolean) => void }) {
+  const [company, setCompany] = useState('G-HUB Enterprise');
+  const [dept, setDept] = useState(employee.department);
+  const [level, setLevel] = useState('CEO (ประธานเจ้าหน้าที่บริหาร)');
+  const [position, setPosition] = useState(employee.position);
+  const [empCode, setEmpCode] = useState(employee.code);
+  const [location, setLocation] = useState(employee.branch);
+  const [shift, setShift] = useState(employee.schedule);
+  const [startDate, setStartDate] = useState(employee.startDate);
+
+  const [status, setStatus] = useState(employee.status as string);
+  const [empType, setEmpType] = useState(employee.empType);
+  const [supervisor, setSupervisor] = useState('');
+  const [contractEnd, setContractEnd] = useState('');
+  const [holidayCal, setHolidayCal] = useState('วันหยุดพนักงานขาย');
+  const [licenseNo, setLicenseNo] = useState('');
+  const [workforce, setWorkforce] = useState<'new' | 'replace'>('new');
+  const [timeRecord, setTimeRecord] = useState<'yes' | 'no'>('yes');
+  const [contractType, setContractType] = useState('รายเดือน');
+
+  const [payMethod, setPayMethod] = useState<'bank' | 'cash'>('bank');
+  const [bank, setBank] = useState('');
+  const [accountNo, setAccountNo] = useState('');
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const dirtyRef = useRef(false);
+
+  function markDirty() {
+    if (!dirtyRef.current) {
+      dirtyRef.current = true;
+      onDirtyChange?.(true);
+    }
+  }
+  function handleSaveClick() { setShowSaveConfirm(true); }
+  function confirmSave() {
+    setShowSaveConfirm(false);
+    dirtyRef.current = false;
+    onDirtyChange?.(false);
+  }
+
+  return (
+    <div className="hr-pif-wrap" onInput={markDirty}>
+      <HrConfirmDialog
+        open={showSaveConfirm}
+        title="กรุณายืนยันการดำเนินการ"
+        description="คุณแน่ใจที่จะแก้ไขข้อมูลใช่หรือไม่?"
+        cancelLabel="ยกเลิก"
+        confirmLabel="ยืนยัน"
+        onCancel={() => setShowSaveConfirm(false)}
+        onConfirm={confirmSave}
+        variant="save"
+      />
+      <div className="hr-pif-body">
+
+        {/* ── ข้อมูลองค์กร ─────────────────────────────────── */}
+        <p className="hr-pif-section-title">ข้อมูลองค์กร</p>
+        <div className="hr-pif-grid">
+          <div className="hr-field">
+            <label className="hr-field__label">บริษัท<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={company} onChange={setCompany} options={EI_COMPANY_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">สังกัด<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={dept} onChange={setDept} options={EI_DEPT_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ระดับ<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={level} onChange={setLevel} options={EI_LEVEL_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ตำแหน่ง<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={position} onChange={setPosition} options={EI_POSITION_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">รหัสพนักงาน<span className="hr-field__req">*</span></label>
+            <input className="hr-field__ctrl" value={empCode} onChange={(e) => setEmpCode(e.target.value)} placeholder="กรอกรหัสพนักงาน" />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">สถานที่ทำงาน</label>
+            <HrCustomSelect value={location} onChange={setLocation} options={EI_LOCATION_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">กะทำงาน<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={shift} onChange={setShift} options={EI_SHIFT_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">วันเริ่มงาน<span className="hr-field__req">*</span></label>
+            <HrDatePicker value={startDate} onChange={(v) => { setStartDate(v); markDirty(); }} />
+          </div>
+        </div>
+
+        <hr className="hr-profile-divider" />
+
+        {/* ── ข้อมูลการจ้างงาน ──────────────────────────────── */}
+        <p className="hr-pif-section-title">ข้อมูลการจ้างงาน</p>
+        <div className="hr-pif-grid">
+          <div className="hr-field">
+            <label className="hr-field__label">สถานะ<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={status} onChange={setStatus} options={EI_STATUS_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ประเภทพนักงาน<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={empType} onChange={setEmpType} options={EI_EMPTYPE_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ผู้บังคับบัญชา</label>
+            <HrCustomSelect value={supervisor} onChange={setSupervisor} options={EI_SUPERVISOR_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">วันสิ้นสุดสัญญาจ้าง</label>
+            <HrDatePicker value={contractEnd} onChange={(v) => { setContractEnd(v); markDirty(); }} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ปฏิทินวันหยุด</label>
+            <HrCustomSelect value={holidayCal} onChange={setHolidayCal} options={EI_HOLIDAY_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">เลขที่ใบขับขี่</label>
+            <input className="hr-field__ctrl" value={licenseNo} onChange={(e) => setLicenseNo(e.target.value)} placeholder="กรอกเลขที่ใบขับขี่" />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ประเภทกำลังคน<span className="hr-field__req">*</span></label>
+            <div className="hr-pif-type-group">
+              <button type="button" className={`hr-pif-type-btn${workforce === 'new' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setWorkforce('new')}>ใหม่</button>
+              <button type="button" className={`hr-pif-type-btn${workforce === 'replace' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setWorkforce('replace')}>ทดแทน</button>
+            </div>
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">บันทึกเวลาเข้าออก<span className="hr-field__req">*</span></label>
+            <div className="hr-pif-type-group">
+              <button type="button" className={`hr-pif-type-btn${timeRecord === 'yes' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setTimeRecord('yes')}>บันทึก</button>
+              <button type="button" className={`hr-pif-type-btn${timeRecord === 'no' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setTimeRecord('no')}>ไม่บันทึก</button>
+            </div>
+          </div>
+        </div>
+        <div className="hr-pif-grid hr-pif-grid--full">
+          <div className="hr-field">
+            <label className="hr-field__label">ประเภทการจ้าง<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={contractType} onChange={setContractType} options={EI_CONTRACT_OPTS} />
+          </div>
+        </div>
+
+        <hr className="hr-profile-divider" />
+
+        {/* ── ข้อมูลการจ่ายเงิน ─────────────────────────────── */}
+        <p className="hr-pif-section-title">ข้อมูลการจ่ายเงิน</p>
+        <div className="hr-field">
+          <div className="hr-pif-type-group">
+            <button type="button" className={`hr-pif-type-btn${payMethod === 'bank' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setPayMethod('bank')}>ธนาคาร</button>
+            <button type="button" className={`hr-pif-type-btn${payMethod === 'cash' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setPayMethod('cash')}>เงินสด</button>
+          </div>
+        </div>
+        {payMethod === 'bank' && (
+          <div className="hr-pif-grid">
+            <div className="hr-field">
+              <label className="hr-field__label">บัญชีธนาคาร<span className="hr-field__req">*</span></label>
+              <HrCustomSelect value={bank} onChange={(v) => { setBank(v); markDirty(); }} options={EI_BANK_OPTS} />
+            </div>
+            <div className="hr-field">
+              <label className="hr-field__label">เลขที่บัญชีพนักงาน<span className="hr-field__req">*</span></label>
+              <input className="hr-field__ctrl" value={accountNo} onChange={(e) => setAccountNo(e.target.value)} placeholder="กรอกเลขบัญชี" />
+            </div>
+          </div>
+        )}
+
+        {/* Save action */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem' }}>
+          <button type="button" className="hr-button hr-button--primary" onClick={handleSaveClick}>บันทึกข้อมูล</button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+const MOCK_ROLES = ['Administrator', 'Staff'];
+const ACCOUNT_STATUSES = [
+  { label: 'Email', on: true },
+  { label: 'Single sign-on', on: false },
+  { label: 'Sign in without email', on: false },
+  { label: '2FA Authenticator', on: false },
+];
+
+function AccountInfoForm({ employee }: { employee: Employee }) {
+  const [phone, setPhone] = useState(employee.phone);
+  const [roles, setRoles] = useState<string[]>(MOCK_ROLES);
+
+  return (
+    <div className="hr-pif-wrap">
+      <div className="hr-pif-body">
+        <p className="hr-pif-section-title">ข้อมูลบัญชี</p>
+
+        {/* Username */}
+        <div className="hr-field">
+          <label className="hr-field__label">Username<span className="hr-field__req">*</span></label>
+          <div className="hr-pif-username-row">
+            {employee.email}
+            <button type="button" className="hr-pif-username-edit" aria-label="แก้ไข">
+              <svg style={{ width: '0.875rem', height: '0.875rem' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile */}
+        <div className="hr-field">
+          <label className="hr-field__label">เบอร์มือถือ</label>
+          <input className="hr-field__ctrl" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="กรอกเบอร์มือถือ" />
+        </div>
+
+        {/* Roles */}
+        <div className="hr-field">
+          <label className="hr-field__label">บทบาท<span className="hr-field__req">*</span></label>
+          <div className="hr-pif-chip-input">
+            {roles.map((r) => (
+              <span key={r} className="hr-pif-chip">
+                {r}
+                <button type="button" className="hr-pif-chip__remove" onClick={() => setRoles((prev) => prev.filter((x) => x !== r))} aria-label={`ลบ ${r}`}>
+                  <svg style={{ width: '0.625rem', height: '0.625rem' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Account status */}
+        <hr className="hr-profile-divider" style={{ margin: '0.25rem 0' }} />
+        <div>
+          <p className="hr-pif-subsection-title">สถานะบัญชี</p>
+          {ACCOUNT_STATUSES.map((s) => (
+            <div key={s.label} className="hr-pif-status-row">
+              <span className="hr-pif-status-row__label">{s.label}</span>
+              <span className={s.on ? 'hr-pif-status--on' : 'hr-pif-status--off'}>{s.on ? 'ใช้งาน' : 'ไม่ใช้งาน'}</span>
+            </div>
+          ))}
+        </div>
+
+        <button type="button" className="hr-pif-danger-link">ลบบัญชีผู้ใช้</button>
+      </div>
+    </div>
+  );
+}
+
+function OverviewTab({ employee, section, onSection }: { employee: Employee; section: string; onSection: (s: string) => void }) {
+  const [selfEdit, setSelfEdit] = useState(false);
+  const hasForm = section === 'personal' || section === 'account';
+  const [dirty, setDirty] = useState(false);
+  const [pendingSection, setPendingSection] = useState<string | null>(null);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
+  function tryNavigate(key: string) {
+    if (dirty && key !== section) {
+      setPendingSection(key);
+      setShowDiscardDialog(true);
+    } else {
+      setDirty(false);
+      onSection(key);
+    }
+  }
+  function confirmDiscard() {
+    setDirty(false);
+    setShowDiscardDialog(false);
+    if (pendingSection) onSection(pendingSection);
+    setPendingSection(null);
+  }
+  function cancelDiscard() {
+    setShowDiscardDialog(false);
+    setPendingSection(null);
+  }
+
+  return (
+    <>
+    <HrConfirmDialog
+      open={showDiscardDialog}
+      title="ยกเลิกการแก้ไขข้อมูล?"
+      description="การแก้ไขข้อมูลทั้งหมดจะไม่ถูกบันทึกในระบบ"
+      cancelLabel="แก้ไขต่อ"
+      confirmLabel="ใช่ ยกเลิกเลย"
+      onCancel={cancelDiscard}
+      onConfirm={confirmDiscard}
+      variant="danger"
+    />
+    <div className="hr-profile-body">
+      {/* Left sidenav */}
+      <nav className="hr-profile-sidenav">
+        {SIDE_SECTIONS.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            className={`hr-profile-sidenav__item${section === s.key ? ' hr-profile-sidenav__item--active' : ''}`}
+            onClick={() => tryNavigate(s.key)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </nav>
+
+      {/* Main content */}
+      <div className="hr-profile-main">
+        {/* Overview summary */}
+        {section === 'overview' && (
+          <>
+            <ProfileSectionCard title="ข้อมูลการจ้างงาน">
+              <div className="hr-profile-field-grid">
+                <Field label="รหัสพนักงาน" value={employee.code} mono />
+                <Field label="ตำแหน่ง" value={employee.position} />
+                <Field label="แผนก / ฝ่าย" value={employee.department} />
+                <Field label="สาขา" value={employee.branch} />
+                <Field label="ประเภทการจ้าง" value={employee.empType} />
+                <Field label="กะการทำงาน" value={employee.schedule} />
+                <Field label="วันที่เริ่มงาน" value={employee.startDate} />
+                <Field label="สถานะ" value={employee.status} />
+                <Field label="อีเมลบริษัท" value={employee.email} />
+              </div>
+            </ProfileSectionCard>
+            <ProfileSectionCard title="ข้อมูลส่วนตัว (สรุป)">
+              <div className="hr-profile-field-grid">
+                <Field label="ชื่อ - นามสกุล" value={employee.name} />
+                <Field label="เพศ" value="ไม่ระบุ" muted />
+                <Field label="สัญชาติ" value="ไทย" />
+                <Field label="วันเกิด" placeholder value="ยังไม่กรอกข้อมูล" />
+                <Field label="หมายเลขบัตรประชาชน" placeholder value="ยังไม่กรอกข้อมูล" />
+                <Field label="เบอร์โทรศัพท์" value={employee.phone} />
+              </div>
+            </ProfileSectionCard>
+          </>
+        )}
+
+        {/* Personal */}
+        {section === 'personal' && (
+          <PersonalInfoForm employee={employee} onDirtyChange={setDirty} />
+        )}
+
+        {/* Account */}
+        {section === 'account' && (
+          <AccountInfoForm employee={employee} />
+        )}
+
+        {/* Contact */}
+        {section === 'contact' && (
+          <div className="hr-profile-flat-section">
+            <p className="hr-profile-flat-section__title">ข้อมูลติดต่อ</p>
+            <div className="hr-profile-field-grid">
+              <Field label="เบอร์โทรศัพท์" value={employee.phone} />
+              <Field label="อีเมลส่วนตัว" placeholder value="ยังไม่กรอกข้อมูล" />
+              <Field label="Line ID" placeholder value="ยังไม่กรอกข้อมูล" />
+              <Field label="ที่อยู่" placeholder value="ยังไม่กรอกข้อมูล" />
+              <Field label="จังหวัด" placeholder value="ยังไม่กรอกข้อมูล" />
+              <Field label="รหัสไปรษณีย์" placeholder value="ยังไม่กรอกข้อมูล" />
+            </div>
+          </div>
+        )}
+
+        {/* Family */}
+        {/* Family */}
+        {section === 'family' && <FamilySection />}
+
+        {/* Work experience */}
+        {section === 'workexp' && <WorkExpSection />}
+
+        {/* Education */}
+        {section === 'education' && <EduSection />}
+
+        {/* Background check */}
+        {section === 'background' && (
+          <div className="hr-profile-flat-section">
+            <p className="hr-profile-flat-section__title">ตรวจสอบประวัติ</p>
+            <p className="hr-profile-flat-empty">ยังไม่มีข้อมูลการตรวจสอบประวัติ</p>
+          </div>
+        )}
+
+        {/* Employment */}
+        {section === 'employment' && (
+          <EmploymentInfoForm employee={employee} onDirtyChange={setDirty} />
+        )}
+
+        {/* Salary */}
+        {section === 'salary' && (
+          <div className="hr-profile-flat-section">
+            <p className="hr-profile-flat-section__title">ข้อมูลเงินเดือน</p>
+            <p className="hr-profile-flat-empty">ยังไม่มีข้อมูลเงินเดือน</p>
+          </div>
+        )}
+
+        {/* Insurance */}
+        {section === 'insurance' && (
+          <div className="hr-profile-flat-section">
+            <p className="hr-profile-flat-section__title">ประกันสังคม</p>
+            <p className="hr-profile-flat-empty">ยังไม่มีข้อมูลประกันสังคม</p>
+          </div>
+        )}
+
+        {/* Docs */}
+        {section === 'docs' && (
+          <div className="hr-profile-flat-section">
+            <p className="hr-profile-flat-section__title">เอกสาร</p>
+            <p className="hr-profile-flat-empty">ยังไม่มีเอกสาร</p>
+          </div>
+        )}
+      </div>
+
+      {/* Right sidebar — overview only */}
+      {section === 'overview' && <aside className="hr-profile-right">
+        {/* Attendance stats */}
+        <div>
+          <p className="hr-profile-right__title">การเข้างาน (เดือนนี้)</p>
+          <div className="hr-profile-stat-row">
+            <div className="hr-profile-stat-box hr-profile-stat-box--green">
+              <div className="hr-profile-stat-box__num">18</div>
+              <div className="hr-profile-stat-box__label">มาทำงาน</div>
+            </div>
+            <div className="hr-profile-stat-box hr-profile-stat-box--red">
+              <div className="hr-profile-stat-box__num">0</div>
+              <div className="hr-profile-stat-box__label">ขาดงาน</div>
+            </div>
+            <div className="hr-profile-stat-box hr-profile-stat-box--amber">
+              <div className="hr-profile-stat-box__num">1</div>
+              <div className="hr-profile-stat-box__label">มาสาย</div>
+            </div>
+          </div>
+        </div>
+
+        <hr className="hr-profile-divider" />
+
+        {/* Contact info */}
+        <div>
+          <p className="hr-profile-right__title">ข้อมูลติดต่อ</p>
+          <div className="hr-profile-contact-item">
+            <svg style={{ width: '0.875rem', height: '0.875rem' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m2 7 10 7 10-7" />
+            </svg>
+            {employee.email}
+          </div>
+          <div className="hr-profile-contact-item">
+            <svg style={{ width: '0.875rem', height: '0.875rem' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.64 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.55 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.5a16 16 0 0 0 5.95 5.95l.92-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+            </svg>
+            {employee.phone}
+          </div>
+        </div>
+
+        <hr className="hr-profile-divider" />
+
+        {/* Leave balance */}
+        <div>
+          <p className="hr-profile-right__title">สิทธิการลาคงเหลือ</p>
+          <table className="hr-profile-leave-table">
+            <tbody>
+              {LEAVE_STUBS.map((l) => (
+                <tr key={l.type}>
+                  <td>{l.type}</td>
+                  <td>{l.quota - l.used} วัน</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </aside>}
+    </div>
+
+    {/* Sticky bottom bar — full-width, below sidenav + main */}
+    {hasForm && (
+      <div className="hr-profile-sticky-bar">
+        <div className="hr-profile-sticky-bar__left">
+          {section === 'personal' && (
+            <>
+              <label className="hr-leave-toggle" style={{ marginBottom: 0 }}>
+                <input type="checkbox" checked={selfEdit} onChange={(e) => setSelfEdit(e.target.checked)} />
+                <span className="hr-leave-toggle__track">
+                  <span className="hr-leave-toggle__thumb" />
+                </span>
+              </label>
+              <span>เปิดให้พนักงานกรอกข้อมูลตั้งต้นได้เอง</span>
+              <span className="hr-profile-sticky-bar__info" title="พนักงานสามารถแก้ไขข้อมูลส่วนตัวของตนเองได้ผ่านแอปพลิเคชัน">i</span>
+            </>
+          )}
+        </div>
+        <div className="hr-profile-sticky-bar__right">
+          <button type="button" className="hr-button hr-button--ghost" style={{ border: '1px solid #374151', color: '#374151' }} onClick={() => onSection('overview')}>ยกเลิก</button>
+          <button type="button" className="hr-button hr-button--primary">บันทึก</button>
+        </div>
+      </div>
+    )}
+    </>
+  );
+}
+
+function PlaceholderTab({ label }: { label: string }) {
+  return (
+    <div className="hr-profile-body" style={{ alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center', color: '#9ca3af', padding: '4rem' }}>
+        <svg style={{ width: '3rem', height: '3rem', margin: '0 auto 0.75rem', color: '#e5e7eb' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+        </svg>
+        <p className="text-sm font-medium" style={{ color: '#374151' }}>แท็บ {label}</p>
+        <p className="text-xs mt-1">อยู่ระหว่างพัฒนา</p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Shift schedule (กะการทำงาน) ───────────────────────────────────── */
+
+const SHIFTCAL_DAYS: Array<{ dow: string; date: number; today?: boolean }> = [
+  { dow: 'จ.', date: 22 },
+  { dow: 'อ.', date: 23 },
+  { dow: 'พ.', date: 24 },
+  { dow: 'พฤ.', date: 25 },
+  { dow: 'ศ.', date: 26 },
+  { dow: 'ส.', date: 27, today: true },
+  { dow: 'อา.', date: 28 },
+];
+const SHIFTCAL_ROW: Array<string | null> = ['S1', 'S1', 'S1', 'S4', 'S4', 'S4', 'S4'];
+
+const SHIFTCAL_MONTH_WEEKDAYS = ['จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส', 'อา'];
+const SHIFTCAL_MONTH_DAYS = 30;
+const SHIFTCAL_MONTH_SHIFTS: Record<number, string> = {
+  1: 'S1', 2: 'S1', 3: 'S1', 4: 'S4', 5: 'S4', 6: 'S4', 7: 'S4',
+  8: 'S1', 9: 'S1', 10: 'S1', 11: 'S4', 12: 'S4', 13: 'S4', 14: 'S4',
+  15: 'S1', 16: 'S1', 17: 'S1', 18: 'S4', 19: 'S4', 20: 'S1', 21: 'S1',
+  22: 'S1', 23: 'S1', 24: 'S1', 25: 'S4', 26: 'S4', 27: 'S4', 28: 'S4',
+  29: 'S1', 30: 'S1',
+};
+// Weekend day-of-week labels (week uses 'ส.'/'อา.', month uses 'ส'/'อา') → rest day / OFF.
+const SHIFTCAL_OFF_DOWS = new Set(['ส', 'ส.', 'อา', 'อา.']);
+type ShiftCalDay = { dow: string; date: number; shift: string | null; off: boolean };
+
+const SHIFTCAL_TODAY_DATE = 27; // mock: June 27
+const SHIFTCAL_MONTH_COL_PX = 72; // 4.5rem at 16px base
+
+function ShiftScheduleTab({ employee }: { employee: Employee }) {
+  const [view, setView] = useState<'week' | 'month'>('week');
+  const [workWeekOnly, setWorkWeekOnly] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const initials = employee.name.slice(0, 2);
+
+  const weekDays: ShiftCalDay[] = SHIFTCAL_DAYS.map((d, i) => ({ dow: d.dow, date: d.date, shift: SHIFTCAL_ROW[i] ?? null, off: SHIFTCAL_OFF_DOWS.has(d.dow) }));
+  const monthDays: ShiftCalDay[] = Array.from({ length: SHIFTCAL_MONTH_DAYS }, (_, i) => {
+    const dow = SHIFTCAL_MONTH_WEEKDAYS[i % 7];
+    return { dow, date: i + 1, shift: SHIFTCAL_MONTH_SHIFTS[i + 1] ?? null, off: SHIFTCAL_OFF_DOWS.has(dow) };
+  });
+  const baseDays = view === 'week' ? weekDays : monthDays;
+  const days = workWeekOnly ? baseDays.filter((d) => d.shift !== null && !d.off) : baseDays;
+  const assigned = days.filter((d) => d.shift && !d.off).length;
+  const colTemplate = view === 'month'
+    ? `repeat(${days.length}, 4.5rem)`
+    : `repeat(${days.length}, minmax(0, 1fr))`;
+  const rangeLabel = view === 'week' ? '22 - 28 มิถุนายน 2569' : '1 - 30 มิถุนายน 2569';
+
+  const scrollToToday = () => {
+    if (!scrollRef.current || view !== 'month') return;
+    const todayIndex = days.findIndex((d) => d.date === SHIFTCAL_TODAY_DATE);
+    if (todayIndex < 0) return;
+    scrollRef.current.scrollLeft = Math.max(0, (todayIndex - 2) * SHIFTCAL_MONTH_COL_PX);
+  };
+
+
+  return (
+    <div className="hr-shiftcal">
+      {/* Toolbar */}
+      <div className="hr-shiftcal-toolbar">
+        <div className="hr-shiftcal-toolbar__group">
+          <span className="hr-shiftcal-title">ข้อมูลกะการทำงาน</span>
+          <button type="button" className="hr-shiftcal-linkbtn" aria-label="เปิดในหน้าเต็ม">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="hr-shiftcal-toolbar__group">
+          <button type="button" className="hr-shiftcal-btn" onClick={scrollToToday}>วันนี้</button>
+          <button type="button" className="hr-shiftcal-navbtn" aria-label="ก่อนหน้า">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+          </button>
+          <button type="button" className="hr-shiftcal-daterange">
+            {rangeLabel}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+          <button type="button" className="hr-shiftcal-navbtn" aria-label="ถัดไป">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+          </button>
+        </div>
+
+        <div className="hr-shiftcal-toolbar__group">
+          <button type="button" className="hr-shiftcal-iconbtn" aria-label="ช่วยเหลือ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
+          </button>
+          <button
+            type="button"
+            className={`hr-shiftcal-iconbtn${workWeekOnly ? ' hr-shiftcal-iconbtn--active' : ''}`}
+            title="ดูเฉพาะวันที่มีกะ"
+            aria-pressed={workWeekOnly}
+            onClick={() => setWorkWeekOnly((v) => !v)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+          </button>
+          <div className="hr-shiftcal-toggle" role="group">
+            <button type="button" className={`hr-shiftcal-toggle__opt${view === 'week' ? ' hr-shiftcal-toggle__opt--active' : ''}`} onClick={() => setView('week')}>สัปดาห์</button>
+            <button type="button" className={`hr-shiftcal-toggle__opt${view === 'month' ? ' hr-shiftcal-toggle__opt--active' : ''}`} onClick={() => setView('month')}>เดือน</button>
+          </div>
+          <button type="button" className="hr-shiftcal-iconbtn" aria-label="ประวัติ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" /><path d="M12 7v5l4 2" /></svg>
+          </button>
+          <button type="button" className="hr-shiftcal-assign">
+            มอบหมายกะ
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Board: fixed name column + horizontally scrollable day grid */}
+      <div className="hr-shiftcal-board">
+        {/* Fixed name column */}
+        <div className="hr-shiftcal-namecol">
+          <div className="hr-shiftcal-cell hr-shiftcal-cell--name hr-shiftcal-headcell">
+            รายชื่อ
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="hr-shiftcal-sort"><path d="m21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16" /></svg>
+          </div>
+          <div className="hr-shiftcal-cell hr-shiftcal-cell--name hr-shiftcal-namecell">
+            <div className="hr-shiftcal-emp">
+              <span className="hr-shiftcal-emp__avatar">{initials}</span>
+              <span className="hr-shiftcal-emp__info">
+                <span className="hr-shiftcal-emp__name">{employee.name}</span>
+                <span className="hr-shiftcal-emp__sub">{employee.position}</span>
+              </span>
+              <span className="hr-shiftcal-emp__count">{assigned}/{days.length}</span>
+            </div>
+          </div>
+          <div className="hr-shiftcal-cell hr-shiftcal-cell--name hr-shiftcal-total__label">รวม</div>
+        </div>
+
+        {/* Scrollable day grid */}
+        <div className="hr-shiftcal-scroll" ref={scrollRef}>
+          <div className="hr-shiftcal-grid" style={{ gridTemplateColumns: colTemplate, width: view === 'month' ? 'max-content' : '100%' }}>
+            {/* Head */}
+            {days.map((d, i) => (
+              <div key={i} className={`hr-shiftcal-cell hr-shiftcal-headcell hr-shiftcal-dayhead${d.date === SHIFTCAL_TODAY_DATE && view === 'month' ? ' hr-shiftcal-dayhead--today' : ''}`}>
+                <span className="hr-shiftcal-dayhead__dow">{d.dow}</span>
+                <span className="hr-shiftcal-dayhead__date">{d.date}</span>
+              </div>
+            ))}
+
+            {/* Employee shift slots */}
+            {days.map((d, i) => (
+              <div key={i} className="hr-shiftcal-cell hr-shiftcal-slot">
+                {d.shift && (
+                  d.off ? (
+                    <span className="hr-shiftcal-shift hr-shiftcal-shift--off">
+                      {d.shift}
+                      <span className="hr-shiftcal-off-fold" />
+                      <span className="hr-shiftcal-off-label">OFF</span>
+                    </span>
+                  ) : (
+                    <span className={`hr-shiftcal-shift hr-shiftcal-shift--${d.shift.toLowerCase()}`}>{d.shift}</span>
+                  )
+                )}
+              </div>
+            ))}
+
+            {/* Total row */}
+            {days.map((d, i) => (
+              <div key={i} className="hr-shiftcal-cell hr-shiftcal-total__cell">{d.shift && !d.off ? 1 : 0}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HrEmployeeProfileOverlay({
+  tabs, activeId, minimized,
+  onSwitch, onCloseTab, onMinimize, onCloseAll,
+}: {
+  tabs: Employee[];
+  activeId: string;
+  minimized: boolean;
+  onSwitch: (id: string) => void;
+  onCloseTab: (id: string) => void;
+  onMinimize: () => void;
+  onCloseAll: () => void;
+}) {
+  const [tabStates, setTabStates] = useState<Record<string, { tab: string; section: string }>>({});
+
+  const getState = (id: string) => tabStates[id] ?? { tab: 'overview', section: 'overview' };
+  const patchState = (id: string, patch: Partial<{ tab: string; section: string }>) =>
+    setTabStates(prev => ({ ...prev, [id]: { ...(prev[id] ?? { tab: 'overview', section: 'overview' }), ...patch } }));
+
+  const employee = tabs.find(e => e.id === activeId) ?? tabs[0];
+  const { tab, section: sideSection } = getState(activeId);
+  const patchActive = (patch: Partial<{ tab: string; section: string }>) => patchState(activeId, patch);
+  const setTab = (t: string) => patchState(activeId, { tab: t });
+  const setSideSection = (s: string) => patchState(activeId, { section: s });
+
+  const initials = employee.name.slice(0, 2);
+
+  return (
+    <div
+      className="hr-profile-scrim"
+      onClick={(e) => { if (e.target === e.currentTarget && !minimized) onCloseAll(); }}
+      style={minimized ? { alignItems: 'flex-end', paddingBottom: '1.5rem', background: 'transparent', pointerEvents: 'none' } : undefined}
+    >
+      <div className={`hr-profile-modal${minimized ? ' hr-profile-modal--minimized' : ''}`} style={minimized ? { pointerEvents: 'auto', maxWidth: '28rem' } : undefined}>
+        {/* Title bar — multi-tab chips */}
+        <div className="hr-profile-titlebar">
+          <div className="hr-profile-titlebar__chips">
+            {tabs.map((emp) => (
+              <div
+                key={emp.id}
+                className={`hr-profile-tab-chip${emp.id === activeId ? ' hr-profile-tab-chip--active' : ''}`}
+                onClick={() => onSwitch(emp.id)}
+              >
+                <span className="hr-profile-tab-chip__dot" />
+                <span className="hr-profile-tab-chip__name">{emp.name} ({emp.code})</span>
+                <button
+                  type="button"
+                  className="hr-profile-tab-chip__close"
+                  onClick={(e) => { e.stopPropagation(); onCloseTab(emp.id); }}
+                  aria-label="ปิด"
+                >
+                  <svg style={{ width: '0.9375rem', height: '0.9375rem' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="hr-profile-titlebar__actions">
+            <button type="button" className="hr-profile-titlebar__btn" onClick={onMinimize} aria-label={minimized ? 'ขยาย' : 'ย่อ'}>
+              {minimized ? (
+                <svg style={{ width: '0.875rem', height: '0.875rem' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+                </svg>
+              ) : (
+                <svg style={{ width: '0.875rem', height: '0.875rem' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3" />
+                </svg>
+              )}
+            </button>
+            <button type="button" className="hr-profile-titlebar__btn" onClick={onCloseAll} aria-label="ปิดทั้งหมด">
+              <svg style={{ width: '0.875rem', height: '0.875rem' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Gradient hero header */}
+        <div className="hr-profile-hero">
+          <div className="hr-profile-hero__avatar">{initials}</div>
+          <div className="hr-profile-hero__info">
+            <div className="hr-profile-hero__name">{employee.name}</div>
+            <div className="hr-profile-hero__position">{employee.position} · {employee.department}</div>
+            <div className="hr-profile-hero__meta">
+              <span className="hr-profile-hero__meta-item">
+                <IconId style={{ width: '0.8125rem', height: '0.8125rem' }} />
+                <span className="hr-profile-hero__meta-val">#{employee.code}</span>
+              </span>
+              <span className="hr-profile-hero__meta-item">
+                <IconBuilding style={{ width: '0.8125rem', height: '0.8125rem' }} />
+                <span className="hr-profile-hero__meta-val">{employee.branch}</span>
+              </span>
+              <span className="hr-profile-hero__meta-item">
+                <IconCalendarCheck style={{ width: '0.8125rem', height: '0.8125rem' }} />
+                <span className="hr-profile-hero__meta-val">เริ่มงาน {employee.startDate}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="hr-profile-tabs" role="tablist">
+          {PROFILE_TABS.map((t) => {
+            const tabActive = tab === t.key || t.children.some((c) => c.key === tab);
+            return (
+            <div key={t.key} className="hr-profile-tab-wrap">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tabActive}
+                className={`hr-profile-tab${tabActive ? ' hr-profile-tab--active' : ''}`}
+                onClick={() => { if (t.children.length === 0) setTab(t.key); }}
+              >
+                {t.label}
+                {t.children.length > 0 && (
+                  <svg className="hr-profile-tab-chevron" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </button>
+              {t.children.length > 0 && (
+                <div className="hr-profile-tab-dropdown">
+                  {t.children.map((c) => (
+                    <button
+                      key={c.key}
+                      type="button"
+                      className="hr-profile-tab-dropdown__item"
+                      onClick={() => {
+                        if (c.sectionKey) patchActive({ tab: 'overview', section: c.sectionKey });
+                        else patchActive({ tab: c.key });
+                      }}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            );
+          })}
+        </div>
+
+        {/* Tab content */}
+        {tab === 'overview' ? (
+          <OverviewTab employee={employee} section={sideSection} onSection={setSideSection} />
+        ) : tab === 'emp-shift' ? (
+          <ShiftScheduleTab employee={employee} />
+        ) : (
+          <PlaceholderTab label={
+            PROFILE_TABS.find((t) => t.key === tab)?.label
+            ?? PROFILE_TABS.flatMap((t) => t.children).find((c) => c.key === tab)?.label
+            ?? tab
+          } />
+        )}
       </div>
     </div>
   );

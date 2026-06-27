@@ -3,14 +3,11 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { PlusIcon, EditIcon, TrashIcon, XIcon, SearchIcon } from '@/components/ui/icons';
 import { HrCustomSelect } from './hr-ui';
+import { publicApiFetch } from '@/lib/api';
 import {
   type JobLevel,
   type Position,
   EMPLOYEE_TYPE_CHIPS,
-  JOB_LEVEL_SEED,
-  JOB_LEVELS_STORAGE_KEY,
-  POSITION_SEED,
-  POSITIONS_STORAGE_KEY,
 } from '@/data/humansource/positions';
 
 // ─── Stub company list ────────────────────────────────────────────────────────
@@ -357,29 +354,22 @@ function PositionDrawer({
 // ─── Job-levels board ─────────────────────────────────────────────────────────
 
 function JobLevelsBoard({ accent }: { accent: string }) {
-  const [levels, setLevels] = useState<JobLevel[]>(JOB_LEVEL_SEED);
-  const [hydrated, setHydrated] = useState(false);
+  const [levels, setLevels] = useState<JobLevel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState('');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [modal, setModal] = useState<JlDraft | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<JobLevel | null>(null);
-  const counter = useRef(0);
+  const isMounted = useRef(true);
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(JOB_LEVELS_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as JobLevel[];
-        if (Array.isArray(parsed)) setLevels(parsed);
-      }
-    } catch { /* keep seed */ }
-    setHydrated(true);
+    isMounted.current = true;
+    publicApiFetch<JobLevel[]>('/api/humansource/job-levels')
+      .then((data) => { if (isMounted.current) { setLevels(data); setLoading(false); } })
+      .catch(() => { if (isMounted.current) { setApiError('โหลดข้อมูลไม่สำเร็จ'); setLoading(false); } });
+    return () => { isMounted.current = false; };
   }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(JOB_LEVELS_STORAGE_KEY, JSON.stringify(levels));
-  }, [levels, hydrated]);
 
   const sorted = [...levels].sort((a, b) => a.rank - b.rank);
   const filtered = sorted
@@ -395,24 +385,43 @@ function JobLevelsBoard({ accent }: { accent: string }) {
 
   const openEdit = (l: JobLevel) => setModal({ ...l });
 
-  const save = (draft: JlDraft) => {
-    setLevels((ls) => {
-      if (!draft.id) return [...ls, { ...draft, id: `jl-${Date.now()}-${counter.current++}` }];
-      return ls.map((l) => (l.id === draft.id ? { ...draft, id: draft.id } : l));
-    });
-    setModal(null);
+  const save = async (draft: JlDraft) => {
+    try {
+      if (!draft.id) {
+        const created = await publicApiFetch<JobLevel>('/api/humansource/job-levels', {
+          method: 'POST',
+          body: JSON.stringify({ nameTh: draft.nameTh, nameEn: draft.nameEn, rank: draft.rank, active: draft.active }),
+        });
+        setLevels((ls) => [...ls, created]);
+      } else {
+        const updated = await publicApiFetch<JobLevel>(`/api/humansource/job-levels/${draft.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ nameTh: draft.nameTh, nameEn: draft.nameEn, rank: draft.rank, active: draft.active }),
+        });
+        setLevels((ls) => ls.map((l) => (l.id === updated.id ? updated : l)));
+      }
+      setModal(null);
+    } catch {
+      setApiError('บันทึกไม่สำเร็จ กรุณาลองใหม่');
+    }
   };
 
-  const doDelete = () => {
+  const doDelete = async () => {
     if (!deleteTarget) return;
-    setLevels((ls) => ls.filter((l) => l.id !== deleteTarget.id));
-    setDeleteTarget(null);
+    try {
+      await publicApiFetch<{ id: string }>(`/api/humansource/job-levels/${deleteTarget.id}`, { method: 'DELETE' });
+      setLevels((ls) => ls.filter((l) => l.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch {
+      setApiError('ลบไม่สำเร็จ กรุณาลองใหม่');
+    }
   };
 
   const existingRanks = levels.map((l) => l.rank);
 
   return (
     <div className="hr-position-page">
+      {apiError ? <p className="hr-leave-modal-error" style={{ margin: '0.75rem 1rem' }}>{apiError}</p> : null}
       <div className="hr-settings-toolbar">
         <div className="hr-settings-toolbar__filters">
           <div className="hr-leave-board__search">
@@ -451,7 +460,9 @@ function JobLevelsBoard({ accent }: { accent: string }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <tr><td colSpan={5} className="hr-position-empty">กำลังโหลด...</td></tr>
+            ) : filtered.length === 0 ? (
               <tr><td colSpan={5} className="hr-position-empty">{search ? 'ไม่พบระดับงานที่ค้นหา' : 'ยังไม่มีระดับงาน'}</td></tr>
             ) : (
               filtered.map((l) => (
@@ -571,9 +582,10 @@ const STATUS_FILTER_CHIP_OPTIONS = [
 // ─── Positions list ───────────────────────────────────────────────────────────
 
 function PositionsList({ accent }: { accent: string }) {
-  const [positions, setPositions] = useState<Position[]>(POSITION_SEED);
-  const [jobLevels, setJobLevels] = useState<JobLevel[]>(JOB_LEVEL_SEED);
-  const [hydrated, setHydrated] = useState(false);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [jobLevels, setJobLevels] = useState<JobLevel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState('');
   const [search, setSearch] = useState('');
   const [filterLevelId, setFilterLevelId] = useState('');
   const [filterCompanyId, setFilterCompanyId] = useState('');
@@ -581,30 +593,20 @@ function PositionsList({ accent }: { accent: string }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [drawer, setDrawer] = useState<PosDraft | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Position | null>(null);
-  const counter = useRef(0);
+  const isMounted = useRef(true);
 
   useEffect(() => {
-    try {
-      const rawPos = window.localStorage.getItem(POSITIONS_STORAGE_KEY);
-      if (rawPos) {
-        const p = JSON.parse(rawPos) as Position[];
-        if (Array.isArray(p)) setPositions(p);
-      }
-    } catch { /* keep seed */ }
-    try {
-      const rawLvl = window.localStorage.getItem(JOB_LEVELS_STORAGE_KEY);
-      if (rawLvl) {
-        const l = JSON.parse(rawLvl) as JobLevel[];
-        if (Array.isArray(l)) setJobLevels(l);
-      }
-    } catch { /* keep seed */ }
-    setHydrated(true);
+    isMounted.current = true;
+    Promise.all([
+      publicApiFetch<Position[]>('/api/humansource/positions'),
+      publicApiFetch<JobLevel[]>('/api/humansource/job-levels'),
+    ])
+      .then(([pos, lvl]) => {
+        if (isMounted.current) { setPositions(pos); setJobLevels(lvl); setLoading(false); }
+      })
+      .catch(() => { if (isMounted.current) { setApiError('โหลดข้อมูลไม่สำเร็จ'); setLoading(false); } });
+    return () => { isMounted.current = false; };
   }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(POSITIONS_STORAGE_KEY, JSON.stringify(positions));
-  }, [positions, hydrated]);
 
   const levelMap = Object.fromEntries(jobLevels.map((l) => [l.id, l]));
 
@@ -647,26 +649,51 @@ function PositionsList({ accent }: { accent: string }) {
       hasBenefits: false, active: true,
     });
 
-  const openEdit = (p: Position) => setDrawer({ ...p });
+  const openEdit = (p: Position) => setDrawer({ ...p, employeeTypes: p.employeeTypes ?? [] });
 
-  const save = (draft: PosDraft) => {
-    setPositions((ps) => {
-      if (!draft.id) return [...ps, { ...draft, id: `pos-${Date.now()}-${counter.current++}` }];
-      return ps.map((p) => (p.id === draft.id ? { ...draft, id: draft.id } : p));
-    });
-    setDrawer(null);
+  const save = async (draft: PosDraft) => {
+    const body = {
+      code: draft.code, nameTh: draft.nameTh, nameEn: draft.nameEn,
+      jobLevelId: draft.jobLevelId, companyId: draft.companyId,
+      employeeTypes: draft.employeeTypes, salaryMin: draft.salaryMin,
+      salaryMax: draft.salaryMax, overview: draft.overview,
+      responsibilities: draft.responsibilities, qualifications: draft.qualifications,
+      hasBenefits: draft.hasBenefits, active: draft.active,
+    };
+    try {
+      if (!draft.id) {
+        const created = await publicApiFetch<Position>('/api/humansource/positions', {
+          method: 'POST', body: JSON.stringify(body),
+        });
+        setPositions((ps) => [...ps, created]);
+      } else {
+        const updated = await publicApiFetch<Position>(`/api/humansource/positions/${draft.id}`, {
+          method: 'PATCH', body: JSON.stringify(body),
+        });
+        setPositions((ps) => ps.map((p) => (p.id === updated.id ? updated : p)));
+      }
+      setDrawer(null);
+    } catch {
+      setApiError('บันทึกไม่สำเร็จ กรุณาลองใหม่');
+    }
   };
 
-  const doDelete = () => {
+  const doDelete = async () => {
     if (!deleteTarget) return;
-    setPositions((ps) => ps.filter((p) => p.id !== deleteTarget.id));
-    setDeleteTarget(null);
+    try {
+      await publicApiFetch<{ id: string }>(`/api/humansource/positions/${deleteTarget.id}`, { method: 'DELETE' });
+      setPositions((ps) => ps.filter((p) => p.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch {
+      setApiError('ลบไม่สำเร็จ กรุณาลองใหม่');
+    }
   };
 
   const companyLabel = (id: string) => COMPANY_OPTIONS.find((c) => c.value === id)?.label ?? 'ทุกบริษัท';
 
   return (
     <div className="hr-position-page">
+      {apiError ? <p className="hr-leave-modal-error" style={{ margin: '0.75rem 1rem' }}>{apiError}</p> : null}
       <div className="hr-settings-toolbar">
         <div className="hr-settings-toolbar__filters">
           <div className="hr-leave-board__search">
@@ -731,7 +758,9 @@ function PositionsList({ accent }: { accent: string }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <tr><td colSpan={8} className="hr-position-empty">กำลังโหลด...</td></tr>
+            ) : filtered.length === 0 ? (
               <tr><td colSpan={8} className="hr-position-empty">{search || filterLevelId || filterCompanyId ? 'ไม่พบตำแหน่งที่ค้นหา' : 'ยังไม่มีตำแหน่งงาน'}</td></tr>
             ) : (
               filtered.map((p) => (

@@ -1,0 +1,50 @@
+-- Select getdate() as Date
+-- Select getdate() Date
+-- Select a.name from syscolumns a,sysobjects b Where a.id=b.id And a.name='Doc_Group' And b.name='DocType'
+-- Select * From DocType Where Doc_Type='
+-- Select @@ServerName as ServerName
+-- select isnull(company_name,'') as companyname,isnull(POS,'N') as POS,isnull(commission,'') as commission ,isnull(jobcode,'') as jobcode from companylist where convert(varchar,company_code)=convert(varchar,'
+-- update positem set rategroup='
+-- ' where date=
+-- Select isnull(c.rategroup,'') as rategroup,isnull(b.product,'') as product from zicmast a,Positem b,zICGroup c,POSMain d where a.group_code=c.group_code and d.date=b.date and d.code = b.code and b.rategroup <> c.rategroup and d.date =
+-- ' and code in (select code from posmain where bonus='
+-- Select * from
+-- ORDER BY
+-- Select b.id as ID From sysobjects b Where b.name='
+-- Select a.id From syscolumns a Where a.id =
+-- Alter Table
+-- Select Max(Charge) as Charge from CardType
+-- Select * from BonusCom Where Date=
+-- Delete BonusComAgent Where Date=
+-- Update Posmain set Net=Total-Discount+Fee Where (Total-Discount+Fee)<>Net and Date=
+-- Order by b.RateGroup,b.AgentComPct
+-- (Select b.AgentComPct,a.Code as BillCode,b.Quantity as Qty,a.Discount as Discount1,b.RateGroup,a.DiscPct,b.TourPercent,b.GuidePercent,a.Total,b.Amount,b.Discount,a.Card,a.CardExchg,a.PrepaidCash,a.PrepaidCard,a.PrepaidCashExchg,a.PrepaidCardExchg,a.Credit,a.BankFee,a.BankFee_Prepaid,b.FixCost_Unit,b.Number,a.Currency,a.Rate,b.MainDiscount from Posmain a,Positem b where a.date=b.date and a.code = b.code and a.date=
+-- Select b.AgentComPct,a.Code as BillCode,b.Quantity as Qty,a.Discount as Discount1,b.RateGroup,a.DiscPct,b.TourPercent,b.GuidePercent,a.Total,b.Amount,b.Discount,a.Card,a.CardExchg,a.PrepaidCash,a.PrepaidCard,a.PrepaidCashExchg,a.PrepaidCardExchg,a.Credit,a.BankFee,a.BankFee_Prepaid,b.FixCost_Unit,b.Number,a.Currency,a.Rate,b.MainDiscount from PosmainH a,PositemH b where a.date=b.date and a.code = b.code and a.date=
+-- Select * from Posmain,Positem,Product where Positem.product=Product.Code and Posmain.date=Positem.date and Posmain.code = Positem.code and Posmain.date=
+-- ' Order by Positem.RateGroup
+-- Select TourGroup.DiscountType as DiscountType from Bonus,TourGroup Where Bonus.Date=
+-- Select Sum(Amount) as Amount from PosItem Where Date=
+-- Select * from Bonus,TourGroup Where Bonus.Date='
+-- Select * from BonusComAgent Where Date=
+-- select isnull(tour,'') as tour,isnull(People,0) as People from bonus where code='
+-- select * from bonus where code='
+-- select isnull(pakval,'') as pakval, isnull(pakvalrange,0) as pakvalrange from agent where code='
+-- select isnull(sum(net),0) as saleamount from posmain where bonus='
+-- select isnull(tour,'') as tour from bonus where code='
+-- select isnull(rateval,'') as rateval, isnull(ratevalrange,0) as ratevalrange from agent where code='
+-- Order by b.RateGroup,a.DiscPct
+-- Select isnull(Rate,'') as RateGroup,isnull(Amount,0) as net from BonusCom where Bonus='
+-- update bonus set bonuscom='Y' where date=
+-- (Select a.Code as BillCode,b.Quantity as Qty,a.Discount as Discount1,b.RateGroup,a.DiscPct,b.TourPercent,b.GuidePercent,a.Total,b.Amount,b.Discount,a.Card,a.CardExchg,a.PrepaidCash,a.PrepaidCard,a.PrepaidCashExchg,a.PrepaidCardExchg,a.Credit,a.BankFee,a.BankFee_Prepaid,b.FixCost_Unit,b.Number,a.Currency,a.Rate,b.MainDiscount from Posmain a,Positem b where a.date=b.date and a.code = b.code and a.date=
+-- Select a.Code as BillCode,b.Quantity as Qty,a.Discount as Discount1,b.RateGroup,a.DiscPct,b.TourPercent,b.GuidePercent,a.Total,b.Amount,b.Discount,a.Card,a.CardExchg,a.PrepaidCash,a.PrepaidCard,a.PrepaidCashExchg,a.PrepaidCardExchg,a.Credit,a.BankFee,a.BankFee_Prepaid,b.FixCost_Unit,b.Number,a.Currency,a.Rate,b.MainDiscount from PosmainH a,PositemH b where a.date=b.date and a.code = b.code and a.date=
+-- Select sum(Card+CardExchg) as Card from Posmain a Where Exists (Select Posmain.Date,Posmain.Code from Posmain,Positem,Product where Positem.Product *=Product.Code and Posmain.date=Positem.date and Posmain.code = Positem.code and Posmain.date='
+-- Delete BonusComGuide Where Date=
+-- Update BonusCom Set GuideAmount=0,GuidepieceAmount=0,GAmount=0,GPiece=0,Gtotal=0 Where Date=
+-- (Select b.GuideComPct,a.Code as BillCode,b.Quantity as Qty,a.Discount as Discount1,b.RateGroup,a.DiscPct,b.TourPercent,b.GuidePercent,a.Total,b.Amount,b.Discount,a.Card,a.CardExchg,a.PrepaidCash,a.PrepaidCard,a.PrepaidCashExchg,a.PrepaidCardExchg,a.Credit,a.BankFee,a.BankFee_Prepaid,b.FixCost_Unit,b.Number,a.Currency,a.Rate,b.MainDiscount from Posmain a,Positem b where a.date=b.date and a.code = b.code and a.date=
+-- Select b.GuideComPct,a.Code as BillCode,b.Quantity as Qty,a.Discount as Discount1,b.RateGroup,a.DiscPct,b.TourPercent,b.GuidePercent,a.Total,b.Amount,b.Discount,a.Card,a.CardExchg,a.PrepaidCash,a.PrepaidCard,a.PrepaidCashExchg,a.PrepaidCardExchg,a.Credit,a.BankFee,a.BankFee_Prepaid,b.FixCost_Unit,b.Number,a.Currency,a.Rate,b.MainDiscount from PosmainH a,PositemH b where a.date=b.date and a.code = b.code and a.date=
+-- Order by b.RateGroup,b.GuideComPct
+-- Select * from BonusComGuide Where Date=
+-- Select * from SysComUse Where id1=
+-- ALTER TABLE [dbo].[syscomuse] WITH NOCHECK ADD CONSTRAINT [PK_syscomuse] PRIMARY KEY CLUSTERED ([id1],[id2],[id3],[id4],[name]) ON [PRIMARY]
+-- Select GetDate() as SysDate
+-- Select GetDate() as sysDate

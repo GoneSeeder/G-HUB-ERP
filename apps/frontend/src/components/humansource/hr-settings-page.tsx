@@ -9,9 +9,10 @@ import {
   type HrSettingsGroup,
 } from '@/data/humansource/navigation';
 import { PlusIcon, XIcon } from '@/components/ui/icons';
-import { HrCustomSelect } from './hr-ui';
+import { HrCustomSelect, HrDatePicker } from './hr-ui';
 import { HolidayYearCalendar as HolidayYearCalendarCrud } from './hr-holiday-year-calendar';
-import { CUSTOM_SHIFTS_STORAGE_KEY, type HrShiftGroupKey, type HrShiftRow } from './hr-shifts';
+import { type HrShiftGroupKey, type HrShiftRow } from './hr-shifts';
+import { publicApiFetch } from '@/lib/api';
 import { AddWorkInLocationModal } from './hr-workin-modal';
 import { TimeGeneralSettings } from './hr-time-general';
 import { LeaveSettings } from './hr-leave-settings';
@@ -668,11 +669,9 @@ export function HolidayYearCalendarLegacy({ accent }: { accent: string }) {
         </div>
 
         <div className="hr-holiday-add">
-          <input
-            type="date"
+          <HrDatePicker
             value={holidayDate}
-            onChange={(event) => setHolidayDate(event.target.value)}
-            className="hr-shift-control hr-holiday-add__date"
+            onChange={setHolidayDate}
           />
           <input
             type="text"
@@ -861,107 +860,55 @@ const WORKIN_STATUS_OPTIONS = [
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+type ApiShift = {
+  id: string; code: string; name: string; type: string; time: string;
+  companyScope: string; groupKey: string; enabled: boolean;
+  updatedBy?: string; updatedAt?: string;
+  description?: string; timezone?: string; color?: string;
+  attendanceRule?: string; flexibleEntryEnabled?: boolean; flexibleMinutes?: number;
+  minimumWorkHours?: number; trackBreak?: boolean; shiftAllowanceEnabled?: boolean;
+  shiftAllowanceAmount?: number; prorateShiftAllowance?: boolean;
+  holidayPremiumEnabled?: boolean; overtimePremiumEnabled?: boolean;
+};
+
+function apiShiftToRow(s: ApiShift): ShiftRow {
+  return {
+    enabled: s.enabled, code: s.code, name: s.name, type: s.type,
+    time: s.time, company: s.companyScope,
+    updatedBy: s.updatedBy ?? '', updatedAt: s.updatedAt ?? '',
+    groupKey: (s.groupKey as ShiftGroupKey) ?? 'same-day',
+    description: s.description, timezone: s.timezone, color: s.color,
+    attendanceRule: s.attendanceRule, flexibleEntryEnabled: s.flexibleEntryEnabled,
+    flexibleMinutes: s.flexibleMinutes, minimumWorkHours: s.minimumWorkHours,
+    trackBreak: s.trackBreak, shiftAllowanceEnabled: s.shiftAllowanceEnabled,
+    shiftAllowanceAmount: s.shiftAllowanceAmount, prorateShiftAllowance: s.prorateShiftAllowance,
+    holidayPremiumEnabled: s.holidayPremiumEnabled, overtimePremiumEnabled: s.overtimePremiumEnabled,
+  };
+}
+
 function ShiftSettingsBoard({ accent }: { accent: string }) {
-  const [customShifts, setCustomShifts] = useState<ShiftRow[]>([]);
+  const [shifts, setShifts] = useState<ShiftRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [form, setForm] = useState<ShiftForm>(EMPTY_SHIFT_FORM);
   const [formError, setFormError] = useState('');
   const [filterCompany, setFilterCompany] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const isMounted = useRef(true);
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(CUSTOM_SHIFTS_STORAGE_KEY);
-      if (saved) {
-        setCustomShifts(JSON.parse(saved) as ShiftRow[]);
-      }
-    } catch {
-      window.localStorage.removeItem(CUSTOM_SHIFTS_STORAGE_KEY);
-    }
+    isMounted.current = true;
+    publicApiFetch<ApiShift[]>('/api/humansource/shifts')
+      .then((data) => { if (isMounted.current) { setShifts(data.map(apiShiftToRow)); setLoading(false); } })
+      .catch(() => { if (isMounted.current) setLoading(false); });
+    return () => { isMounted.current = false; };
   }, []);
 
-  const baseShiftGroups: Array<{ groupKey: ShiftGroupKey; rows: ShiftRow[] }> = [
-    {
-      groupKey: 'same-day',
-      rows: [
-        {
-          enabled: true,
-          code: 'WC001',
-          name: 'สำนักงาน 08.30-17.30',
-          type: 'กะปกติ',
-          time: '08:30-12:00 / 13:00-17:30',
-          company: 'ใช้กับทุกบริษัท',
-          updatedBy: 'empeo Team',
-          updatedAt: '10/06/2026 16:32',
-          groupKey: 'same-day',
-        },
-        {
-          enabled: true,
-          code: 'WC002',
-          name: 'สำนักงานครึ่งวัน',
-          type: 'กะพิเศษ',
-          time: '08:30-12:00 / 13:00-15:00',
-          company: 'G-HUB Enterprise',
-          updatedBy: 'HR Admin',
-          updatedAt: '10/06/2026 16:32',
-          groupKey: 'same-day',
-        },
-      ],
-    },
-    {
-      groupKey: 'overnight',
-      rows: [
-        {
-          enabled: true,
-          code: 'WC003',
-          name: 'กะดึก 22.00-06.00',
-          type: 'กะข้ามวัน',
-          time: '22:00-02:00 / 03:00-06:00',
-          company: 'Operations',
-          updatedBy: 'HR Admin',
-          updatedAt: '10/06/2026 16:32',
-          groupKey: 'overnight',
-        },
-      ],
-    },
-    {
-      groupKey: 'total-hours',
-      rows: [
-        {
-          enabled: false,
-          code: 'WC004',
-          name: 'ภาคสนาม 8 ชั่วโมง',
-          type: 'ชั่วโมงรวม',
-          time: 'ครบ 8 ชม. / พักยืดหยุ่น',
-          company: 'ฝ่ายขาย',
-          updatedBy: 'HR Admin',
-          updatedAt: '10/06/2026 16:32',
-          groupKey: 'total-hours',
-        },
-      ],
-    },
-    {
-      groupKey: 'combined',
-      rows: [
-        {
-          enabled: false,
-          code: 'WC005',
-          name: 'ควบเช้า-บ่าย',
-          type: 'ควบกะ',
-          time: '06:00-14:00 + 14:00-22:00',
-          company: 'คลังสินค้า',
-          updatedBy: 'HR Admin',
-          updatedAt: '10/06/2026 16:32',
-          groupKey: 'combined',
-        },
-      ],
-    },
-  ];
-
-  const shiftGroups = baseShiftGroups.map((group) => ({
-    ...group,
-    rows: [...group.rows, ...customShifts.filter((shift) => shift.groupKey === group.groupKey)],
+  const GROUP_KEYS: ShiftGroupKey[] = ['same-day', 'overnight', 'total-hours', 'combined'];
+  const shiftGroups = GROUP_KEYS.map((groupKey) => ({
+    groupKey,
+    rows: shifts.filter((s) => s.groupKey === groupKey),
   }));
 
   const openCreateModal = () => {
@@ -1000,45 +947,41 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
     const time = form.breakStart && form.breakEnd
       ? `${form.startTime}-${form.breakStart} / ${form.breakEnd}-${form.endTime}`
       : `${form.startTime}-${form.endTime}`;
-    const now = new Date();
-    const newShift: ShiftRow = {
-      enabled: form.enabled,
-      code,
-      name,
-      type: SHIFT_GROUP_META[form.groupKey].type,
-      time,
-      company,
-      updatedBy: 'HR Admin',
-      updatedAt: now.toLocaleString('th-TH', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-      groupKey: form.groupKey,
-      description: form.description.trim(),
-      timezone: form.timezone,
-      color: form.color,
-      attendanceRule: form.attendanceRule,
-      flexibleEntryEnabled: form.flexibleEntryEnabled,
-      flexibleMinutes: Number(form.flexibleMinutes) || 0,
-      minimumWorkHours: Number(form.minimumWorkHours) || 0,
-      trackBreak: form.trackBreak,
-      shiftAllowanceEnabled: form.shiftAllowanceEnabled,
-      shiftAllowanceAmount: Number(form.shiftAllowanceAmount) || 0,
-      prorateShiftAllowance: form.prorateShiftAllowance,
-      holidayPremiumEnabled: form.holidayPremiumEnabled,
-      overtimePremiumEnabled: form.overtimePremiumEnabled,
-    };
-    const nextShifts = [...customShifts, newShift];
 
-    setCustomShifts(nextShifts);
-    window.localStorage.setItem(CUSTOM_SHIFTS_STORAGE_KEY, JSON.stringify(nextShifts));
-    closeCreateModal();
+    publicApiFetch<ApiShift>('/api/humansource/shifts', {
+      method: 'POST',
+      body: JSON.stringify({
+        code,
+        name,
+        type: SHIFT_GROUP_META[form.groupKey].type,
+        time,
+        companyScope: company,
+        groupKey: form.groupKey,
+        enabled: form.enabled,
+        description: form.description.trim() || undefined,
+        timezone: form.timezone || undefined,
+        color: form.color || undefined,
+        attendanceRule: form.attendanceRule || undefined,
+        flexibleEntryEnabled: form.flexibleEntryEnabled,
+        flexibleMinutes: Number(form.flexibleMinutes) || 0,
+        minimumWorkHours: Number(form.minimumWorkHours) || 0,
+        trackBreak: form.trackBreak,
+        shiftAllowanceEnabled: form.shiftAllowanceEnabled,
+        shiftAllowanceAmount: Number(form.shiftAllowanceAmount) || 0,
+        prorateShiftAllowance: form.prorateShiftAllowance,
+        holidayPremiumEnabled: form.holidayPremiumEnabled,
+        overtimePremiumEnabled: form.overtimePremiumEnabled,
+        updatedBy: 'HR Admin',
+      }),
+    })
+      .then((created) => {
+        setShifts((prev) => [...prev, apiShiftToRow(created)]);
+        closeCreateModal();
+      })
+      .catch(() => setFormError('ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่'));
   };
 
-  const allShiftRows = shiftGroups.flatMap((group) => group.rows);
+  const allShiftRows = loading ? [] : shiftGroups.flatMap((group) => group.rows);
   const filteredShiftRows = allShiftRows.filter((row) => {
     if (filterCompany && row.company !== filterCompany) return false;
     if (filterType && row.type !== filterType) return false;

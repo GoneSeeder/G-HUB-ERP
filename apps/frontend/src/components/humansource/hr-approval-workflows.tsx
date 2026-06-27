@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FolderIcon, SearchIcon, UploadIcon } from '@/components/ui/icons';
 import {
-  APPROVAL_DOC_CONFIGS_STORAGE_KEY,
-  APPROVAL_PERSON_MAP_STORAGE_KEY,
   DOCUMENT_TYPES_SEED,
   describeApproval,
   type ApprovalMechanism,
@@ -12,6 +10,7 @@ import {
   type DocumentApprovalConfig,
   type PersonApprover,
 } from '@/data/humansource/approval-workflows';
+import { publicApiFetch } from '@/lib/api';
 import { employees } from '@/data/humansource/mock';
 import { HrCustomSelect } from './hr-ui';
 
@@ -73,43 +72,28 @@ export function ApprovalWorkflowSettings({ accent }: { accent: string }) {
 
 function DocumentApprovalList({ accent }: { accent: string }) {
   const [configs, setConfigs] = useState<DocumentApprovalConfig[]>(DOCUMENT_TYPES_SEED);
-  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(APPROVAL_DOC_CONFIGS_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as DocumentApprovalConfig[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Merge stored values onto seed so newly added doc types still appear.
-          const byType = new Map(parsed.map((c) => [c.docType, c]));
-          setConfigs(
-            DOCUMENT_TYPES_SEED.map((seed) => byType.get(seed.docType) ?? seed)
-          );
+    publicApiFetch<DocumentApprovalConfig[]>('/api/humansource/approval/configs')
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const byType = new Map(data.map((c) => [c.docType, c]));
+          setConfigs(DOCUMENT_TYPES_SEED.map((seed) => byType.get(seed.docType) ?? seed));
         }
-      }
-    } catch {
-      window.localStorage.removeItem(APPROVAL_DOC_CONFIGS_STORAGE_KEY);
-    }
-    setHydrated(true);
+      })
+      .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(APPROVAL_DOC_CONFIGS_STORAGE_KEY, JSON.stringify(configs));
-  }, [configs, hydrated]);
-
-  const setMechanism = (docType: string, mechanism: ApprovalMechanism) => {
-    setConfigs((current) =>
-      current.map((c) => (c.docType === docType ? { ...c, mechanism } : c))
-    );
+  const patchConfig = (docType: string, patch: { mechanism?: ApprovalMechanism; steps?: ApprovalSteps }) => {
+    setConfigs((cur) => cur.map((c) => c.docType === docType ? { ...c, ...patch } : c));
+    publicApiFetch(`/api/humansource/approval/configs/${docType}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }).catch(() => {});
   };
 
-  const setSteps = (docType: string, steps: ApprovalSteps) => {
-    setConfigs((current) =>
-      current.map((c) => (c.docType === docType ? { ...c, steps } : c))
-    );
-  };
+  const setMechanism = (docType: string, mechanism: ApprovalMechanism) => patchConfig(docType, { mechanism });
+  const setSteps = (docType: string, steps: ApprovalSteps) => patchConfig(docType, { steps: String(steps) as ApprovalSteps });
 
   return (
     <div className="hr-approval__panel">
@@ -202,39 +186,28 @@ const ACTIVE_EMPLOYEES = employees.filter((e) => e.active);
 
 function PersonApproverMap() {
   const [map, setMap] = useState<PersonApprover[]>([]);
-  const [hydrated, setHydrated] = useState(false);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(APPROVAL_PERSON_MAP_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as PersonApprover[];
-        if (Array.isArray(parsed)) setMap(parsed);
-      }
-    } catch {
-      window.localStorage.removeItem(APPROVAL_PERSON_MAP_STORAGE_KEY);
-    }
-    setHydrated(true);
+    publicApiFetch<PersonApprover[]>('/api/humansource/approval/person-approvers')
+      .then((data) => { if (Array.isArray(data)) setMap(data); })
+      .catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(APPROVAL_PERSON_MAP_STORAGE_KEY, JSON.stringify(map));
-  }, [map, hydrated]);
 
   const approverOf = (employeeId: string): string =>
     map.find((m) => m.employeeId === employeeId)?.approverId ?? '';
 
   const setApprover = (employeeId: string, approverId: string) => {
-    setMap((current) => {
-      const next = approverId ? approverId : null;
-      const existing = current.find((m) => m.employeeId === employeeId);
-      if (existing) {
-        return current.map((m) => (m.employeeId === employeeId ? { ...m, approverId: next } : m));
-      }
-      return [...current, { employeeId, approverId: next }];
+    const next = approverId || null;
+    setMap((cur) => {
+      const existing = cur.find((m) => m.employeeId === employeeId);
+      if (existing) return cur.map((m) => m.employeeId === employeeId ? { ...m, approverId: next } : m);
+      return [...cur, { employeeId, approverId: next }];
     });
+    publicApiFetch('/api/humansource/approval/person-approvers', {
+      method: 'POST',
+      body: JSON.stringify({ employeeId, approverId: next }),
+    }).catch(() => {});
   };
 
   const approverOptions = useMemo(

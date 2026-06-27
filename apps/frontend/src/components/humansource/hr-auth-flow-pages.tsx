@@ -481,3 +481,157 @@ export function HrLinkGhubPage() {
     </HrAuthSurface>
   );
 }
+
+export function HrEmployeeLinkOverlay({ onSuccess }: { onSuccess: () => void }) {
+  const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const [state, setState] = useState<LinkCodeState>('idle');
+  const [seconds, setSeconds] = useState(599);
+  const refs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    window.setTimeout(() => refs.current[0]?.focus(), 80);
+  }, []);
+
+  useEffect(() => {
+    if (state === 'success') return;
+    const id = window.setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
+    return () => window.clearInterval(id);
+  }, [state]); // functional updater — no need for `seconds` in deps
+
+  const code = digits.join('');
+
+  const handleChange = (i: number, raw: string) => {
+    const ch = raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(-1);
+    const next = [...digits];
+    next[i] = ch;
+    setDigits(next);
+    if (state !== 'idle') setState('idle');
+    if (ch && i < 5) window.setTimeout(() => refs.current[i + 1]?.focus(), 0);
+  };
+
+  const handleKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !digits[i] && i > 0) {
+      refs.current[i - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    const next: string[] = ['', '', '', '', '', ''];
+    for (let i = 0; i < text.length; i++) next[i] = text[i];
+    setDigits(next);
+    window.setTimeout(() => refs.current[Math.min(text.length, 5)]?.focus(), 0);
+  };
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (code.length !== 6 || state === 'loading') return;
+    setState('loading');
+    await new Promise((r) => window.setTimeout(r, 600));
+    const result = seconds === 0 ? 'expired' : (await linkHrAccountWithCode('', code)).result;
+    if (result === 'success') {
+      setState('success');
+      window.setTimeout(onSuccess, 800);
+      return;
+    }
+    setState(result);
+  };
+
+  const errorMsg =
+    state === 'expired' ? 'รหัสหมดอายุแล้ว กรุณาขอรหัสใหม่จาก HR'
+    : state === 'used' ? 'รหัสนี้ถูกใช้ไปแล้ว กรุณาขอรหัสใหม่จาก HR'
+    : state === 'invalid' ? 'รหัสเชื่อมต่อไม่ถูกต้อง'
+    : '';
+
+  const isExpired = seconds === 0;
+  const isDisabled = isExpired || state === 'loading' || state === 'success';
+
+  return (
+    <div className="hr-emp-link-overlay" role="dialog" aria-modal="true" aria-label="ผูกบัญชีพนักงาน">
+      <div className="hr-emp-link-modal">
+        <div className="hr-emp-link-modal__icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="hr-emp-link-shield"
+            aria-hidden="true"
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <rect x="10.5" y="10" width="3" height="4" rx="0.5" fill="currentColor" stroke="none" />
+            <circle cx="12" cy="9" r="1.25" fill="currentColor" stroke="none" />
+          </svg>
+        </div>
+
+        {state === 'success' ? (
+          <>
+            <h1 className="hr-emp-link-modal__title">เชื่อมต่อสำเร็จ!</h1>
+            <p className="hr-emp-link-modal__desc">กำลังเข้าสู่ระบบ HumanSource HR</p>
+          </>
+        ) : (
+          <>
+            <h1 className="hr-emp-link-modal__title">ยืนยันรหัสเพื่อผูกบัญชีพนักงาน</h1>
+            <p className="hr-emp-link-modal__desc">
+              กรุณากรอกรหัสผูกบัญชีพนักงาน 6 หลัก<br />
+              เพื่อเชื่อมโยงบัญชีของคุณกับข้อมูลพนักงาน
+            </p>
+
+            <form onSubmit={onSubmit} noValidate className="hr-emp-link-modal__form">
+              <label className="hr-emp-link-modal__label">รหัสผูกบัญชีพนักงาน 6 หลัก</label>
+              <div className="hr-emp-link-otp-row" onPaste={handlePaste}>
+                {digits.map((d, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => { refs.current[i] = el; }}
+                    type="text"
+                    inputMode="text"
+                    maxLength={2}
+                    value={d}
+                    onChange={(e) => handleChange(i, e.target.value)}
+                    onKeyDown={(e) => handleKey(i, e)}
+                    className={`hr-emp-link-otp-box${errorMsg ? ' hr-emp-link-otp-box--error' : ''}`}
+                    disabled={isDisabled}
+                    aria-label={`หลักที่ ${i + 1}`}
+                    placeholder="–"
+                  />
+                ))}
+              </div>
+
+              {errorMsg ? (
+                <div className="hr-emp-link-modal__error" role="alert">
+                  <IconAlert className="hr-emp-link-icon-xs" />
+                  {errorMsg}
+                </div>
+              ) : null}
+
+              <div className="hr-emp-link-modal__hint">
+                <IconClock className="hr-emp-link-icon-xs" />
+                {isExpired
+                  ? 'รหัสหมดอายุแล้ว'
+                  : `ใช้ได้ครั้งเดียว • หมดอายุใน ${fmt(seconds)}`}
+              </div>
+
+              <button
+                type="submit"
+                className="hr-emp-link-modal__submit"
+                disabled={code.length !== 6 || isExpired || state === 'loading'}
+              >
+                {state === 'loading' ? <span className="hr-login-spinner" aria-hidden="true" /> : null}
+                {state === 'loading' ? 'กำลังตรวจสอบ...' : 'ยืนยัน'}
+              </button>
+            </form>
+
+            <p className="hr-emp-link-modal__footer">
+              ยังไม่มีรหัสผูกบัญชีพนักงาน?{' '}
+              <span className="hr-emp-link-modal__footer-link">ติดต่อฝ่าย HR</span>
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

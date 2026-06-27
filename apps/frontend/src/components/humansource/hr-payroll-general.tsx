@@ -5,11 +5,10 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { HrCustomSelect } from './hr-ui';
-import { payrollKey } from '@/data/humansource/payroll-common';
+import { publicApiFetch } from '@/lib/api';
 import {
   CURRENCY_OPTIONS,
   PAYROLL_GENERAL_SEED,
-  PAYROLL_GENERAL_STORAGE_BASE,
   roundMoney,
   type PayrollDayAnchor,
   type PayrollGeneralConfig,
@@ -46,37 +45,36 @@ function isPresetCycle(start: PayrollDayAnchor, end: PayrollDayAnchor): boolean 
   return false;
 }
 
-const GENERAL_GLOBAL_KEY = payrollKey(PAYROLL_GENERAL_STORAGE_BASE, 'global');
-
-function loadConfig(): PayrollGeneralConfig {
-  try {
-    const raw = window.localStorage.getItem(GENERAL_GLOBAL_KEY);
-    if (raw) return { ...PAYROLL_GENERAL_SEED, ...(JSON.parse(raw) as Partial<PayrollGeneralConfig>) };
-  } catch {
-    /* corrupt value — fall back to seed */
-  }
-  return PAYROLL_GENERAL_SEED;
-}
-
 export function PayrollGeneralSettings(_props: { accent: string }) {
   const [config, setConfig] = useState<PayrollGeneralConfig>(PAYROLL_GENERAL_SEED);
   const [hydrated, setHydrated] = useState(false);
   const [customCycleMode, setCustomCycleMode] = useState(false);
   const [toast, setToast] = useState('');
   const toastTimer = useRef<number | null>(null);
+  const isMounted = useRef(true);
+  useEffect(() => { isMounted.current = true; return () => { isMounted.current = false; }; }, []);
 
-  // hydrate once on mount
+  // load from API on mount
   useEffect(() => {
-    const loaded = loadConfig();
-    setConfig(loaded);
-    setCustomCycleMode(!isPresetCycle(loaded.cycleStartDay, loaded.cycleEndDay));
-    setHydrated(true);
+    publicApiFetch<PayrollGeneralConfig>('/api/humansource/payroll/general-config')
+      .then((loaded) => {
+        if (!isMounted.current) return;
+        const cfg = { ...PAYROLL_GENERAL_SEED, ...loaded };
+        setConfig(cfg);
+        setCustomCycleMode(!isPresetCycle(cfg.cycleStartDay, cfg.cycleEndDay));
+        setHydrated(true);
+      })
+      .catch(() => {
+        if (!isMounted.current) return;
+        setCustomCycleMode(!isPresetCycle(PAYROLL_GENERAL_SEED.cycleStartDay, PAYROLL_GENERAL_SEED.cycleEndDay));
+        setHydrated(true);
+      });
   }, []);
 
-  // realtime auto-save whenever config changes after hydration
+  // auto-save to API whenever config changes after hydration
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem(GENERAL_GLOBAL_KEY, JSON.stringify(config));
+    publicApiFetch('/api/humansource/payroll/general-config', { method: 'PATCH', body: JSON.stringify(config) }).catch(() => {});
     setToast('บันทึกอัตโนมัติแล้ว');
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = window.setTimeout(() => setToast(''), 1800);

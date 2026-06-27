@@ -1,152 +1,119 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
-
-type HrAccountStatus = 'active' | 'pending' | 'disabled';
-type HrMembershipStatus = 'active' | 'none' | 'pending';
+import { hash, compare } from 'bcryptjs';
+import { PrismaService } from '../prisma/prisma.service';
 
 type HrSession = {
-  authSource: 'hr' | 'ghub';
+  authSource: string;
   email: string;
   displayName: string;
-  accountStatus: HrAccountStatus;
-  membershipStatus: HrMembershipStatus;
+  accountStatus: string;
+  membershipStatus: string;
   hasGhubLink: boolean;
   createdAt: string;
 };
 
-type HrAccountRecord = HrSession & {
-  password: string;
-};
+function toSession(account: {
+  email: string; displayName: string; authSource: string;
+  accountStatus: string; membershipStatus: string;
+  hasGhubLink: boolean; createdAt: Date;
+}): HrSession {
+  return {
+    authSource: account.authSource,
+    email: account.email,
+    displayName: account.displayName,
+    accountStatus: account.accountStatus,
+    membershipStatus: account.membershipStatus,
+    hasGhubLink: account.hasGhubLink,
+    createdAt: account.createdAt.toISOString(),
+  };
+}
 
-const SUCCESS_LINK_CODE = 'A7K3P9';
+function generateCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
 
 @Injectable()
 export class HumansourceAuthService {
-  private readonly accounts = new Map<string, HrAccountRecord>();
+  constructor(private prisma: PrismaService) {}
 
-  register(displayName: string, email: string, password: string) {
-    const cleanEmail = this.cleanEmail(email);
-    const session = this.createSession(cleanEmail, {
-      displayName,
-      membershipStatus: 'none',
+  // ── Register ─────────────────────────────────────────────────────────────────
+  async register(displayName: string, email: string, password: string) {
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = await this.prisma.hrAccount.findUnique({ where: { email: cleanEmail } });
+    if (existing) throw new BadRequestException('อีเมลนี้ถูกใช้งานแล้ว');
+
+    const passwordHash = await hash(password, 10);
+    const account = await this.prisma.hrAccount.create({
+      data: {
+        email: cleanEmail,
+        displayName: displayName.trim(),
+        passwordHash,
+        authSource: 'hr',
+        accountStatus: 'pending',
+        membershipStatus: 'none',
+      },
     });
 
-    this.accounts.set(cleanEmail, {
-      ...session,
-      password,
+    return { session: toSession(account) };
+  }
+
+  // ── Login ─────────────────────────────────────────────────────────────────────
+  async login(email: string, password: string) {
+    const cleanEmail = email.trim().toLowerCase();
+    const account = await this.prisma.hrAccount.findUnique({ where: { email: cleanEmail } });
+    if (!account) throw new UnauthorizedException('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+
+    const valid = await compare(password, account.passwordHash);
+    if (!valid) throw new UnauthorizedException('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+
+    if (account.accountStatus === 'disabled') {
+      throw new UnauthorizedException('บัญชีนี้ถูกระงับการใช้งาน');
+    }
+
+    return { session: toSession(account) };
+  }
+
+  // ── Generate link code ────────────────────────────────────────────────────────
+  async generateLinkCode(email: string) {
+    const cleanEmail = email.trim().toLowerCase();
+    const account = await this.prisma.hrAccount.findUnique({ where: { email: cleanEmail } });
+    if (!account) throw new BadRequestException('ไม่พบบัญชี');
+
+    await this.prisma.hrLinkCode.updateMany({
+      where: { accountId: account.id, used: false },
+      data: { used: true },
     });
 
-    return { session };
+    const code = generateCode();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await this.prisma.hrLinkCode.create({ data: { code, accountId: account.id, expiresAt } });
+    return { code, expiresAt };
   }
 
-  login(email: string, password: string) {
-    const cleanEmail = this.cleanEmail(email);
-    const prefix = cleanEmail.split('@')[0];
-    const stored = this.accounts.get(cleanEmail);
+  // ── Redeem link code ──────────────────────────────────────────────────────────
+  async linkCode(email: string, code: string) {
+    const cleanEmail = email.trim().toLowerCase();
+    const normalCode = code.trim().toUpperCase();
 
-    if (prefix === 'test.invalid') {
-      throw new UnauthorizedException('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
-    }
-
-    if (stored && stored.password !== password) {
-      throw new UnauthorizedException('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
-    }
-
-    if (stored) {
-      return { session: this.toSession(stored) };
-    }
-
-    if (prefix === 'test.pending') {
-      return {
-        session: this.createSession(cleanEmail, {
-          accountStatus: 'pending',
-          membershipStatus: 'pending',
-        }),
-      };
-    }
-
-    if (prefix === 'test.disabled') {
-      return {
-        session: this.createSession(cleanEmail, {
-          accountStatus: 'disabled',
-          membershipStatus: 'none',
-        }),
-      };
-    }
-
-    if (prefix === 'test.nocompany') {
-      return {
-        session: this.createSession(cleanEmail, {
-          membershipStatus: 'none',
-        }),
-      };
-    }
-
-    return {
-      session: this.createSession(cleanEmail),
-    };
-  }
-
-  linkCode(email: string, code: string) {
-    const cleanEmail = this.cleanEmail(email);
-    const normalizedCode = code.trim().toUpperCase();
-
-    if (normalizedCode === 'EXPIRE') {
-      throw new BadRequestException({ code: 'expired', message: 'รหัสนี้หมดอายุแล้ว' });
-    }
-
-    if (normalizedCode === 'USEDXX') {
-      throw new BadRequestException({ code: 'used', message: 'รหัสนี้ถูกใช้ไปแล้ว' });
-    }
-
-    if (normalizedCode !== SUCCESS_LINK_CODE) {
-      throw new BadRequestException({ code: 'invalid', message: 'รหัสเชื่อมต่อไม่ถูกต้อง' });
-    }
-
-    const current = this.accounts.get(cleanEmail);
-    const session = {
-      ...(current ? this.toSession(current) : this.createSession(cleanEmail)),
-      accountStatus: 'active' as const,
-      membershipStatus: 'active' as const,
-    };
-
-    this.accounts.set(cleanEmail, {
-      ...session,
-      password: current?.password ?? '',
+    const linkCode = await this.prisma.hrLinkCode.findUnique({
+      where: { code: normalCode },
+      include: { account: true },
     });
 
-    return { session };
-  }
+    if (!linkCode) return { result: 'invalid' };
+    if (linkCode.used) return { result: 'used' };
+    if (linkCode.expiresAt < new Date()) return { result: 'expired' };
+    if (linkCode.account.email !== cleanEmail) return { result: 'invalid' };
 
-  private cleanEmail(email: string) {
-    return email.trim().toLowerCase();
-  }
+    await this.prisma.hrLinkCode.update({ where: { code: normalCode }, data: { used: true } });
+    const updated = await this.prisma.hrAccount.update({
+      where: { id: linkCode.accountId },
+      data: { accountStatus: 'active', membershipStatus: 'active' },
+    });
 
-  private createSession(
-    email: string,
-    overrides: Partial<Omit<HrSession, 'authSource' | 'email' | 'createdAt'>> = {},
-  ): HrSession {
-    const nameFromEmail = email.split('@')[0] || 'HR User';
-
-    return {
-      authSource: 'hr',
-      email,
-      displayName: overrides.displayName?.trim() || nameFromEmail,
-      accountStatus: overrides.accountStatus ?? 'active',
-      membershipStatus: overrides.membershipStatus ?? 'active',
-      hasGhubLink: overrides.hasGhubLink ?? false,
-      createdAt: new Date().toISOString(),
-    };
-  }
-
-  private toSession(account: HrAccountRecord): HrSession {
-    return {
-      authSource: account.authSource,
-      email: account.email,
-      displayName: account.displayName,
-      accountStatus: account.accountStatus,
-      membershipStatus: account.membershipStatus,
-      hasGhubLink: account.hasGhubLink,
-      createdAt: account.createdAt,
-    };
+    return { result: 'success', session: toSession(updated) };
   }
 }

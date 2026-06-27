@@ -3,7 +3,7 @@
     "name": "G-HUB HumanSource Design Tokens",
     "version": "2.0.0",
     "source": "Extracted verbatim from the approved Holiday Management UI (design-samples/holiday-management.html). No values invented; every token traces to a rule in that file.",
-    "authority": "Visual authority is the approved Holiday Management UI. On conflict with DESIGN.md, this set wins (per DESIGN_SYSTEM_EXTRACTION.md).",
+    "authority": "Token source for DESIGN.md (the single UI source of truth). Values traced to the approved Holiday Management UI. Prose/rules live in DESIGN.md; this file is the machine-readable token appendix it references. Exception: actionPrimary changed to indigo per owner decision 2026-06.",
     "rule": "Do not add tokens from theory, Material, Tailwind defaults, or other SaaS. New tokens must be extracted from an approved screen."
   },
 
@@ -22,8 +22,8 @@
     "focusRing":    { "value": "rgba(99,102,241,0.12)", "from": "input/select :focus box-shadow (0 0 0 3px)" },
     "focusBorder":  { "value": "#818cf8", "from": "input/select :focus border-color" },
 
-    "actionPrimary":      { "value": "#111827", "from": ".btn--primary background — primary CTA is dark, NOT indigo" },
-    "actionPrimaryHover": { "value": "#1f2937", "from": ".btn--primary:hover" },
+    "actionPrimary":      { "value": "#4f46e5", "from": ".hr-button--primary background — CHANGED 2026-06 (owner decision): primary = indigo, same as --hr-primary. Indigo now serves BOTH primary action and active/selected/focus state. Old dark #111827 retired." },
+    "actionPrimaryHover": { "value": "#4338ca", "from": ".hr-button--primary:hover — indigo ink (was #1f2937 dark)" },
 
     "danger":       { "value": "#be123c", "from": ".btn--danger text / modal__icon (delete)" },
     "dangerSoft":   { "value": "#fff1f2", "from": ".btn--danger background" },

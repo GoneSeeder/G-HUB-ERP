@@ -3,18 +3,16 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { EditIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '@/components/ui/icons';
 import { HrCustomSelect } from './hr-ui';
+import { publicApiFetch } from '@/lib/api';
 import {
   EMPLOYEE_TYPE_SEED,
-  EMPLOYEE_TYPES_STORAGE_KEY,
   taxLabel,
   type EmployeeType,
   type EmployeeTypeTax,
 } from '@/data/humansource/employee-types';
 import {
   EMPLOYEE_DEFAULTS_SEED,
-  EMPLOYEE_DEFAULTS_STORAGE_KEY,
   RUNNING_NUMBER_SEED,
-  RUNNING_NUMBERS_STORAGE_KEY,
   type EmployeeDefaults,
   type RunningNumberConfig,
   type RunningNumberDateToken,
@@ -125,8 +123,8 @@ function ConfirmDelete({
 // ─── Employee Type CRUD ────────────────────────────────────────────────────────
 
 const TAX_OPTIONS: { value: EmployeeTypeTax; label: string }[] = [
-  { value: 'withholding', label: 'หัก ณ ที่จ่าย' },
-  { value: 'none',        label: 'ไม่หัก' },
+  { value: 'หัก ณ ที่จ่าย', label: 'หัก ณ ที่จ่าย' },
+  { value: 'ไม่หัก',        label: 'ไม่หัก' },
 ];
 
 const STATUS_OPTIONS = [
@@ -144,7 +142,7 @@ const DATE_TOKEN_OPTIONS: { value: RunningNumberDateToken; label: string }[] = [
 ];
 
 function emptyEmpType(): EmployeeType {
-  return { id: '', code: '', nameTh: '', nameEn: '', tax: 'none', active: true };
+  return { id: '', code: '', nameTh: '', nameEn: '', tax: 'ไม่หัก', active: true };
 }
 
 function EmpTypeModal({
@@ -258,31 +256,22 @@ function EmpTypeModal({
 }
 
 function EmployeeTypeBoard({ accent }: { accent: string }) {
-  const [rows, setRows] = useState<EmployeeType[]>(EMPLOYEE_TYPE_SEED);
-  const [hydrated, setHydrated] = useState(false);
+  const [rows, setRows] = useState<EmployeeType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState('');
   const [editing, setEditing] = useState<EmployeeType | null>(null);
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create');
   const [confirmDel, setConfirmDel] = useState<EmployeeType | null>(null);
   const [search, setSearch] = useState('');
-  const counter = useRef(0);
+  const isMounted = useRef(true);
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(EMPLOYEE_TYPES_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as EmployeeType[];
-        if (Array.isArray(parsed) && parsed.length > 0) setRows(parsed);
-      }
-    } catch {
-      window.localStorage.removeItem(EMPLOYEE_TYPES_STORAGE_KEY);
-    }
-    setHydrated(true);
+    isMounted.current = true;
+    publicApiFetch<EmployeeType[]>('/api/humansource/employee-types')
+      .then((data) => { if (isMounted.current) { setRows(data); setLoading(false); } })
+      .catch(() => { if (isMounted.current) { setApiError('โหลดข้อมูลไม่สำเร็จ'); setLoading(false); } });
+    return () => { isMounted.current = false; };
   }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(EMPLOYEE_TYPES_STORAGE_KEY, JSON.stringify(rows));
-  }, [rows, hydrated]);
 
   const openCreate = () => {
     setEditMode('create');
@@ -294,23 +283,49 @@ function EmployeeTypeBoard({ accent }: { accent: string }) {
   };
   const close = () => setEditing(null);
 
-  const handleSave = (row: EmployeeType) => {
-    setRows((current) => {
+  const handleSave = async (row: EmployeeType) => {
+    try {
       if (editMode === 'create') {
-        const id = `et-${Date.now()}-${counter.current++}`;
-        return [...current, { ...row, id }];
+        const created = await publicApiFetch<EmployeeType>('/api/humansource/employee-types', {
+          method: 'POST',
+          body: JSON.stringify({ code: row.code, nameTh: row.nameTh, nameEn: row.nameEn, tax: row.tax, active: row.active }),
+        });
+        setRows((current) => [...current, created]);
+      } else {
+        const updated = await publicApiFetch<EmployeeType>(`/api/humansource/employee-types/${row.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ code: row.code, nameTh: row.nameTh, nameEn: row.nameEn, tax: row.tax, active: row.active }),
+        });
+        setRows((current) => current.map((r) => (r.id === updated.id ? updated : r)));
       }
-      return current.map((r) => (r.id === row.id ? row : r));
-    });
-    close();
+      close();
+    } catch {
+      setApiError('บันทึกไม่สำเร็จ กรุณาลองใหม่');
+    }
   };
 
-  const toggle = (id: string) =>
-    setRows((current) => current.map((r) => (r.id === id ? { ...r, active: !r.active } : r)));
+  const toggle = async (id: string) => {
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+    try {
+      const updated = await publicApiFetch<EmployeeType>(`/api/humansource/employee-types/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ active: !row.active }),
+      });
+      setRows((current) => current.map((r) => (r.id === id ? updated : r)));
+    } catch {
+      setApiError('อัปเดตสถานะไม่สำเร็จ');
+    }
+  };
 
-  const del = (id: string) => {
-    setRows((current) => current.filter((r) => r.id !== id));
-    setConfirmDel(null);
+  const del = async (id: string) => {
+    try {
+      await publicApiFetch<{ id: string }>(`/api/humansource/employee-types/${id}`, { method: 'DELETE' });
+      setRows((current) => current.filter((r) => r.id !== id));
+      setConfirmDel(null);
+    } catch {
+      setApiError('ลบไม่สำเร็จ กรุณาลองใหม่');
+    }
   };
 
   const filtered = search.trim()
@@ -328,6 +343,10 @@ function EmployeeTypeBoard({ accent }: { accent: string }) {
 
   return (
     <div className="hr-leave-board">
+      {apiError ? (
+        <p className="hr-leave-modal-error" style={{ margin: '0.75rem 1rem' }}>{apiError}</p>
+      ) : null}
+
       <header className="hr-leave-board__toolbar">
         <div className="hr-leave-board__toolbar-left">
           <div className="hr-leave-board__search">
@@ -355,6 +374,9 @@ function EmployeeTypeBoard({ accent }: { accent: string }) {
       </header>
 
       <div className="hr-leave-board__table-wrap">
+        {loading ? (
+          <p className="hr-leave-board__empty">กำลังโหลด...</p>
+        ) : (
         <table className="hr-leave-board__table">
           <thead>
             <tr>
@@ -423,6 +445,7 @@ function EmployeeTypeBoard({ accent }: { accent: string }) {
             ) : null}
           </tbody>
         </table>
+        )}
       </div>
 
       {editing ? (
@@ -452,25 +475,19 @@ function EmployeeTypeBoard({ accent }: { accent: string }) {
 function EmployeeDefaultsForm({ accent }: { accent: string }) {
   const [defaults, setDefaults] = useState<EmployeeDefaults>(EMPLOYEE_DEFAULTS_SEED);
   const [empTypes, setEmpTypes] = useState<EmployeeType[]>(EMPLOYEE_TYPE_SEED);
-  const [hydrated, setHydrated] = useState(false);
   const [saved, setSaved] = useState(false);
+  const isMounted = useRef(true);
+  useEffect(() => { isMounted.current = true; return () => { isMounted.current = false; }; }, []);
 
   useEffect(() => {
-    try {
-      const rawD = window.localStorage.getItem(EMPLOYEE_DEFAULTS_STORAGE_KEY);
-      if (rawD) {
-        const p = JSON.parse(rawD) as EmployeeDefaults;
-        if (p && typeof p.codePrefix === 'string') setDefaults(p);
-      }
-    } catch { /* ignore */ }
-    try {
-      const rawT = window.localStorage.getItem(EMPLOYEE_TYPES_STORAGE_KEY);
-      if (rawT) {
-        const p = JSON.parse(rawT) as EmployeeType[];
-        if (Array.isArray(p) && p.length > 0) setEmpTypes(p);
-      }
-    } catch { /* ignore */ }
-    setHydrated(true);
+    Promise.all([
+      publicApiFetch<EmployeeDefaults>('/api/humansource/basic-settings/employee-defaults'),
+      publicApiFetch<EmployeeType[]>('/api/humansource/employee-types'),
+    ]).then(([d, t]) => {
+      if (!isMounted.current) return;
+      if (d && typeof d.codePrefix === 'string') setDefaults(d);
+      if (Array.isArray(t) && t.length > 0) setEmpTypes(t);
+    }).catch(() => {});
   }, []);
 
   const update = (patch: Partial<EmployeeDefaults>) => {
@@ -478,10 +495,9 @@ function EmployeeDefaultsForm({ accent }: { accent: string }) {
     setSaved(false);
   };
 
-  const handleSave = (e: FormEvent) => {
+  const handleSave = async (e: FormEvent) => {
     e.preventDefault();
-    if (!hydrated) return;
-    window.localStorage.setItem(EMPLOYEE_DEFAULTS_STORAGE_KEY, JSON.stringify(defaults));
+    await publicApiFetch('/api/humansource/basic-settings/employee-defaults', { method: 'PATCH', body: JSON.stringify(defaults) });
     setSaved(true);
   };
 
@@ -688,50 +704,46 @@ function RunningNumberModal({
 
 function RunningNumberBoard({ accent }: { accent: string }) {
   const [rows, setRows] = useState<RunningNumberConfig[]>(RUNNING_NUMBER_SEED);
-  const [hydrated, setHydrated] = useState(false);
   const [shown, setShown] = useState(false);
   const [editing, setEditing] = useState<RunningNumberConfig | null>(null);
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create');
   const [confirmDel, setConfirmDel] = useState<RunningNumberConfig | null>(null);
   const counter = useRef(0);
 
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(RUNNING_NUMBERS_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as RunningNumberConfig[];
-        if (Array.isArray(parsed) && parsed.length > 0) setRows(parsed);
-      }
-    } catch {
-      window.localStorage.removeItem(RUNNING_NUMBERS_STORAGE_KEY);
-    }
-    setHydrated(true);
-  }, []);
+  const isMountedRN = useRef(true);
+  useEffect(() => { isMountedRN.current = true; return () => { isMountedRN.current = false; }; }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(RUNNING_NUMBERS_STORAGE_KEY, JSON.stringify(rows));
-  }, [rows, hydrated]);
+    publicApiFetch<RunningNumberConfig[]>('/api/humansource/basic-settings/running-numbers')
+      .then((r) => { if (isMountedRN.current && r.length) setRows(r); })
+      .catch(() => {});
+  }, []);
 
   const openCreate = () => { setEditMode('create'); setEditing(emptyRN()); };
   const openEdit = (row: RunningNumberConfig) => { setEditMode('edit'); setEditing(row); };
   const close = () => setEditing(null);
 
-  const handleSave = (row: RunningNumberConfig) => {
-    setRows((current) => {
-      if (editMode === 'create') {
-        const id = `rn-${Date.now()}-${counter.current++}`;
-        return [...current, { ...row, id }];
-      }
-      return current.map((r) => (r.id === row.id ? row : r));
-    });
+  const handleSave = async (row: RunningNumberConfig) => {
+    if (editMode === 'create') {
+      const id = `rn-${Date.now()}-${counter.current++}`;
+      const created = await publicApiFetch<RunningNumberConfig>('/api/humansource/basic-settings/running-numbers', { method: 'POST', body: JSON.stringify({ ...row, id }) });
+      setRows((current) => [...current, created]);
+    } else {
+      const updated = await publicApiFetch<RunningNumberConfig>(`/api/humansource/basic-settings/running-numbers/${row.id}`, { method: 'PATCH', body: JSON.stringify(row) });
+      setRows((current) => current.map((r) => r.id === row.id ? updated : r));
+    }
     close();
   };
 
-  const toggle = (id: string) =>
-    setRows((current) => current.map((r) => (r.id === id ? { ...r, active: !r.active } : r)));
+  const toggle = async (id: string) => {
+    const row = rows.find((r) => r.id === id);
+    if (!row) return;
+    const updated = await publicApiFetch<RunningNumberConfig>(`/api/humansource/basic-settings/running-numbers/${id}`, { method: 'PATCH', body: JSON.stringify({ active: !row.active }) });
+    setRows((current) => current.map((r) => r.id === id ? updated : r));
+  };
 
-  const del = (id: string) => {
+  const del = async (id: string) => {
+    await publicApiFetch(`/api/humansource/basic-settings/running-numbers/${id}`, { method: 'DELETE' });
     setRows((current) => current.filter((r) => r.id !== id));
     setConfirmDel(null);
   };

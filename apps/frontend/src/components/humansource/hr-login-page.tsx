@@ -7,6 +7,7 @@ import {
   getHrSessionDestination,
   linkHrAccountWithCode,
   loginHrAccount,
+  setHrSessionSnapshot,
 } from '@/lib/hr-auth';
 
 type AuthView = 'login' | 'pending' | 'disabled' | 'no-company' | 'link-code';
@@ -281,7 +282,11 @@ export function HrLoginPage() {
     try {
       await new Promise(r => setTimeout(r, 900));
       const session = await loginHrAccount('google.user@gmail.com', 'google-oauth-mock');
-      router.push(getHrSessionDestination(session));
+      // Bypass: Google login treats account as already linked (no real OAuth yet)
+      const linkedSession = { ...session, hasGhubLink: true };
+      setHrSessionSnapshot(linkedSession);
+      window.localStorage.setItem('g-hub.hr.ghub-linked', 'true');
+      router.push(getHrSessionDestination(linkedSession));
     } catch {
       // Google OAuth ยังไม่เชื่อม backend — stub
     } finally {

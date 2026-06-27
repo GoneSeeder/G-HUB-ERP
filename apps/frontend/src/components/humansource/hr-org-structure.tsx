@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PlusIcon, EditIcon, TrashIcon, XIcon, CheckIcon } from '@/components/ui/icons';
+import { publicApiFetch } from '@/lib/api';
 import {
   type OrgNode,
   type OrgNodeType,
-  ORG_STRUCTURE_STORAGE_KEY,
   ORG_STRUCTURE_SEED,
   addChildNode,
   findCompanyAncestor,
@@ -16,7 +16,6 @@ import {
 } from '@/data/humansource/org-structure';
 import {
   type Company,
-  COMPANIES_STORAGE_KEY,
   COMPANY_SEED,
 } from '@/data/humansource/companies';
 import { OrgNodeDetailModal } from './hr-company-detail';
@@ -108,7 +107,6 @@ function reconcileBranchesWithTree(companies: Company[], tree: OrgNode[]): Compa
 export function OrgStructureBoard({ accent }: { accent: string }) {
   const [tree, setTree] = useState<OrgNode[]>(ORG_STRUCTURE_SEED);
   const [companies, setCompanies] = useState<Company[]>(COMPANY_SEED);
-  const [hydrated, setHydrated] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [draft, setDraft] = useState<Draft | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<OrgNode | null>(null);
@@ -117,36 +115,34 @@ export function OrgStructureBoard({ accent }: { accent: string }) {
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const idCounter = useRef(0);
 
-  // Hydrate once from localStorage.
+  const isMounted = useRef(true);
+  useEffect(() => { isMounted.current = true; return () => { isMounted.current = false; }; }, []);
+
+  // Load from API on mount.
   useEffect(() => {
-    try {
-      const rawTree = window.localStorage.getItem(ORG_STRUCTURE_STORAGE_KEY);
-      if (rawTree) {
-        const parsed = JSON.parse(rawTree) as OrgNode[];
-        if (Array.isArray(parsed)) setTree(parsed);
-      }
-    } catch { /* keep seed */ }
-    try {
-      const rawCo = window.localStorage.getItem(COMPANIES_STORAGE_KEY);
-      if (rawCo) {
-        const parsed = JSON.parse(rawCo) as Company[];
-        if (Array.isArray(parsed)) setCompanies(parsed);
-      }
-    } catch { /* keep seed */ }
-    setHydrated(true);
+    Promise.all([
+      publicApiFetch<OrgNode[]>('/api/humansource/org-structure/tree'),
+      publicApiFetch<Company[]>('/api/humansource/org-structure/companies'),
+    ]).then(([t, c]) => {
+      if (!isMounted.current) return;
+      if (Array.isArray(t) && t.length) setTree(t);
+      if (Array.isArray(c) && c.length) setCompanies(c);
+    }).catch(() => {});
   }, []);
 
-  // Persist tree on every change once hydrated.
+  // Persist tree to API whenever it changes.
+  const treeInitialized = useRef(false);
   useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(ORG_STRUCTURE_STORAGE_KEY, JSON.stringify(tree));
-  }, [tree, hydrated]);
+    if (!treeInitialized.current) { treeInitialized.current = true; return; }
+    publicApiFetch('/api/humansource/org-structure/tree', { method: 'PUT', body: JSON.stringify(tree) }).catch(() => {});
+  }, [tree]);
 
-  // Persist companies on every change once hydrated.
+  // Persist companies to API whenever they change.
+  const companiesInitialized = useRef(false);
   useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(COMPANIES_STORAGE_KEY, JSON.stringify(companies));
-  }, [companies, hydrated]);
+    if (!companiesInitialized.current) { companiesInitialized.current = true; return; }
+    publicApiFetch('/api/humansource/org-structure/companies', { method: 'PUT', body: JSON.stringify(companies) }).catch(() => {});
+  }, [companies]);
 
   // Branch records aligned to the tree — what the detail modal displays (no orphans).
   const displayCompanies = useMemo(() => reconcileBranchesWithTree(companies, tree), [companies, tree]);

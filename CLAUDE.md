@@ -21,7 +21,8 @@ The frontend is **Next.js (App Router) + Tailwind + TypeScript (strict, `noUnuse
 
 | File | Why |
 |---|---|
-| `DESIGN.md` (repo root) | **Design system source of truth** — color tokens, typography, spacing, component patterns, approved/rejected layout patterns. Maintained by impeccable. |
+| `DESIGN.md` (repo root) | **THE single UI source of truth.** Consolidated design system (philosophy, tokens, all 14 components, layout, governance, anti-tells). Now absorbs the old `DESIGN_V2.md` / `COMPONENT_RULES_V2.md` / `LAYOUT_RULES_V2.md` / `DESIGN_GOVERNANCE_V2.md` (those are stubs pointing back here). **Read this whole file — do not stop after skimming.** |
+| `DESIGN_TOKENS_V2.json` (repo root) | Machine-readable token appendix referenced by `DESIGN.md` (exact hex/rem/z-index values). |
 | `PRODUCT.md` (repo root) | Product context, brand personality (Clean · Friendly · Modern), anti-references (what *not* to look like). |
 | `apps/frontend/src/components/humansource/AGENTS.md` | **Hard rules** for HR UI (semantic classes, no native select, HrCustomSelect, verification commands). Treat as non-negotiable. |
 | `LEAVE_SETTINGS_PLAN.md` (repo root) | Spec for the leave settings + approval workflows feature. Phases 1–3 done, Phase 4+ pending. |
@@ -85,7 +86,27 @@ preferences for any HR UI work — not just for the file that was being discusse
 ---
 
 ## 4. State / persistence conventions
-- Demo features use **localStorage** (no backend yet). See `hr-holiday-year-calendar.tsx`
+
+> **⚠️ DIRECTION CHANGE (2026-06-27): HR is moving to a real backend + database.**
+> From now on, **new HR work targets the real NestJS + Prisma + Postgres backend
+> (`apps/backend`), NOT mock data / localStorage.** The plan, schema draft, and build
+> sequence are in **`HR_BACKEND_PLAN.md`**. Frontend+backend are built in parallel.
+> - Existing localStorage features get migrated to the DB feature-by-feature (Layer A
+>   master/config first, then Layer B runtime: shift assignments, attendance, leave
+>   requests, approvals, payroll runs — payroll LAST).
+> - The frontend `data/humansource/*` mock stays as the **frozen API contract / seed
+>   source** during migration — don't keep building new features on it.
+> - DB: `docker-compose` postgres, `DATABASE_URL` in repo-root `.env`. Migrations live in
+>   `apps/backend/prisma/migrations` (naming `YYYYMMDDHHMMSS_name`); seed = `prisma/seed.ts`
+>   (HR seed split into `prisma/seed-humansource.ts`).
+> - **Dev workflow: run apps on the HOST for instant reload** — `docker compose stop backend
+>   frontend` (keep postgres in docker), then `cd apps/backend && pnpm start:dev` (host:3001)
+>   + `cd apps/frontend && pnpm dev` (host:3000). The docker backend is a prod build (no source
+>   mount) — rebuild it only to deploy. After a schema change: `prisma generate` + restart the
+>   backend watch; trust `nest build` / `tsc --noEmit` over transient watch type-noise.
+
+**Legacy (localStorage) pattern — for features not yet migrated:**
+- Demo features use **localStorage**. See `hr-holiday-year-calendar.tsx`
   for the canonical pattern: hydrate once in `useEffect`, gate persistence with a
   `hydrated` flag, persist on every state change.
 - localStorage keys are prefixed `g-hub.hr.*`.

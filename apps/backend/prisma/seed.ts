@@ -1,6 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
+import { seedHumanSource } from './seed-humansource';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -496,6 +497,8 @@ async function main() {
       ],
     });
   }
+
+  await seedHumanSource(prisma);
 }
 
 main()

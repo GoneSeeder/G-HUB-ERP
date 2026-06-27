@@ -1,0 +1,1113 @@
+!This program cannot be run in DOS mode.
+Rich
+=K|i
+.text
+`.data
+.rsrc
+MSVBVM60.DLL
+wRs2uQsD
+rRs1hRs
+;Rst
+PsbrRs
+sPsEtPs&HPsW
+hPs)uPskbQs=
+PsetPs
+uRss
+qRs.
+Qs&nPs0sRssnPs
+nRs*aQs
+?Os?|Ps
+LPs*<Rs
+OsRwRs
+LPs\
+Ps2vRs`vRs$FPsx
+gPsa
+Ps7vPsfLPs
+PsDROs
+QOs%
+Ns];Os
+jPs/
+RsEjPs
+OstLPs|sQs"
+PsYuRs
+RspuRsM
+lPstjPs
+aQs-
+Os0jPs
+-C000-Project1
+046}#2.
+Setup_SK
+Form1
+Form1
+ProgressBar1
+MSComctlLib.ProgressBar
+Data1
+MSAdodcLib.Adodc
+MS Sans Serif
+Command1
+Setup
+Label5
+Label5
+Label4
+Label4
+Label3
+Label3
+Label2
+Label1
+Label1
+VB5!
+Setup_GEI_DEC_26
+Setup_DC
+Project1
+MSADODC.OCX
+MSAdodcLib.Adodc
+Adodc
+(6(!:
+(6( :
+mscomctl.ocx
+MSComctlLib.ProgressBar
+ProgressBar
+Setup_SK
+SingForm
+Command1
+ErrorPrg
+Project1
+C:\Program Files\Microsoft Visual Studio\VB98\VB6.OLB
+Label4
+Label1
+Form
+6__vbaI2Var
+ProgressBar1
+'0?'
+C:\WINDOWS\system32\MSCOMCTL.oca
+MSComctlLib
+Data1
+!C:\WINDOWS\system32\MSADODC.oca
+MSAdodcLib
+Label2
+Label3
+Label5
+kernel32
+GetFullPathNameA
+msvbvm50.dll
+GetMem1
+gdi32
+GetPath
+GetSystemDirectoryA
+h`2@
+GetTempPathA
+GetWindowsDirectoryA
+user32
+GetWindowRgn
+hL3@
+icmp.dll
+IcmpCreateFile
+IcmpCloseHandle
+h04@
+IcmpSendEcho
+hx4@
+WSOCK32.DLL
+WSAGetLastError
+WSAStartup
+WSACleanup
+hX5@
+gethostname
+gethostbyname
+gethostbyaddr
+h,6@
+RtlMoveMemory
+ht6@
+GetVolumeInformationA
+ShowOwnedPopups
+FindWindowA
+h\8@
+SendMessageA
+OpenProcess
+GetExitCodeProcess
+h49@
+TerminateProcess
+__vbaVarAnd
+VBA6.DLL
+__vbaVarCmpLe
+__vbaVarCmpGe
+__vbaStrCmp
+__vbaStrVarMove
+__vbaNew2
+__vbaDateVar
+__vbaCastObjVar
+__vbaLateIdCall
+__vbaFpI2
+__vbaFreeStr
+__vbaHresultCheckObj
+__vbaStrCat
+__vbaStrMove
+__vbaErrorOverflow
+__vbaEnd
+__vbaVarDup
+__vbaFreeObjList
+__vbaLateIdSt
+__vbaLateIdCallLd
+__vbaR4Var
+__vbaVarForNext
+__vbaVarForInit
+__vbaFreeObj
+__vbaObjSet
+__vbaFreeVar
+__vbaVarTstEq
+__vbaVarAdd
+__vbaVarCmpEq
+__vbaVarOr
+__vbaBoolVarNull
+__vbaFreeVarList
+__vbaFreeStrList
+__vbaStrCopy
+__vbaVarMove
+__vbaAryDestruct
+__vbaDateR8
+__vbaDateStr
+__vbaVarTstLt
+__vbaRedimPreserve
+__vbaVarAbs
+__vbaVarCmpLt
+__vbaLateMemCallSt
+__vbaVarLateMemSt
+__vbaVarZero
+__vbaResume
+__vbaPrintFile
+__vbaCyMulI2
+__vbaFpR8
+__vbaGosubFree
+__vbaGosubReturn
+__vbaStrR4
+__vbaStrCy
+__vbaCyInt
+__vbaFPFix
+__vbaCyFix
+__vbaCySub
+__vbaR4Cy
+__vbaCyAdd
+__vbaVarDiv
+__vbaR8Cy
+__vbaVarMul
+__vbaFpCmpCy
+__vbaCyI2
+__vbaGosub
+__vbaCyVar
+__vbaFpCy
+__vbaExitProc
+__vbaVarCat
+__vbaR8Var
+__vbaPowerR8
+__vbaVarLateMemCallLdRf
+__vbaLineInputStr
+__vbaInStr
+__vbaFpI4
+__vbaAryUnlock
+__vbaAryLock
+__vbaVarTstLe
+__vbaFreeVarg
+__vbaVarCmpGt
+__vbaVarLateMemCallSt
+__vbaObjVar
+__vbaVarLateMemCallLd
+__vbaVarSetVar
+__vbaStrErrVarCopy
+__vbaI2Str
+__vbaLenVar
+__vbaGenerateBoundsError
+__vbaVarSub
+__vbaStrI2
+__vbaStrVarVal
+__vbaSetSystemError
+__vbaI4Var
+__vbaI2I4
+__vbaVarCopy
+__vbaStrVarCopy
+__vbaFileClose
+__vbaInputFile
+__vbaFileOpen
+__vbaInStrVar
+__vbaVarNot
+__vbaVarTstNe
+__vbaLenBstr
+__vbaVarCmpNe
+__vbaVarTstGt
+__vbaLateMemCall
+__vbaLateMemSt
+__vbaLateMemCallLd
+__vbaBoolVar
+__vbaObjSetAddref
+__vbaOnError
+__vbaVarVargNofree
+__vbaVargVarMove
+__vbaStrUI1
+__vbaRedim
+__vbaLsetFixstrFree
+__vbaFixstrConstruct
+__vbaUI1I2
+__vbaAryConstruct2
+__vbaFileCloseAll
+__vbaRecAnsiToUni
+__vbaStrToAnsi
+__vbaRecUniToAnsi
+__vbaStrI4
+__vbaStrToUnicode
+__vbaLsetFixstr
+__vbaStrFixstr
+Ph$:@
+Phh:@
+jTh<>@
+j(hL>@
+j4h\>@
+h|>@
+Rh ?@
+Ph,?@
+Qh8?@
+RhD?@
+Qh4@@
+Rh@@@
+PhL@@
+QhX@@
+Rhd@@
+Php@@
+Qh(A@
+Rh8A@
+QhHA@
+RhXA@
+PhdA@
+QhpA@
+Qh|A@
+Qh B@
+Qh0B@
+Qh<B@
+RhHB@
+PhTB@
+Qh`B@
+nu'f
+PhlB@
+du(f=e
+QhxB@
+QhlB@
+Rh$C@
+Ph0C@
+Qh<C@
+RhLC@
+PhXC@
+QhdC@
+RhpC@
+u,f=
+du-f=e
+nu2f;
+nu4f
+fu"f=e
+nu=f
+nu)f
+QCRj
+h|>@
+QhDF@
+Ht(Ht
+h|>@
+RhdG@
+QhDF@
+Ph,H@
+Qh@H@
+h|>@
+PhXH@
+hpH@
+Ph@H@
+h(K@
+h8K@
+h(K@
+j,h8K@
+h(K@
+jPh8K@
+h(K@
+h<>@
+jTh<>@
+j(hL>@
+j4h\>@
+h<>@
+h(K@
+h<>@
+jPh<>@
+h<>@
+h|L@
+h(K@
+h<>@
+jPh<>@
+jTh<>@
+j(hL>@
+h<>@
+h|L@
+h(K@
+h<>@
+h<>@
+h<>@
+jTh<>@
+j(hL>@
+j4h\>@
+h<>@
+PQhL
+h(K@
+h<>@
+jTh<>@
+j(hL>@
+jTh<>@
+j(hL>@
+j4h\>@
+h<>@
+h(K@
+j<h8K@
+Rh@P@
+QRhL
+PhxN@
+Phh:@
+PhXH@
+Rh(K@
+jPh8K@
+h|P@
+Ph R@
+Rh(K@
+h<>@
+jPh<>@
+jTh<>@
+j(hL>@
+j4h\>@
+jTh<>@
+j(hL>@
+j4h\>@
+jTh<>@
+j(hL>@
+j4h\>@
+jTh<>@
+j(hL>@
+j4h\>@
+jTh<>@
+j(hL>@
+j4h\>@
+h<>@
+Rh(K@
+j<h8K@
+LSVW
+VPp;
+,SVW
+pPPQ
+lSVW
+|SVW
+$SVW
+h`'A
+$SVW
+,SVW
+h|>@
+h(K@
+h8K@
+h(K@
+}#jPh8K@
+h<>@
+h<>@
+h(K@
+h<>@
+}#jTh<>@
+}#j(hL>@
+}#j4h\>@
+h<>@
+h(K@
+}#j<h8K@
+h(K@
+h8K@
+h(K@
+}#j<h8K@
+h(K@
+}#jPh8K@
+h(K@
+}#jPh8K@
+h(K@
+}#jPh8K@
+h(K@
+}#j@h8K@
+h(K@
+}#j@h8K@
+Ph R@
+h(K@
+}#j@h8K@
+h(K@
+}#j<h8K@
+h(K@
+h8K@
+h(K@
+}#j<h8K@
+h(K@
+}#jPh8K@
+h(K@
+}#jPh8K@
+h(K@
+}#jPh8K@
+h(K@
+}#jPh8K@
+h(K@
+}#j@h8K@
+h(K@
+}#j@h8K@
+Ph R@
+h(K@
+}#j@h8K@
+h(K@
+}#j<h8K@
+|SVW
+h%dA
+h%dA
+h%dA
+h%dA
+h9gA
+h9gA
+h9gA
+$h{kA
+MSVBVM60.DLL
+__vbaVarTstGt
+__vbaVarSub
+__vbaStrI2
+_CIcos
+_adj_fptan
+__vbaStrI4
+__vbaVarMove
+__vbaVarVargNofree
+__vbaFreeVar
+__vbaLenBstr
+__vbaLineInputStr
+__vbaGosubReturn
+__vbaLateIdCall
+__vbaStrVarMove
+__vbaFreeVarList
+__vbaEnd
+_adj_fdiv_m64
+__vbaFreeObjList
+__vbaStrErrVarCopy
+_adj_fprem1
+__vbaRecAnsiToUni
+__vbaResume
+__vbaVarCmpNe
+__vbaStrCat
+__vbaLsetFixstr
+__vbaCyInt
+__vbaSetSystemError
+__vbaHresultCheckObj
+__vbaLenVar
+_adj_fdiv_m32
+__vbaVarTstLe
+__vbaAryDestruct
+__vbaVarCmpGe
+__vbaLateMemSt
+__vbaExitProc
+__vbaVarForInit
+__vbaFileCloseAll
+__vbaOnError
+__vbaCyAdd
+__vbaObjSet
+_adj_fdiv_m16i
+__vbaObjSetAddref
+_adj_fdivr_m16i
+__vbaStrFixstr
+__vbaBoolVar
+__vbaFPFix
+__vbaFpR8
+__vbaVarTstLt
+__vbaBoolVarNull
+_CIsin
+__vbaVargVarMove
+__vbaVarCmpGt
+__vbaVarZero
+__vbaChkstk
+__vbaFileClose
+__vbaCyVar
+__vbaGosubFree
+EVENT_SINK_AddRef
+__vbaGenerateBoundsError
+__vbaVarAbs
+__vbaCyI2
+__vbaStrCmp
+__vbaAryConstruct2
+__vbaVarTstEq
+__vbaDateR8
+__vbaI2I4
+__vbaObjVar
+DllFunctionCall
+__vbaVarLateMemSt
+__vbaVarOr
+__vbaCySub
+__vbaCastObjVar
+__vbaStrR4
+__vbaRedimPreserve
+_adj_fpatan
+__vbaR4Var
+__vbaFixstrConstruct
+__vbaR4Cy
+__vbaLateIdCallLd
+__vbaRedim
+__vbaR8Cy
+__vbaRecUniToAnsi
+EVENT_SINK_Release
+__vbaUI1I2
+_CIsqrt
+__vbaVarAnd
+EVENT_SINK_QueryInterface
+__vbaStrUI1
+__vbaFpCmpCy
+__vbaVarMul
+__vbaExceptHandler
+__vbaStrToUnicode
+__vbaInputFile
+__vbaPrintFile
+__vbaCyFix
+__vbaDateStr
+_adj_fprem
+_adj_fdivr_m64
+__vbaI2Str
+__vbaGosub
+__vbaVarDiv
+__vbaVarCmpLe
+__vbaFPException
+__vbaInStrVar
+__vbaStrVarVal
+__vbaVarCat
+__vbaDateVar
+__vbaLsetFixstrFree
+__vbaI2Var
+_CIlog
+__vbaErrorOverflow
+__vbaFileOpen
+__vbaVarLateMemCallLdRf
+__vbaInStr
+__vbaNew2
+__vbaCyMulI2
+_adj_fdiv_m32i
+_adj_fdivr_m32i
+__vbaStrCopy
+__vbaVarNot
+__vbaVarCmpLt
+__vbaFreeStrList
+_adj_fdivr_m32
+__vbaPowerR8
+__vbaR8Var
+_adj_fdiv_r
+__vbaVarTstNe
+__vbaVarSetVar
+__vbaI4Var
+__vbaVarCmpEq
+__vbaFpCy
+__vbaLateMemCall
+__vbaAryLock
+__vbaVarAdd
+__vbaStrToAnsi
+__vbaFreeVarg
+__vbaVarDup
+__vbaFpI2
+__vbaVarCopy
+__vbaVarLateMemCallLd
+__vbaFpI4
+__vbaLateMemCallLd
+_CIatan
+__vbaStrMove
+__vbaStrVarCopy
+_allmul
+__vbaVarLateMemCallSt
+__vbaLateIdSt
+__vbaLateMemCallSt
+_CItan
+__vbaAryUnlock
+__vbaVarForNext
+_CIexp
+__vbaStrCy
+__vbaFreeObj
+__vbaFreeStr
+=K|i
+=K|i
+=K|i
+=K|i
+=K|i
+=K|i
+=K|i
+=K|i
+=K|i
+1u  
+DSN=ST_Server
+ST_Server
+Adodc1
+@exe
+@isual Studio\VB98;C:\WINDOWS\system3
+C4145310-469C-11d1-B182-00A0C922E820
+9368265E-85FE-11d1-8BE3-0000F8754DA1
+110.105.100.
+110.105.111.
+110.110.104.
+110.110.101.
+110.110.102.
+110.200.114.
+Setup Complete
+Setup
+Setup 
+Driver={SQL Server}; Server=
+; Database=master; UID=sa; PWD=
+Select getdate() as Date 
+Date
+Error 104  - 
+Error 101
+Error 102-1
+RTHB
+RTH1
+SHOPPING
+BKKGEI
+P365
+EVENT
+RLGT
+FM21001
+FM21002
+SACG
+TGTS
+PGC00
+PGC01
+RTHP
+GURU
+110.100.114
+110.200.114
+110.105.102
+WNL_T
+KWFC
+SCRTLX
+RTSK
+TL01
+TL001
+BNT01
+MAP2
+GSTK
+Error 103  
+Code :
+DrawMode
+AutoRedraw
+DrawWidth
+DrawStyle
+ScaleWidth
+ScaleHeight
+ScaleMode
+Line
+OA_ACC
+Over
+7170
+.EXE 
+AC_START
+Company.ini
+Company.cfg
+1-1-7
+\PRG
+\RPT
+PRG\
+Config\
+RPT\
+PICTURE\
+Image\
+SysPa.cfg
+system.db
+C:\AC_Data\Config\System.
+C:\AC_Data\Config\System.cfg
+DATADIR
+DATAFILE
+PRGDIR
+CONFIGDIR
+REPORTDIR
+PICDIR
+IMAGEDIR
+SQLCONNECT
+SQLCONNECT1
+REPORTSQL
+THAI
+ACCESS
+COMPANYCODE
+COMPANYNAME
+JOBNAME
+SERVERNAME
+DATABASENAME
+PASSWORD
+ Config File
+Start.Mnu
+Select getdate() Date 
+Select a.name from syscolumns a,sysobjects b Where a.id=b.id And a.name='Doc_Group' And b.name='DocType' 
+Select * From DocType Where Doc_Type='
+Doc_Group
+List
+=GEMCOLLECTION
+=WGEM_SERVER1
+=SERVER1
+=ST_SERVER
+=SERVER2003
+=DATA1 SQL
+SERVER=
+SERVER =
+DATABASE=
+DATABASE =
+PWD=
+PWD =
+; database=AC_Dat1; UID=sa; PWD=
+CompanyList
+Varchar(1)
+Commission
+JobCode
+Varchar(10)
+'ACC'
+commission
+SQLCONNECT2
+COMPANYBRANCH
+Select @@ServerName as ServerName 
+ServerName
+WGEM-Server2
+MSFlexGrid2
+select isnull(company_name,'') as companyname,isnull(POS,'N') as POS,isnull(commission,'') as commission ,isnull(jobcode,'') as jobcode from companylist where convert(varchar,company_code)=convert(varchar,'
+CompanyName
+ListIndex
+WGEM_Server1
+pwd=
+1-1-8
+1-0-0
+Short Date
+0000
+yyyy
+OpenResultset
+rdoColumns
+Type
+Close
+MSFlexGrid1
+Cols
+TextMatrix
+Text
+MSFlexGrid3
+MSFlexGrid4
+MSFlexGrid5
+MSFlexGrid6
+ and  b.product = a.product_code  and d.Bonus='
+' and d.AgentCom='Y' 
+update positem set rategroup='
+rategroup
+' where date=
+ and product='
+product
+Select  isnull(c.rategroup,'') as rategroup,isnull(b.product,'') as product  from zicmast a,Positem b,zICGroup c,POSMain d where  a.group_code=c.group_code and  d.date=b.date and  d.code = b.code and b.rategroup <> c.rategroup and d.date =
+WHERE
+' and code in (select code from posmain where bonus='
+' and AgentCom='Y'  ) 
+01/01/1800
+=' '
+ like '
+rdoTables
+Count
+Name
+cmd /c reg add "HKCU\Control Panel\International" /v iCalendarType /t reg_sz /d 1 /f 
+SELECT
+Select * from 
+Fields 
+ Field 
+ ALL 
+ 1/2/3 ....
+System.cfg
+ORDER BY
+FROM
+Caption
+Select b.id as ID From sysobjects b Where b.name='
+Select a.id From syscolumns a Where a.id = 
+ And a.name = '
+ Alter Table 
+ Add 
+ Null Default 
+Update 
+ Set 
+SelStart
+SelLength
+ListCount
+#,##0.00
+Select Max(Charge) as Charge from CardType
+Charge
+Select *  from BonusCom Where Date=
+ and Bonus='
+Delete BonusComAgent Where Date=
+AgentComPct
+guidepercent
+Total
+PrepaidCash
+Update Posmain set Net=Total-Discount+Fee Where (Total-Discount+Fee)<>Net and Date=
+ and a.Bonus='
+' and b.AgentCom='Y' 
+ union 
+' and b.AgentCom='Y'  ) 
+ Order by b.RateGroup,b.AgentComPct 
+Currency
+BillCode
+(Select  b.AgentComPct,a.Code as BillCode,b.Quantity as Qty,a.Discount as Discount1,b.RateGroup,a.DiscPct,b.TourPercent,b.GuidePercent,a.Total,b.Amount,b.Discount,a.Card,a.CardExchg,a.PrepaidCash,a.PrepaidCard,a.PrepaidCashExchg,a.PrepaidCardExchg,a.Credit,a.BankFee,a.BankFee_Prepaid,b.FixCost_Unit,b.Number,a.Currency,a.Rate,b.MainDiscount  from Posmain a,Positem b where a.date=b.date and  a.code = b.code and a.date=
+ Select  b.AgentComPct,a.Code as BillCode,b.Quantity as Qty,a.Discount as Discount1,b.RateGroup,a.DiscPct,b.TourPercent,b.GuidePercent,a.Total,b.Amount,b.Discount,a.Card,a.CardExchg,a.PrepaidCash,a.PrepaidCard,a.PrepaidCashExchg,a.PrepaidCardExchg,a.Credit,a.BankFee,a.BankFee_Prepaid,b.FixCost_Unit,b.Number,a.Currency,a.Rate,b.MainDiscount  from PosmainH a,PositemH b where a.date=b.date and  a.code = b.code and a.date=
+Select  *  from Posmain,Positem,Product  where Positem.product=Product.Code and  Posmain.date=Positem.date and  Posmain.code = Positem.code and Posmain.date=
+ and Posmain.Bonus='
+' Order by Positem.RateGroup
+DiscPct
+Rate
+credit
+Select TourGroup.DiscountType as DiscountType from Bonus,TourGroup Where Bonus.Date=
+ and Bonus.Code='
+' and Bonus.Tour *= TourGroup.Code and Bonus.Nation*=TourGroup.Nation_Code and TourGroup.RateGroup='
+DiscountType
+tourpercent
+PrepaidCard
+PrepaidCashExchg
+PrepaidCardExchg
+BankFee
+BankFee_Prepaid
+Select Sum(Amount) as Amount from PosItem  Where Date=
+ and Code='
+Amount
+Discount
+Card
+CardExchg
+maindiscount
+Fixcost_Unit
+Select * from Bonus,TourGroup Where Bonus.Date='
+' and Bonus.Code='
+CompanyDiscountPct1
+CompanyDiscountPct2
+TourPercent1
+TourPercent2
+TourPercent3
+tourpiece
+GuidePiece
+GuideGoldPercent
+TLPercent
+##########
+Select * from BonusComAgent Where Date=
+' and Rate='
+' and TourPercent=
+Bonus
+Piece
+Prepaid
+TourAmount
+TourPieceAmount
+TourTotal
+FixCost
+AmountX
+TourPercentX
+23:59:59
+TourPercent1X
+TourPercent2X
+TourPercent3X
+TourAmount1
+TourAmount2
+TourAmount3
+TourAmountX
+TourAmount1X
+TourAmount2X
+TourAmount3X
+GuideAmount
+GuidePieceAmount
+GuideGoldAmount
+TLAmount
+**** 
+CurrencyRate
+Code
+COMPANYDISCOUNTPCT
+select isnull(tour,'') as tour,isnull(People,0) as People from bonus where code='
+' and date=
+Tour
+People
+select * from bonus where code='
+PersonValTour
+'  and RateGroup='
+ select isnull(pakval,'') as pakval, isnull(pakvalrange,0) as pakvalrange  from agent where code='
+pakval
+PakValRange
+ select isnull(sum(net),0) as saleamount from posmain where bonus='
+saleamount
+Clear
+Rows
+FixedRows
+select isnull(tour,'') as tour from bonus where code='
+ select isnull(rateval,'') as rateval, isnull(ratevalrange,0) as ratevalrange  from agent where code='
+Rateval
+RateValRange
+ Order by b.RateGroup,a.DiscPct 
+Adodc1
+Refresh
+Select isnull(Rate,'') as RateGroup,isnull(Amount,0) as net from BonusCom where Bonus='
+' and  Date=
+RateGroup='
+update bonus set bonuscom='Y' where date=
+ and code='
+'  ) 
+' and Posmain.Bonus='
+(Select  a.Code as BillCode,b.Quantity as Qty,a.Discount as Discount1,b.RateGroup,a.DiscPct,b.TourPercent,b.GuidePercent,a.Total,b.Amount,b.Discount,a.Card,a.CardExchg,a.PrepaidCash,a.PrepaidCard,a.PrepaidCashExchg,a.PrepaidCardExchg,a.Credit,a.BankFee,a.BankFee_Prepaid,b.FixCost_Unit,b.Number,a.Currency,a.Rate,b.MainDiscount  from Posmain a,Positem b where a.date=b.date and  a.code = b.code and a.date=
+ Select  a.Code as BillCode,b.Quantity as Qty,a.Discount as Discount1,b.RateGroup,a.DiscPct,b.TourPercent,b.GuidePercent,a.Total,b.Amount,b.Discount,a.Card,a.CardExchg,a.PrepaidCash,a.PrepaidCard,a.PrepaidCashExchg,a.PrepaidCardExchg,a.Credit,a.BankFee,a.BankFee_Prepaid,b.FixCost_Unit,b.Number,a.Currency,a.Rate,b.MainDiscount  from PosmainH a,PositemH b where a.date=b.date and  a.code = b.code and a.date=
+Select sum(Card+CardExchg) as Card  from Posmain a Where Exists (Select  Posmain.Date,Posmain.Code from Posmain,Positem,Product where Positem.Product *=Product.Code and Posmain.date=Positem.date and  Posmain.code = Positem.code and Posmain.date='
+' and posmain.date=a.date and posmain.code=a.code ) 
+Delete BonusComGuide Where Date=
+Update BonusCom Set GuideAmount=0,GuidepieceAmount=0,GAmount=0,GPiece=0,Gtotal=0  Where Date=
+' and b.GuideCom='Y' 
+' and b.GuideCom='Y'  ) 
+(Select  b.GuideComPct,a.Code as BillCode,b.Quantity as Qty,a.Discount as Discount1,b.RateGroup,a.DiscPct,b.TourPercent,b.GuidePercent,a.Total,b.Amount,b.Discount,a.Card,a.CardExchg,a.PrepaidCash,a.PrepaidCard,a.PrepaidCashExchg,a.PrepaidCardExchg,a.Credit,a.BankFee,a.BankFee_Prepaid,b.FixCost_Unit,b.Number,a.Currency,a.Rate,b.MainDiscount  from Posmain a,Positem b where a.date=b.date and  a.code = b.code and a.date=
+ Select  b.GuideComPct,a.Code as BillCode,b.Quantity as Qty,a.Discount as Discount1,b.RateGroup,a.DiscPct,b.TourPercent,b.GuidePercent,a.Total,b.Amount,b.Discount,a.Card,a.CardExchg,a.PrepaidCash,a.PrepaidCard,a.PrepaidCashExchg,a.PrepaidCardExchg,a.Credit,a.BankFee,a.BankFee_Prepaid,b.FixCost_Unit,b.Number,a.Currency,a.Rate,b.MainDiscount  from PosmainH a,PositemH b where a.date=b.date and  a.code = b.code and a.date=
+ Order by b.RateGroup,b.GuideComPct 
+GuideComPct
+Select * from BonusComGuide Where Date=
+' and GuidePercent=
+GAmount
+GTotal
+GPiece
+GPSPlace.cfg
+Enabled
+Parent
+Adodc2
+Recordset
+RecordCount
+FormatString
+ColWidth
+MoveFirst
+s_Lon
+s_Lat
+Center_Area
+CalGPSDist
+Address1
+Station_Name
+MoveNext
+****
+Visible
+X-XXXX
+hh:mm:ss
+Status
+r_Time
+dd/MM/yyyy
+HH:mm:ss
+MovePrevious
+unfinished
+##########.
+Height
+Width
+Left
+July
+; database=Master;  
+ and name='
+ and id4=
+System Date
+ and id3=
+Socket error occurred in Cleanup.
+VDX1
+Overay1
+Overay2
+DATACENTER
+GCI-Center
+ST_SERVER
+4565
+STOCK
+DATA1
+Server1
+SERVER2003_LOCAL
+Office1
+Select * from  SysComUse Where id1=
+ and id2=
+Driver={SQL Server}; Server=(Local); database=Master;  
+OA_SERVER
+11/12/2007
+1-1-6
+; database=
+; UID=
+; PWD=
+SERVER-WORLDGEM
+Sockets version 
+ is not supported by 32-bit Windows Sockets.
+\System\Gmem2.dll
+CREATE TABLE [dbo].[syscomuse] ([id1] [int] NOT NULL ,[id2] [int] NOT NULL ,[id3] [int] NOT NULL ,[id4] [int] NOT NULL ,[name] [varchar] (50) COLLATE Thai_CI_AS NOT NULL) ON [PRIMARY]
+Select @@ServerName as ServerName
+{SQL SERVER}
+Use master CREATE TABLE [dbo].[syscomuse] ([id1] [int] NOT NULL ,[id2] [int] NOT NULL ,[id3] [int] NOT NULL ,[id4] [int] NOT NULL ,[name] [varchar] (50) COLLATE Thai_CI_AS NOT NULL) ON [PRIMARY] 
+This application requires a minimum of 
+ALTER TABLE [dbo].[syscomuse] WITH NOCHECK ADD CONSTRAINT [PK_syscomuse] PRIMARY KEY  CLUSTERED ([id1],[id2],[id3],[id4],[name])  ON [PRIMARY]
+Insert into SysComUse (id1,id2,id3,id4,name) Values ( 
+ supported sockets.
+26/07/1995
+CREATE TABLE [dbo].[syscomuse] ([id1] [int] NOT NULL ,[id2] [int] NOT NULL ,[id3] [int] NOT NULL ,[id4] [int] NOT NULL ,[name] [varchar] (50) COLLATE Thai_CI_AS NOT NULL) ON [PRIMARY] 
+192.168.1.1
+The 32-bit Windows Socket is not responding.
+65.65.65.65
+Test1.tmp
+C:\Par.tmp
+C:\Test1.Tmp
+lcs:100 2,0,1
+Debug < 
+ > Null 
+Select GetDate() as SysDate
+sysDate
+IP Success
+IP Buffer too small
+IP Destination Net Unreachable
+IP Destination Host Unreachable
+IP Destination Protocol Unreachable
+IP Destination Port Unreachable
+IP No Resources
+IP Bad Option
+IP Hardware Error
+IP Packet too big
+IP Reqquest timed out
+IP Bad Request
+IP Bad Route
+IP TTL Expired Transit
+IP TTL Expired Reassem
+IP Parameter Problem
+IP Source Quench
+IP Option too big
+IP Bad Destination
+IP Address Deleted
+IP Spec MTU Change
+IP MTU Change
+IP Unload
+IP Address Added
+IP General Failure
+IP Pending
+Ping timeout
+Destination host unreachable.
+Unknown message returned
+Windows Sockets error 
+kapi
+ has occurred. Unable to successfully get Host Name.
+ has occurred.  Unable to successfully get Host Name.
+GEMCOLLECTION
+1-1-3
+1-1-0
+VDX3
+VDX4
+System
+   08
+ Driver 
+Wanning
+5165
+1-1-5
+Select GetDate() as sysDate
+Permission Error
+Error
+Error Code : 
+Memory out of rang
+Lan Driver not Work
+1-1-1
+Can not Start Program
+1-1-2
+Sub Program Can not run
+1-1-4
+System Error
+Connection Error
+Company Code not config
+VS_VERSION_INFO
+VarFileInfo
+Translation
+StringFileInfo
+040904B0
+CompanyName
+Company
+ProductName
+Setup_DC
+FileVersion
+1.00
+ProductVersion
+1.00
+InternalName
+Setup_GEI_DEC_26
+OriginalFilename
+Setup_GEI_DEC_26.exe

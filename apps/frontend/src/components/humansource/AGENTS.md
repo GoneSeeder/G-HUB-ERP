@@ -12,6 +12,7 @@ Do not apply these rules to other G-HUB modules unless the user explicitly asks 
 
 ## UI Style
 
+- **Read `DESIGN.md` in full first** — it is the single UI source of truth (philosophy, tokens, all 14 components, layout, governance, anti-tells). Exact token values: `DESIGN_TOKENS_V2.json`.
 - **Must NOT look AI-generated.** Follow `DESIGN.md` → "HR UI Standard". Concretely, never ship:
   tinted "example/ตัวอย่าง" callout boxes, a descriptive sentence under every control,
   fill-in-the-blank sentence inputs, emoji-as-icons, repeated identical cards/rows, or

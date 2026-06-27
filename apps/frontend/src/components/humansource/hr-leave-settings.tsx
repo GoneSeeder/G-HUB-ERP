@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowLeftIcon, EditIcon, PlusIcon, SearchIcon, TrashIcon, XIcon } from '@/components/ui/icons';
+import { publicApiFetch } from '@/lib/api';
 import {
   LEAVE_TYPE_SEED,
-  LEAVE_TYPES_STORAGE_KEY,
   type LeaveCountBasis,
   type LeaveCutoffBasis,
   type LeaveGender,
@@ -23,11 +23,9 @@ import {
 } from '@/data/humansource/org-structure';
 import {
   EMPLOYEE_TYPE_SEED,
-  EMPLOYEE_TYPES_STORAGE_KEY,
   type EmployeeType,
 } from '@/data/humansource/employee-types';
 import {
-  APPROVAL_DOC_CONFIGS_STORAGE_KEY,
   DOCUMENT_TYPES_SEED,
   describeApproval,
   type DocumentApprovalConfig,
@@ -103,14 +101,6 @@ const STEP_OVERRIDE_OPTIONS: { value: string; label: string }[] = [
 
 // ─── Org tree — built from org-structure SoT + employee FK ids ──────────────
 // Selection model: orgNodeIds[] = dept/team nodes selected whole; employeeIds[] = individuals.
-// Migration map: old 'departments' Thai name → OrgNode.id (used in hydrate migration).
-const DEPT_NAME_TO_NODE_ID: Record<string, string> = {
-  'ฝ่ายบุคคล':  'org-ghub-hr',
-  'ฝ่ายบัญชี':  'org-ghub-acc',
-  'ฝ่ายขาย':    'org-ghub-sales',
-  'IT':          'org-ghub-it',
-  'Operations':  'org-ghub-wh',
-};
 
 type OrgEmployee = { id: string; name: string; code: string; position: string };
 type OrgLeaf = { nodeId: string; name: string; employees: OrgEmployee[] };
@@ -239,54 +229,29 @@ const LEAVE_STATUS_OPTIONS = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function LeaveSettings({ accent }: { accent: string }) {
-  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>(LEAVE_TYPE_SEED);
-  const [hydrated, setHydrated] = useState(false);
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<LeaveType | null>(null);  // null = closed
   const [editingMode, setEditingMode] = useState<'create' | 'edit'>('create');
   const [confirmDelete, setConfirmDelete] = useState<LeaveType | null>(null);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const isMounted = useRef(true);
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(LEAVE_TYPES_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as LeaveType[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // One-time migration: old shape had departments/positions/employees (string names).
-          // New shape uses orgNodeIds/positionIds/employeeIds (stable ids).
-          const migrated = parsed.map((lt) => {
-            const e = lt.eligibility as Record<string, unknown>;
-            if ('departments' in e && !('orgNodeIds' in e)) {
-              return {
-                ...lt,
-                eligibility: {
-                  gender: lt.eligibility.gender,
-                  requirePassProbation: lt.eligibility.requirePassProbation,
-                  minTenureMonths: lt.eligibility.minTenureMonths,
-                  positionIds: (e.positions as string[]) ?? [],
-                  orgNodeIds: ((e.departments as string[]) ?? [])
-                    .map((name) => DEPT_NAME_TO_NODE_ID[name])
-                    .filter((id): id is string => !!id),
-                  employeeIds: (e.employees as string[]) ?? [],
-                },
-              };
-            }
-            return lt;
-          });
-          setLeaveTypes(migrated);
+    isMounted.current = true;
+    publicApiFetch<LeaveType[]>('/api/humansource/leave-types')
+      .then((data) => {
+        if (isMounted.current) {
+          setLeaveTypes(Array.isArray(data) && data.length > 0 ? data : LEAVE_TYPE_SEED);
+          setLoading(false);
         }
-      }
-    } catch {
-      window.localStorage.removeItem(LEAVE_TYPES_STORAGE_KEY);
-    }
-    setHydrated(true);
+      })
+      .catch(() => {
+        if (isMounted.current) { setLeaveTypes(LEAVE_TYPE_SEED); setLoading(false); }
+      });
+    return () => { isMounted.current = false; };
   }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(LEAVE_TYPES_STORAGE_KEY, JSON.stringify(leaveTypes));
-  }, [leaveTypes, hydrated]);
 
   const openCreate = () => {
     setEditingMode('create');
@@ -301,24 +266,42 @@ export function LeaveSettings({ accent }: { accent: string }) {
   const close = () => setEditing(null);
 
   const handleSave = (next: LeaveType) => {
-    setLeaveTypes((current) => {
-      if (editingMode === 'create') {
-        return [...current, { ...next, id: `leave-custom-${Date.now()}` }];
-      }
-      return current.map((leave) => (leave.id === next.id ? next : leave));
-    });
+    if (editingMode === 'create') {
+      publicApiFetch<LeaveType>('/api/humansource/leave-types', {
+        method: 'POST',
+        body: JSON.stringify(next),
+      }).then((created) => {
+        if (isMounted.current) setLeaveTypes((cur) => [...cur, created]);
+      }).catch(() => {});
+    } else {
+      publicApiFetch<LeaveType>(`/api/humansource/leave-types/${next.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(next),
+      }).then((updated) => {
+        if (isMounted.current) setLeaveTypes((cur) => cur.map((l) => l.id === updated.id ? updated : l));
+      }).catch(() => {});
+    }
     close();
   };
 
   const deleteLeave = (id: string) => {
-    setLeaveTypes((current) => current.filter((leave) => leave.id !== id));
+    publicApiFetch(`/api/humansource/leave-types/${id}`, { method: 'DELETE' })
+      .then(() => { if (isMounted.current) setLeaveTypes((cur) => cur.filter((l) => l.id !== id)); })
+      .catch(() => {});
     setConfirmDelete(null);
   };
 
   const toggleEnabled = (id: string) => {
-    setLeaveTypes((current) =>
-      current.map((leave) => (leave.id === id ? { ...leave, enabled: !leave.enabled } : leave))
-    );
+    const leave = leaveTypes.find((l) => l.id === id);
+    if (!leave) return;
+    const updated = { ...leave, enabled: !leave.enabled };
+    setLeaveTypes((cur) => cur.map((l) => l.id === id ? updated : l));
+    publicApiFetch(`/api/humansource/leave-types/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled: updated.enabled }),
+    }).catch(() => {
+      if (isMounted.current) setLeaveTypes((cur) => cur.map((l) => l.id === id ? leave : l));
+    });
   };
 
   const filtered = leaveTypes
@@ -383,7 +366,8 @@ export function LeaveSettings({ accent }: { accent: string }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((leave) => (
+            {loading && <tr><td colSpan={7} className="hr-leave-board__empty">กำลังโหลด...</td></tr>}
+            {!loading && filtered.map((leave) => (
               <tr key={leave.id} onClick={() => openEdit(leave)}>
                 <td className="hr-leave-board__stripe" style={{ backgroundColor: leave.color }} />
                 <td>
@@ -1007,21 +991,19 @@ function ColorSwatchPicker({ value, onChange }: { value: string; onChange: (colo
 const APPROVAL_WORKFLOWS_HREF =
   '/humansource/settings?path=' + encodeURIComponent('/humansource/settings/approval-workflows');
 
-function readLeaveDocConfig(): DocumentApprovalConfig {
-  const seed =
-    DOCUMENT_TYPES_SEED.find((d) => d.docType === 'leave') ?? DOCUMENT_TYPES_SEED[0];
-  try {
-    const raw = window.localStorage.getItem(APPROVAL_DOC_CONFIGS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as DocumentApprovalConfig[];
-      if (Array.isArray(parsed)) {
-        return parsed.find((d) => d.docType === 'leave') ?? seed;
-      }
-    }
-  } catch {
-    /* fall through to seed */
-  }
-  return seed;
+function useLeaveDocConfig(): DocumentApprovalConfig | null {
+  const [config, setConfig] = useState<DocumentApprovalConfig | null>(null);
+  useEffect(() => {
+    publicApiFetch<DocumentApprovalConfig[]>('/api/humansource/approval/configs')
+      .then((data) => {
+        const found = data.find((d) => d.docType === 'leave');
+        setConfig(found ?? DOCUMENT_TYPES_SEED.find((d) => d.docType === 'leave') ?? null);
+      })
+      .catch(() => {
+        setConfig(DOCUMENT_TYPES_SEED.find((d) => d.docType === 'leave') ?? null);
+      });
+  }, []);
+  return config;
 }
 
 function ApprovalForm({
@@ -1031,11 +1013,7 @@ function ApprovalForm({
   draft: LeaveType;
   onApprovalChange: (patch: Partial<LeaveType['approval']>) => void;
 }) {
-  // Doc config is read once on mount — it lives in another module/localStorage.
-  const [docConfig, setDocConfig] = useState<DocumentApprovalConfig | null>(null);
-  useEffect(() => {
-    setDocConfig(readLeaveDocConfig());
-  }, []);
+  const docConfig = useLeaveDocConfig();
 
   const a = draft.approval;
   const overriding = !a.useDefaultTemplate;
@@ -1113,16 +1091,11 @@ function EligibilityForm({
   const q = draft.quota;
   const splitPerType = q.perEmployeeType !== undefined;
 
-  // Read employee types from localStorage (falls back to seed)
   const [allEmpTypes, setAllEmpTypes] = useState<EmployeeType[]>(EMPLOYEE_TYPE_SEED);
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(EMPLOYEE_TYPES_STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as EmployeeType[];
-        if (Array.isArray(parsed) && parsed.length > 0) setAllEmpTypes(parsed);
-      }
-    } catch { /* keep seed */ }
+    publicApiFetch<EmployeeType[]>('/api/humansource/employee-types')
+      .then((data) => { if (Array.isArray(data) && data.length > 0) setAllEmpTypes(data); })
+      .catch(() => {});
   }, []);
 
   return (

@@ -4,36 +4,27 @@
 // Modal UI adapted from empeo reference: chip type selector, card frequency selector,
 // radio pay-day selector (EOM / same-month / next-month).
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { XIcon } from '@/components/ui/icons';
 import { HrDatePicker } from './hr-ui';
-import { payrollKey } from '@/data/humansource/payroll-common';
+import { publicApiFetch } from '@/lib/api';
+import { PAYROLL_COMPANY_OPTIONS } from '@/data/humansource/payroll-common';
 import {
-  PAY_PERIOD_CONFIGS_STORAGE_BASE,
-  GENERATED_PERIODS_STORAGE_BASE,
   generatePeriods,
   type GeneratedPeriod,
   type PayFrequency,
   type PayPeriodConfig,
 } from '@/data/humansource/payroll-pay-periods';
 import {
-  PAYROLL_EMPLOYMENT_TYPES_STORAGE_BASE,
   PAYROLL_EMPLOYMENT_TYPE_SEED,
   type PayrollEmploymentType,
 } from '@/data/humansource/payroll-employment-types';
 import {
-  PAYROLL_GENERAL_STORAGE_BASE,
   PAYROLL_GENERAL_SEED,
   type PayrollGeneralConfig,
   type PayrollDayAnchor,
 } from '@/data/humansource/payroll-general';
 import { THAI_HOLIDAY_SEED } from '@/data/humansource/thailand-holidays';
-
-// ── storage keys ───────────────────────────────────────────────────────────────
-
-const CONFIGS_KEY   = payrollKey(PAY_PERIOD_CONFIGS_STORAGE_BASE, 'global');
-const PERIODS_KEY   = payrollKey(GENERATED_PERIODS_STORAGE_BASE, 'global');
-const EMP_TYPES_KEY = payrollKey(PAYROLL_EMPLOYMENT_TYPES_STORAGE_BASE, 'global');
-const GENERAL_KEY   = payrollKey(PAYROLL_GENERAL_STORAGE_BASE, 'global');
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
@@ -52,18 +43,28 @@ function firstPeriodStartIso(year: number, cycleStartDay: PayrollDayAnchor): str
   return `${year}-01-${String(day).padStart(2, '0')}`;
 }
 
-function loadJSON<T>(key: string, fallback: T): T {
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (raw) return JSON.parse(raw) as T;
-  } catch { /* corrupt */ }
-  return fallback;
-}
-
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
   const months = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   return `${d} ${months[m - 1]} ${y}`;
+}
+
+// ── filter option lists ────────────────────────────────────────────────────────
+
+const COMPANY_FILTER_OPTS = PAYROLL_COMPANY_OPTIONS
+  .filter((c) => c !== 'ใช้กับทุกบริษัท')
+  .map((c) => ({ value: c, label: c }));
+
+const STATUS_FILTER_OPTS = [
+  { value: 'upcoming', label: 'ยังไม่ถึง' },
+  { value: 'current',  label: 'กำลังดำเนินการ' },
+  { value: 'past',     label: 'สิ้นสุดแล้ว' },
+];
+
+function configStatusKey(year: number, thisYear: number): 'upcoming' | 'current' | 'past' {
+  if (year > thisYear) return 'upcoming';
+  if (year < thisYear) return 'past';
+  return 'current';
 }
 
 // ── frequency card definitions ─────────────────────────────────────────────────
@@ -97,7 +98,7 @@ function blankForm(_empTypes: PayrollEmploymentType[]): PeriodForm {
     employmentTypeIds: [],
     frequency: 'monthly',
     payDayType: 'eom',
-    payDayNum: 25,
+    payDayNum: 1,
     payBeforeIfHoliday: true,
     hasOffCycle: false,
     offCycleStart: '',
@@ -114,34 +115,48 @@ function derivePayDay(form: PeriodForm): { payDayOfMonth: PayrollDayAnchor; payN
 
 // ── main component ─────────────────────────────────────────────────────────────
 
-export function PayrollPayPeriods(_props: { accent: string }) {
+export function PayrollPayPeriods(props: { accent: string }) {
+  const { accent } = props;
   const [configs, setConfigs]         = useState<PayPeriodConfig[]>([]);
   const [periods, setPeriods]         = useState<GeneratedPeriod[]>([]);
   const [empTypes, setEmpTypes]       = useState<PayrollEmploymentType[]>(PAYROLL_EMPLOYMENT_TYPE_SEED);
   const [generalConfig, setGeneral]   = useState<PayrollGeneralConfig>(PAYROLL_GENERAL_SEED);
-  const [hydrated, setHydrated]       = useState(false);
+  const [filterCompany, setFilterCompany] = useState('');
+  const [filterYear, setFilterYear]       = useState('');
+  const [filterStatus, setFilterStatus]   = useState('');
+  const [showSalary, setShowSalary]       = useState(false);
+  const [thisYear, setThisYear]           = useState(0);
 
   const [modalOpen, setModalOpen]     = useState(false);
   const [form, setForm]               = useState<PeriodForm>(() => blankForm(PAYROLL_EMPLOYMENT_TYPE_SEED));
   const [expandedId, setExpandedId]   = useState<string | null>(null);
   const [deleteId, setDeleteId]       = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadedEmp = loadJSON<PayrollEmploymentType[]>(EMP_TYPES_KEY, PAYROLL_EMPLOYMENT_TYPE_SEED);
-    const loadedGen = loadJSON<PayrollGeneralConfig>(GENERAL_KEY, PAYROLL_GENERAL_SEED);
-    setEmpTypes(loadedEmp);
-    setGeneral(loadedGen);
-    setConfigs(loadJSON<PayPeriodConfig[]>(CONFIGS_KEY, []));
-    setPeriods(loadJSON<GeneratedPeriod[]>(PERIODS_KEY, []));
-    setForm(blankForm(loadedEmp));
-    setHydrated(true);
-  }, []);
+  const isMounted = useRef(true);
+  useEffect(() => { isMounted.current = true; return () => { isMounted.current = false; }; }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(CONFIGS_KEY, JSON.stringify(configs));
-    window.localStorage.setItem(PERIODS_KEY, JSON.stringify(periods));
-  }, [configs, periods, hydrated]);
+    setThisYear(new Date().getFullYear());
+    Promise.all([
+      publicApiFetch<PayrollEmploymentType[]>('/api/humansource/payroll/employment-types'),
+      publicApiFetch<PayrollGeneralConfig>('/api/humansource/payroll/general-config'),
+      publicApiFetch<PayPeriodConfig[]>('/api/humansource/payroll/pay-period-configs'),
+    ]).then(([emp, gen, cfgs]) => {
+      if (!isMounted.current) return;
+      const loadedEmp = emp.length ? emp : PAYROLL_EMPLOYMENT_TYPE_SEED;
+      setEmpTypes(loadedEmp);
+      setGeneral(gen ?? PAYROLL_GENERAL_SEED);
+      const periods: GeneratedPeriod[] = (cfgs as (PayPeriodConfig & { generatedPeriods?: GeneratedPeriod[] })[])
+        .flatMap((c) => c.generatedPeriods ?? []);
+      setConfigs(cfgs);
+      setPeriods(periods);
+      setForm(blankForm(loadedEmp));
+    }).catch(() => {
+      if (!isMounted.current) return;
+      setEmpTypes(PAYROLL_EMPLOYMENT_TYPE_SEED);
+      setGeneral(PAYROLL_GENERAL_SEED);
+    });
+  }, []);
 
   const patchForm = (next: Partial<PeriodForm>) => setForm((f) => ({ ...f, ...next }));
 
@@ -150,11 +165,9 @@ export function PayrollPayPeriods(_props: { accent: string }) {
     setModalOpen(true);
   }
 
-  function handleSave() {
-    const id = `ppc-${Date.now()}`;
+  async function handleSave() {
     const { payDayOfMonth, payNextMonth } = derivePayDay(form);
-    const newConfig: PayPeriodConfig = {
-      id,
+    const configDto = {
       year: form.year,
       employmentTypeIds: form.employmentTypeIds,
       frequency: form.frequency,
@@ -165,14 +178,17 @@ export function PayrollPayPeriods(_props: { accent: string }) {
       hasOffCycle: form.hasOffCycle,
       offCycleStart: form.hasOffCycle && form.offCycleStart ? form.offCycleStart : null,
     };
-    const newPeriods = generatePeriods(newConfig, generalConfig, buildHolidaySet(form.year));
-    setConfigs((prev) => [...prev, newConfig]);
+    const savedConfig = await publicApiFetch<PayPeriodConfig>('/api/humansource/payroll/pay-period-configs', { method: 'POST', body: JSON.stringify(configDto) });
+    const newPeriods = generatePeriods(savedConfig, generalConfig, buildHolidaySet(form.year));
+    await publicApiFetch(`/api/humansource/payroll/pay-period-configs/${savedConfig.id}/periods`, { method: 'POST', body: JSON.stringify(newPeriods) });
+    setConfigs((prev) => [...prev, savedConfig]);
     setPeriods((prev) => [...prev, ...newPeriods]);
     setModalOpen(false);
-    setExpandedId(id);
+    setExpandedId(savedConfig.id);
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
+    await publicApiFetch(`/api/humansource/payroll/pay-period-configs/${id}`, { method: 'DELETE' });
     setConfigs((prev) => prev.filter((c) => c.id !== id));
     setPeriods((prev) => prev.filter((p) => p.configId !== id));
     if (expandedId === id) setExpandedId(null);
@@ -195,15 +211,67 @@ export function PayrollPayPeriods(_props: { accent: string }) {
     }));
   }
 
+  // ── derived filter options + filtered list ────────────────────────────────
+  const yearFilterOpts = Array.from(new Set(configs.map((c) => String(c.year))))
+    .sort()
+    .map((y) => ({ value: y, label: `ปี ${y}` }));
+
+  const filteredConfigs = configs.filter((cfg) => {
+    if (filterYear && String(cfg.year) !== filterYear) return false;
+    if (filterStatus && configStatusKey(cfg.year, thisYear) !== filterStatus) return false;
+    return true;
+  });
+
   return (
     <div className="hr-payroll-page hr-period-page">
       {/* toolbar */}
-      <div className="hr-period-toolbar">
-        <h3 className="hr-period-toolbar__title">กำหนดงวดเงินเดือน</h3>
-        <button type="button" className="hr-btn hr-btn--primary hr-btn--sm" onClick={openModal}>
-          <PlusIcon />
-          สร้างงวดใหม่
-        </button>
+      <div className="hr-period-board__toolbar">
+        <div className="hr-period-board__toolbar-left">
+          <FilterChipSelect
+            label="บริษัท"
+            value={filterCompany}
+            options={COMPANY_FILTER_OPTS}
+            onChange={setFilterCompany}
+            accent={accent}
+          />
+          <FilterChipSelect
+            label="ปี"
+            value={filterYear}
+            options={yearFilterOpts}
+            onChange={setFilterYear}
+            accent={accent}
+          />
+          <FilterChipSelect
+            label="สถานะ"
+            value={filterStatus}
+            options={STATUS_FILTER_OPTS}
+            onChange={setFilterStatus}
+            accent={accent}
+          />
+          <button
+            type="button"
+            className={`hr-period-icon-btn${showSalary ? ' hr-period-icon-btn--active' : ''}`}
+            onClick={() => setShowSalary((v) => !v)}
+            aria-label={showSalary ? 'ซ่อนยอดจ่าย' : 'แสดงยอดจ่าย'}
+            title={showSalary ? 'ซ่อนยอดจ่ายสุทธิ' : 'แสดงยอดจ่ายสุทธิ'}
+          >
+            <EyeIcon open={showSalary} />
+          </button>
+          <button
+            type="button"
+            className="hr-period-icon-btn"
+            aria-label="ตั้งค่าการแสดงผล"
+            title="ตั้งค่า"
+          >
+            <GearIcon />
+          </button>
+        </div>
+        <div className="hr-period-board__toolbar-right">
+          <button type="button" className="hr-btn hr-btn--primary" onClick={openModal}>
+            <PlusIcon />
+            สร้างงวด
+          </button>
+        </div>
       </div>
 
       {/* table / empty */}
@@ -224,8 +292,8 @@ export function PayrollPayPeriods(_props: { accent: string }) {
               </tr>
             </thead>
             <tbody>
-              {configs.map((cfg) => {
-                const emp        = empTypeMap.get(cfg.employmentTypeId);
+              {filteredConfigs.map((cfg) => {
+                const cfgEmps    = cfg.employmentTypeIds.map((id) => empTypeMap.get(id)).filter(Boolean) as PayrollEmploymentType[];
                 const cfgPeriods = periods.filter((p) => p.configId === cfg.id);
                 const isExpanded = expandedId === cfg.id;
                 const payLabel   = cfg.payNextMonth
@@ -236,9 +304,14 @@ export function PayrollPayPeriods(_props: { accent: string }) {
                     <tr key={cfg.id}>
                       <td><span className="hr-period-year">{cfg.year}</span></td>
                       <td>
-                        <div className="hr-cell-name">
-                          <span className="hr-cell-name__primary">{emp?.nameTh ?? cfg.employmentTypeId}</span>
-                          {emp && <span className="hr-cell-code">{emp.code}</span>}
+                        <div className="hr-period-emp-chips">
+                          {cfgEmps.length > 0
+                            ? cfgEmps.map((emp) => (
+                                <span key={emp.id} className="hr-period-emp-chip">
+                                  {emp.nameTh}
+                                </span>
+                              ))
+                            : <span className="hr-cell-name__secondary">—</span>}
                         </div>
                       </td>
                       <td>
@@ -276,7 +349,7 @@ export function PayrollPayPeriods(_props: { accent: string }) {
                     {isExpanded && cfgPeriods.length > 0 && (
                       <tr key={`${cfg.id}-detail`} className="hr-period-detail-row">
                         <td colSpan={7} className="hr-period-detail-cell">
-                          <PeriodDetailTable periods={cfgPeriods} />
+                          <PeriodDetailTable periods={cfgPeriods} showSalary={showSalary} />
                         </td>
                       </tr>
                     )}
@@ -324,6 +397,59 @@ export function PayrollPayPeriods(_props: { accent: string }) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── filter chip select (toolbar filter — mirrors hr-leave-settings pattern) ───
+
+function FilterChipSelect({
+  label, value, options, onChange, accent,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+  accent: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value);
+  if (selected) {
+    return (
+      <div className="hr-filter-chip hr-filter-chip--active" style={{ borderColor: accent, color: accent }}>
+        <span>{selected.label}</span>
+        <button type="button" className="hr-filter-chip__clear" aria-label="ล้างตัวกรอง" onClick={() => onChange('')}>
+          <XIcon className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div ref={wrapRef} className="hr-filter-chip-wrap">
+      <button type="button" className="hr-filter-chip" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        {label} <span aria-hidden>▾</span>
+      </button>
+      {open && (
+        <div className="hr-filter-chip-dropdown">
+          {options.map((o) => (
+            <button key={o.value} type="button" className="hr-filter-chip-dropdown__item"
+              onClick={() => { onChange(o.value); setOpen(false); }}>
+              {o.label}
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -586,7 +712,7 @@ function CreateModal({
 
 // ── period detail sub-table ───────────────────────────────────────────────────
 
-function PeriodDetailTable({ periods }: { periods: GeneratedPeriod[] }) {
+function PeriodDetailTable({ periods, showSalary }: { periods: GeneratedPeriod[]; showSalary: boolean }) {
   return (
     <div className="hr-period-subtable-wrap">
       <table className="hr-period-subtable">
@@ -597,6 +723,8 @@ function PeriodDetailTable({ periods }: { periods: GeneratedPeriod[] }) {
             <th>วันเริ่มรอบ</th>
             <th>วันสิ้นรอบ</th>
             <th>วันที่จ่าย</th>
+            <th>พนักงาน</th>
+            <th className="hr-period-subtable__salary-th">ยอดจ่ายสุทธิ</th>
           </tr>
         </thead>
         <tbody>
@@ -607,6 +735,10 @@ function PeriodDetailTable({ periods }: { periods: GeneratedPeriod[] }) {
               <td className="hr-period-subtable__date">{formatDate(p.periodStart)}</td>
               <td className="hr-period-subtable__date">{formatDate(p.periodEnd)}</td>
               <td className="hr-period-subtable__date hr-period-subtable__payday">{formatDate(p.payDate)}</td>
+              <td className="hr-period-subtable__emp">—</td>
+              <td className="hr-period-subtable__salary">
+                {showSalary ? '—' : 'xx,xxx.xx'}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -719,6 +851,28 @@ function LockIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12" aria-hidden>
       <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
+function EyeIcon({ open }: { open: boolean }) {
+  return open ? (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden>
+      <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+      <path fillRule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" clipRule="evenodd" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden>
+      <path fillRule="evenodd" d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.029 10.029 0 0 0 3.3-4.38 1.651 1.651 0 0 0 0-1.185A10.004 10.004 0 0 0 9.999 3a9.956 9.956 0 0 0-4.744 1.194L3.28 2.22ZM7.752 6.69l1.092 1.092a2.5 2.5 0 0 1 3.374 3.373l1.091 1.092a4 4 0 0 0-5.557-5.557Z" clipRule="evenodd" />
+      <path d="M10.748 13.93l2.523 2.523a10.006 10.006 0 0 1-7.607-1.69A10.003 10.003 0 0 1 .664 10.59a1.65 1.65 0 0 1 0-1.186 10.037 10.037 0 0 1 3.398-4.577l1.786 1.786a4 4 0 0 0 4.9 7.327Z" />
+    </svg>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" width="15" height="15" aria-hidden>
+      <path fillRule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clipRule="evenodd" />
     </svg>
   );
 }

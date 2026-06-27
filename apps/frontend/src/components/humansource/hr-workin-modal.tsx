@@ -142,7 +142,7 @@ function GpsFields() {
             step={25}
             value={radius}
             onChange={(event) => setRadius(Number(event.target.value))}
-            className="w-full accent-indigo-600"
+            className="hr-range-slider"
           />
         </div>
       </Field>

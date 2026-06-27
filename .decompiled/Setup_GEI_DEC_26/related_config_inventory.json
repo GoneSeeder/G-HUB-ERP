@@ -1,0 +1,2680 @@
+{
+  "source_dir": "C:\\Users\\User\\Desktop\\Config",
+  "file_count": 134,
+  "extension_counts": {
+    ".inq": 32,
+    ".ini": 1,
+    ".inf": 77,
+    ".cfg": 17,
+    ".gei": 2,
+    ".rg": 1,
+    ".rpp": 1,
+    ".rt": 1,
+    ".txt": 2
+  },
+  "top_keys": [
+    [
+      "\"FINDSQLPOS",
+      105
+    ],
+    [
+      "\"DBGRID1",
+      64
+    ],
+    [
+      "\"DBGRID1FIND",
+      48
+    ],
+    [
+      "PRINTERSLP",
+      31
+    ],
+    [
+      "PRINTERTAX",
+      29
+    ],
+    [
+      "PRINTERCER",
+      29
+    ],
+    [
+      "STATECASHREGISTER",
+      9
+    ],
+    [
+      "USEPORT",
+      9
+    ],
+    [
+      "CODECASHREGISTER",
+      9
+    ],
+    [
+      "PRINTERSLIP",
+      9
+    ],
+    [
+      "TABLEHAVE",
+      9
+    ],
+    [
+      "CASHM",
+      9
+    ],
+    [
+      "SALECFG",
+      9
+    ],
+    [
+      "NATIONCFG",
+      9
+    ],
+    [
+      "PRINTERNAME",
+      8
+    ],
+    [
+      "BARCODE",
+      7
+    ],
+    [
+      "CUSDISPLAYPORT",
+      3
+    ],
+    [
+      "PRINTERREFUND",
+      3
+    ],
+    [
+      "TRANSPORT",
+      2
+    ],
+    [
+      "PRINTCOPY",
+      2
+    ],
+    [
+      "MACHINENO",
+      2
+    ],
+    [
+      "TOPMARGIN",
+      2
+    ],
+    [
+      "LEFTMARGIN",
+      2
+    ],
+    [
+      "TABLEGROUP",
+      2
+    ],
+    [
+      "SQL",
+      2
+    ],
+    [
+      "SQLCONNECT",
+      2
+    ],
+    [
+      "THAI",
+      2
+    ],
+    [
+      "ACCESS",
+      2
+    ],
+    [
+      "COMPANYNAME",
+      2
+    ],
+    [
+      "JOBNAME",
+      2
+    ],
+    [
+      "MACHINETYPE",
+      1
+    ],
+    [
+      "SALECODE",
+      1
+    ],
+    [
+      "SHOWDISCOUNT",
+      1
+    ],
+    [
+      "REBILL",
+      1
+    ],
+    [
+      "SHOWPCS",
+      1
+    ],
+    [
+      "CLEVEL",
+      1
+    ],
+    [
+      "MONEYCHANGE",
+      1
+    ],
+    [
+      "AUTOBONUS",
+      1
+    ],
+    [
+      "AUTONEWBILL",
+      1
+    ],
+    [
+      "TAXINVFULL",
+      1
+    ],
+    [
+      "REFRESH",
+      1
+    ],
+    [
+      "OVER",
+      1
+    ],
+    [
+      "SQLCONNECTNET",
+      1
+    ],
+    [
+      "SERVERNAME",
+      1
+    ]
+  ],
+  "sensitive_marker_files": [
+    "SYSPA.CFG",
+    "System.cfg"
+  ],
+  "files": [
+    {
+      "name": "ACCBOOK.Inq",
+      "extension": ".inq",
+      "size_bytes": 60,
+      "last_write_time": 1344506904.566455,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1409.953,3390.236,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ACCLINK.Inq",
+      "extension": ".inq",
+      "size_bytes": 69,
+      "last_write_time": 1241081134.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1409.953,3660.095,1860.095,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "AR_PAID_BUY.Inq",
+      "extension": ".inq",
+      "size_bytes": 51,
+      "last_write_time": 1250765106.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=3030.236,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "AR_PAID_PAY_1.Inq",
+      "extension": ".inq",
+      "size_bytes": 51,
+      "last_write_time": 1250765106.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=3030.236,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "BNCINF.Inq",
+      "extension": ".inq",
+      "size_bytes": 59,
+      "last_write_time": 1319435034.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=3585.26,1844.787,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "BNCINF_-.Inq",
+      "extension": ".inq",
+      "size_bytes": 59,
+      "last_write_time": 1318411012.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1425.26,3300.095,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "BNCINF_A.Inq",
+      "extension": ".inq",
+      "size_bytes": 60,
+      "last_write_time": 1359176408.2846959,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=689.9528,3209.953,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "CERTIFY.Inq",
+      "extension": ".inq",
+      "size_bytes": 87,
+      "last_write_time": 1423118551.4957654,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1230.236,959.8111,1140.095,959.8111,1860.095,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "Company.ini",
+      "extension": ".ini",
+      "size_bytes": 0,
+      "last_write_time": 1340864615.0,
+      "key_count": 0,
+      "keys": [],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": []
+    },
+    {
+      "name": "COSTING.Inf",
+      "extension": ".inf",
+      "size_bytes": 80,
+      "last_write_time": 1256807270.0,
+      "key_count": 0,
+      "keys": [],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "90",
+        "1350",
+        "2715",
+        "615",
+        "645",
+        "1020",
+        "975",
+        "735",
+        "945",
+        "975",
+        "1065",
+        "1035"
+      ]
+    },
+    {
+      "name": "COSTING.Inq",
+      "extension": ".inq",
+      "size_bytes": 60,
+      "last_write_time": 1256371018.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=5969.764,3929.953,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "CUSTOMER_CUSTOMER.Inf",
+      "extension": ".inf",
+      "size_bytes": 30,
+      "last_write_time": 1400917739.0,
+      "key_count": 1,
+      "keys": [
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "DOCTYPE_SUB_-.Inq",
+      "extension": ".inq",
+      "size_bytes": 60,
+      "last_write_time": 1345610056.6472974,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1409.953,3660.095,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ExpressImport.cfg",
+      "extension": ".cfg",
+      "size_bytes": 34,
+      "last_write_time": 1168490244.0,
+      "key_count": 0,
+      "keys": [],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "C:\\Program Files\\ExpressD\\SKDATA"
+      ]
+    },
+    {
+      "name": "FIXCERTIFICATE.Inq",
+      "extension": ".inq",
+      "size_bytes": 92,
+      "last_write_time": 1678263680.6503575,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=870.2363,1230.236,1800,1049.953,1289.764,1140.095,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "GUIINF.Inq",
+      "extension": ".inq",
+      "size_bytes": 60,
+      "last_write_time": 1357361850.0593777,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1500.095,6930.142,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "GUIINF_-.Inq",
+      "extension": ".inq",
+      "size_bytes": 60,
+      "last_write_time": 1352535297.490831,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1319.811,1860.095,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "GYU-POSENTST.cfg",
+      "extension": ".cfg",
+      "size_bytes": 158,
+      "last_write_time": 1299053026.0,
+      "key_count": 9,
+      "keys": [
+        "CASHM",
+        "CODECASHREGISTER",
+        "NATIONCFG",
+        "PRINTERNAME",
+        "PRINTERSLIP",
+        "SALECFG",
+        "STATECASHREGISTER",
+        "TABLEHAVE",
+        "USEPORT"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "STATECASHREGISTER=1",
+        "USEPORT=COM1",
+        "CODECASHREGISTER=7",
+        "PRINTERSLIP=Y",
+        "PRINTERNAME=EPSON TM-U210B Partial cut",
+        "TABLEHAVE=Y",
+        "CASHM=N",
+        "SALECFG=Y",
+        "NATIONCFG=N",
+        ""
+      ]
+    },
+    {
+      "name": "ICMAST.Inq",
+      "extension": ".inq",
+      "size_bytes": 60,
+      "last_write_time": 1413270718.6566665,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1230.236,3750.236,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "Import.cfg",
+      "extension": ".cfg",
+      "size_bytes": 24,
+      "last_write_time": 1313034336.0,
+      "key_count": 0,
+      "keys": [],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "A",
+        "C",
+        "G",
+        "I",
+        "A",
+        "B",
+        "C",
+        "E"
+      ]
+    },
+    {
+      "name": "ISSBILL_BR.Inf",
+      "extension": ".inf",
+      "size_bytes": 124,
+      "last_write_time": 1286887186.0,
+      "key_count": 1,
+      "keys": [
+        "\"DBGrid1"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=900.2835,1409.953,1860.095,1769.953,1860.095,1244.976,1005.165,1860.095,689.9528,1769.953,1409.953,1860.095,\"",
+        "\"\""
+      ]
+    },
+    {
+      "name": "ISSBILL_IAG.Inf",
+      "extension": ".inf",
+      "size_bytes": 97,
+      "last_write_time": 1165474312.0,
+      "key_count": 1,
+      "keys": [
+        "\"DBGrid1"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=900.2835,959.8111,1769.953,1860.095,959.8111,1244.976,689.9528,1769.953,959.8111,\"",
+        "\"\""
+      ]
+    },
+    {
+      "name": "ISSBILL_IG.Inf",
+      "extension": ".inf",
+      "size_bytes": 124,
+      "last_write_time": 1286883644.0,
+      "key_count": 1,
+      "keys": [
+        "\"DBGrid1"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=900.2835,1409.953,1860.095,1769.953,1860.095,1244.976,1005.165,1860.095,689.9528,1769.953,1409.953,1860.095,\"",
+        "\"\""
+      ]
+    },
+    {
+      "name": "ISSCNT_CNT.Inf",
+      "extension": ".inf",
+      "size_bytes": 89,
+      "last_write_time": 1452134619.580397,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1769.953,2129.953,1319.811,1860.095,\"",
+        "\"FindSQLPos=5315,40,17200,7115\""
+      ]
+    },
+    {
+      "name": "ISSCNT_SCAN_CNT.Inf",
+      "extension": ".inf",
+      "size_bytes": 80,
+      "last_write_time": 1359719684.7840395,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1769.953,1860.095,1860.095,\"",
+        "\"FindSQLPos=4595,40,20410,6395\""
+      ]
+    },
+    {
+      "name": "ISSCSK_CSK.Inf",
+      "extension": ".inf",
+      "size_bytes": 89,
+      "last_write_time": 1444816046.628335,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1769.953,1860.095,1319.811,6359.812,\"",
+        "\"FindSQLPos=5315,40,17200,7115\""
+      ]
+    },
+    {
+      "name": "ISSGRN_GRN.Inf",
+      "extension": ".inf",
+      "size_bytes": 110,
+      "last_write_time": 1189401090.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSPTA_PTA.Inf",
+      "extension": ".inf",
+      "size_bytes": 119,
+      "last_write_time": 1515743868.680729,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,1769.953,959.8111,959.8111,1769.953,1860.095,1860.095,510.2362,1319.811,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSPTG_A_PTG.Inf",
+      "extension": ".inf",
+      "size_bytes": 178,
+      "last_write_time": 1698977928.512795,
+      "key_count": 3,
+      "keys": [
+        "\"DBGrid1",
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,1769.953,959.8111,959.8111,1769.953,1860.095,1860.095,510.2362,1319.811,\"",
+        "\"DBGrid1Find=1769.953,2039.811,959.8111,959.8111,\"",
+        "\"FindSQLPos=4595,40,20410,6395\""
+      ]
+    },
+    {
+      "name": "ISSPTG_PTG.Inf",
+      "extension": ".inf",
+      "size_bytes": 180,
+      "last_write_time": 1544520859.566331,
+      "key_count": 3,
+      "keys": [
+        "\"DBGrid1",
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,1769.953,959.8111,959.8111,1769.953,1860.095,1860.095,510.2362,1319.811,\"",
+        "\"DBGrid1Find=1769.953,1230.236,959.8111,959.8111,\"",
+        "\"FindSQLPos=4590,2865,15540,6395\""
+      ]
+    },
+    {
+      "name": "ISSREC_REC.Inf",
+      "extension": ".inf",
+      "size_bytes": 196,
+      "last_write_time": 1144718770.0,
+      "key_count": 3,
+      "keys": [
+        "\"DBGrid1",
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=900.2835,959.8111,1244.976,1005.165,1860.095,689.9528,1769.953,959.8111,\"",
+        "\"DBGrid1Find=1769.953,1679.811,1140.095,959.8111,959.8111,1860.095,1860.095,\"",
+        "\"FindSQLPos=3335,40,11920,5135\""
+      ]
+    },
+    {
+      "name": "ISSSK_ADJ.Inf",
+      "extension": ".inf",
+      "size_bytes": 189,
+      "last_write_time": 1774930182.3886638,
+      "key_count": 3,
+      "keys": [
+        "\"DBGrid1",
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3330.142,675.2126,780.0945,945.0709,1124.787,1244.976,854.9292,1140.095,1365.165,\"",
+        "\"DBGrid1Find=1769.953,1500.095,1844.787,5355.213,\"",
+        "\"FindSQLPos=1530,3975,12390,6510\""
+      ]
+    },
+    {
+      "name": "ISSSK_CN.Inf",
+      "extension": ".inf",
+      "size_bytes": 110,
+      "last_write_time": 1349502819.2660458,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_CP.Inf",
+      "extension": ".inf",
+      "size_bytes": 139,
+      "last_write_time": 1349063174.3755271,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1140.095,945.0709,1244.976,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=4595,40,17200,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_CPS.Inf",
+      "extension": ".inf",
+      "size_bytes": 243,
+      "last_write_time": 1746437465.0689256,
+      "key_count": 3,
+      "keys": [
+        "\"DBGrid1",
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=750.0473,4394.835,975.1182,959.8111,945.0709,1244.976,1244.976,915.0237,1140.095,1260.284,\"",
+        "\"DBGrid1Find=1769.953,1409.953,1950.236,1409.953,1230.236,1230.236,1860.095,1230.236,1860.095,1860.095,\"",
+        "\"FindSQLPos=6165,2700,10590,3675\""
+      ]
+    },
+    {
+      "name": "ISSSK_CRN.Inf",
+      "extension": ".inf",
+      "size_bytes": 128,
+      "last_write_time": 1450751778.5017664,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1140.095,945.0709,1244.976,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_DN.Inf",
+      "extension": ".inf",
+      "size_bytes": 139,
+      "last_write_time": 1413260028.3390565,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1140.095,945.0709,1244.976,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=4805,40,23650,6605\""
+      ]
+    },
+    {
+      "name": "ISSSK_DO.Inf",
+      "extension": ".inf",
+      "size_bytes": 110,
+      "last_write_time": 1520324375.3669713,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_DOCTYPE_GN7.Inf",
+      "extension": ".inf",
+      "size_bytes": 137,
+      "last_write_time": 1490943042.7284904,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1860.095,1244.976,945.0709,1244.976,1860.095,1860.095,1769.953,1409.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_DOCTYPE_GR7.Inf",
+      "extension": ".inf",
+      "size_bytes": 137,
+      "last_write_time": 1483694108.0876389,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1140.095,945.0709,1244.976,1244.976,1860.095,1860.095,1769.953,1409.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_DOCTYPE_PR7.Inf",
+      "extension": ".inf",
+      "size_bytes": 140,
+      "last_write_time": 1496718162.2397301,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1860.095,1244.976,945.0709,1769.953,689.9528,870.2363,1500.095,\"",
+        "\"\"",
+        "\"FindSQLPos=6920,-20,28840,8720\""
+      ]
+    },
+    {
+      "name": "ISSSK_ENT.Inf",
+      "extension": ".inf",
+      "size_bytes": 139,
+      "last_write_time": 1433298179.2628274,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1140.095,945.0709,1244.976,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=4595,40,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_GCH.Inf",
+      "extension": ".inf",
+      "size_bytes": 101,
+      "last_write_time": 1550214378.0471938,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1470.047,1860.095,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_GCH.Inq",
+      "extension": ".inq",
+      "size_bytes": 116,
+      "last_write_time": 1431940557.9761975,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1950.236,1860.095,1860.095,1500.095,1860.095,1860.095,1860.095,\"",
+        "\"FindSQLPos=4595,40,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_GPP.Inf",
+      "extension": ".inf",
+      "size_bytes": 94,
+      "last_write_time": 1432787537.820671,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,1860.095,1244.976,1409.953,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=4595,40,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_GRB.Inf",
+      "extension": ".inf",
+      "size_bytes": 139,
+      "last_write_time": 1346122642.4391322,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1140.095,945.0709,1244.976,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=4595,40,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_GRN.Inf",
+      "extension": ".inf",
+      "size_bytes": 276,
+      "last_write_time": 1771908976.2377198,
+      "key_count": 3,
+      "keys": [
+        "\"DBGrid1",
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,4470.236,1065.26,1049.953,1019.906,945.0709,1244.976,959.8111,1049.953,1094.74,1409.953,\"",
+        "\"DBGrid1Find=1769.953,1500.095,1860.095,959.8111,1500.095,870.2363,959.8111,1860.095,689.9528,1769.953,1769.953,1409.953,1409.953,\"",
+        "\"FindSQLPos=3315,720,14010,4335\""
+      ]
+    },
+    {
+      "name": "ISSSK_GRN.Inq",
+      "extension": ".inq",
+      "size_bytes": 324,
+      "last_write_time": 1436854462.4787016,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1500.095,689.9528,3300.095,1860.095,1860.095,1230.236,1049.953,1140.095,1860.095,1860.095,1860.095,1049.953,870.2363,870.2363,1769.953,1409.953,1049.953,1409.953,1409.953,1860.095,1769.953,1860.095,1049.953,1860.095,1860.095,1860.095,1049.953,1140.095,1049.953,1140.095,\"",
+        "\"FindSQLPos=3315,720,14010,4335\""
+      ]
+    },
+    {
+      "name": "ISSSK_GRR.Inf",
+      "extension": ".inf",
+      "size_bytes": 205,
+      "last_write_time": 1517561334.852405,
+      "key_count": 3,
+      "keys": [
+        "\"DBGrid1",
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=750.0473,2174.74,1065.26,780.0945,945.0709,1244.976,929.7639,780.0945,1049.953,1124.787,1319.811,\"",
+        "\"DBGrid1Find=1769.953,1409.953,1950.236,1500.095,1860.095,\"",
+        "\"FindSQLPos=3750,3615,12240,4110\""
+      ]
+    },
+    {
+      "name": "ISSSK_I.Inf",
+      "extension": ".inf",
+      "size_bytes": 368,
+      "last_write_time": 1520822410.6718276,
+      "key_count": 3,
+      "keys": [
+        "\"DBGrid1",
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,5265.071,854.9292,840.189,1035.213,1049.953,1860.095,1769.953,\"",
+        "\"DBGrid1Find=1500.095,2849.953,1140.095,1319.811,1860.095,1230.236,1140.095,1500.095,1319.811,1319.811,1769.953,1769.953,1230.236,1049.953,1860.095,1860.095,1860.095,1860.095,1860.095,1860.095,1860.095,1230.236,1860.095,1860.095,1590.236,1679.811,\"",
+        "\"FindSQLPos=5190,2430,11920,5135\""
+      ]
+    },
+    {
+      "name": "ISSSK_I.Inq",
+      "extension": ".inq",
+      "size_bytes": 118,
+      "last_write_time": 1211876792.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1860.095,2670.236,1049.953,1500.095,1860.095,1860.095,1860.095,\"",
+        "\"FindSQLPos=5190,2430,11920,5135\""
+      ]
+    },
+    {
+      "name": "ISSSK_IA.Inf",
+      "extension": ".inf",
+      "size_bytes": 139,
+      "last_write_time": 1510974056.7593732,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1860.095,1860.095,1769.953,1860.095,1049.953,\"",
+        "\"\"",
+        "\"FindSQLPos=5580,45,17460,7380\""
+      ]
+    },
+    {
+      "name": "ISSSK_IN.Inf",
+      "extension": ".inf",
+      "size_bytes": 83,
+      "last_write_time": 1182328728.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_INV.Inf",
+      "extension": ".inf",
+      "size_bytes": 131,
+      "last_write_time": 1775029544.9445488,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1409.953,1140.095,945.0709,1244.976,780.0945,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=3840,105,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_INV.Inq",
+      "extension": ".inq",
+      "size_bytes": 117,
+      "last_write_time": 1226288350.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1319.811,3209.953,1049.953,1500.095,1860.095,1860.095,1860.095,\"",
+        "\"FindSQLPos=3840,105,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_ISE.Inf",
+      "extension": ".inf",
+      "size_bytes": 140,
+      "last_write_time": 1420791718.5517888,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1140.095,945.0709,1244.976,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=4335,4365,8025,3615\""
+      ]
+    },
+    {
+      "name": "ISSSK_ISF.Inf",
+      "extension": ".inf",
+      "size_bytes": 91,
+      "last_write_time": 1346121379.024113,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=599.811,3195.213,1140.095,705.2599,1200.189,1470.047,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_ISP.Inf",
+      "extension": ".inf",
+      "size_bytes": 128,
+      "last_write_time": 1434337569.2945232,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1140.095,945.0709,1244.976,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_ISR.Inf",
+      "extension": ".inf",
+      "size_bytes": 149,
+      "last_write_time": 1743056412.4126947,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=645.1654,3300.095,870.2363,870.2363,689.9528,1019.906,989.8583,794.8347,1230.236,1230.236,1860.095,\"",
+        "\"\"",
+        "\"FindSQLPos=4890,5670,8955,6390\""
+      ]
+    },
+    {
+      "name": "ISSSK_ISS.Inf",
+      "extension": ".inf",
+      "size_bytes": 102,
+      "last_write_time": 1451271350.9819705,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=599.811,5235.024,1140.095,705.2599,1200.189,1470.047,\"",
+        "\"\"",
+        "\"FindSQLPos=4335,40,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_IST.Inf",
+      "extension": ".inf",
+      "size_bytes": 101,
+      "last_write_time": 1386559250.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1769.953,3330.142,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_ORD.Inf",
+      "extension": ".inf",
+      "size_bytes": 251,
+      "last_write_time": 1432796200.8902435,
+      "key_count": 3,
+      "keys": [
+        "\"DBGrid1",
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=1110.047,3839.811,2009.764,945.0709,1244.976,959.8111,1860.095,1769.953,\"",
+        "\"DBGrid1Find=1140.095,1409.953,870.2363,870.2363,1409.953,1409.953,959.8111,1769.953,1140.095,1230.236,1769.953,1860.095,1860.095,\"",
+        "\"FindSQLPos=4020,-45,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_ORD.Inq",
+      "extension": ".inq",
+      "size_bytes": 197,
+      "last_write_time": 1211365110.0,
+      "key_count": 3,
+      "keys": [
+        "\"DBGrid1",
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3825.071,2009.764,945.0709,1244.976,959.8111,1860.095,1769.953,\"",
+        "\"DBGrid1Find=1409.953,2835.213,959.8111,1230.236,1860.095,1860.095,1860.095,\"",
+        "\"FindSQLPos=4020,-45,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_PO.Inf",
+      "extension": ".inf",
+      "size_bytes": 313,
+      "last_write_time": 1739154311.0637858,
+      "key_count": 3,
+      "keys": [
+        "\"DBGrid1",
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,4800.189,434.8347,2204.788,824.882,1094.74,1035.213,1170.142,675.2126,959.8111,1200.189,1230.236,689.9528,870.2363,1230.236,\"",
+        "\"DBGrid1Find=1769.953,1409.953,1409.953,1500.095,1409.953,1409.953,1860.095,1769.953,1769.953,510.2362,1860.095,1860.095,1860.095,\"",
+        "\"FindSQLPos=2595,-285,20410,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_PO.Inq",
+      "extension": ".inq",
+      "size_bytes": 323,
+      "last_write_time": 1437116505.588243,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=689.9528,1230.236,2865.26,3585.26,1500.095,60.09449,60.09449,1140.095,1409.953,2039.811,1950.236,1049.953,870.2363,870.2363,1769.953,1409.953,1049.953,1409.953,1409.953,1860.095,1769.953,1860.095,1049.953,1860.095,1860.095,1860.095,1049.953,1140.095,1049.953,1140.095,\"",
+        "\"FindSQLPos=2595,-285,20410,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_POS.Inf",
+      "extension": ".inf",
+      "size_bytes": 110,
+      "last_write_time": 1389176349.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1860.095,945.0709,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_PR.Inf",
+      "extension": ".inf",
+      "size_bytes": 141,
+      "last_write_time": 1741319365.3659077,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3764.977,1260.284,1860.095,1244.976,945.0709,1769.953,689.9528,1019.906,1500.095,\"",
+        "\"\"",
+        "\"FindSQLPos=3525,-210,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_PR.Inq",
+      "extension": ".inq",
+      "size_bytes": 118,
+      "last_write_time": 1346915858.2280662,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1860.095,3390.236,1860.095,1500.095,1860.095,1860.095,1860.095,\"",
+        "\"FindSQLPos=3525,-210,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_PR7.Inf",
+      "extension": ".inf",
+      "size_bytes": 128,
+      "last_write_time": 1445506222.0132627,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1860.095,1244.976,945.0709,1769.953,689.9528,870.2363,1500.095,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_PRM.Inf",
+      "extension": ".inf",
+      "size_bytes": 128,
+      "last_write_time": 1483693976.5648084,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1140.095,945.0709,1244.976,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_QT.Inf",
+      "extension": ".inf",
+      "size_bytes": 123,
+      "last_write_time": 1432796194.1513596,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3044.977,1140.095,945.0709,1244.976,1860.095,1769.953,959.8111,\"",
+        "\"\"",
+        "\"FindSQLPos=3840,2070,11070,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_RCH.Inf",
+      "extension": ".inf",
+      "size_bytes": 112,
+      "last_write_time": 1445833674.778242,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1140.095,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=5585,40,21520,7385\""
+      ]
+    },
+    {
+      "name": "ISSSK_RET.Inf",
+      "extension": ".inf",
+      "size_bytes": 141,
+      "last_write_time": 1766375086.4667933,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,5204.977,900.2835,959.8111,945.0709,1244.976,1244.976,1049.953,1230.236,1275.024,\"",
+        "\"\"",
+        "\"FindSQLPos=5685,4350,10110,3165\""
+      ]
+    },
+    {
+      "name": "ISSSK_SA_I.Inf",
+      "extension": ".inf",
+      "size_bytes": 121,
+      "last_write_time": 1196143902.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=4595,40,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_SA_ORD.Inf",
+      "extension": ".inf",
+      "size_bytes": 121,
+      "last_write_time": 1191499502.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=4595,40,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_SA_PO.Inf",
+      "extension": ".inf",
+      "size_bytes": 110,
+      "last_write_time": 1191839324.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_SPR.Inf",
+      "extension": ".inf",
+      "size_bytes": 110,
+      "last_write_time": 1432796183.721851,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1860.095,945.0709,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_SR.Inf",
+      "extension": ".inf",
+      "size_bytes": 124,
+      "last_write_time": 1746437494.528445,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=-120,-120,29040,15840\""
+      ]
+    },
+    {
+      "name": "ISSSK_TOB.Inf",
+      "extension": ".inf",
+      "size_bytes": 92,
+      "last_write_time": 1342166575.343813,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSSK_TRI.Inf",
+      "extension": ".inf",
+      "size_bytes": 141,
+      "last_write_time": 1483694121.2533696,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,3330.142,1140.095,945.0709,1244.976,1244.976,1860.095,1860.095,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=4320,2595,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSSK_TRO.Inf",
+      "extension": ".inf",
+      "size_bytes": 112,
+      "last_write_time": 1743653045.7294855,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=720.0001,6494.74,1230.236,945.0709,1244.976,1769.953,3330.142,\"",
+        "\"\"",
+        "\"FindSQLPos=240,7380,10740,8868\""
+      ]
+    },
+    {
+      "name": "ISSSK_TRO.Inq",
+      "extension": ".inq",
+      "size_bytes": 116,
+      "last_write_time": 1430706967.0711615,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1860.095,3390.236,1860.095,1500.095,1860.095,1860.095,1860.095,\"",
+        "\"FindSQLPos=240,7380,8010,6390\""
+      ]
+    },
+    {
+      "name": "ISSUE1_ADJ.Inf",
+      "extension": ".inf",
+      "size_bytes": 103,
+      "last_write_time": 1181278270.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=3275,40,11920,5075\""
+      ]
+    },
+    {
+      "name": "ISSUE1_CN.Inf",
+      "extension": ".inf",
+      "size_bytes": 94,
+      "last_write_time": 1170827218.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=4595,40,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSUE1_GRN.Inf",
+      "extension": ".inf",
+      "size_bytes": 103,
+      "last_write_time": 1176914196.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=3275,40,11920,5075\""
+      ]
+    },
+    {
+      "name": "ISSUE1_I.Inf",
+      "extension": ".inf",
+      "size_bytes": 139,
+      "last_write_time": 1145502090.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1860.095,1860.095,1769.953,959.8111,1049.953,\"",
+        "\"\"",
+        "\"FindSQLPos=3350,40,11920,5150\""
+      ]
+    },
+    {
+      "name": "ISSUE1_IA.Inf",
+      "extension": ".inf",
+      "size_bytes": 139,
+      "last_write_time": 1145503410.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,4215.118,1140.095,945.0709,1244.976,1860.095,1860.095,1769.953,959.8111,1049.953,\"",
+        "\"\"",
+        "\"FindSQLPos=3275,40,11920,5075\""
+      ]
+    },
+    {
+      "name": "ISSUE1_IN.Inf",
+      "extension": ".inf",
+      "size_bytes": 94,
+      "last_write_time": 1171621394.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=3350,40,11920,5150\""
+      ]
+    },
+    {
+      "name": "ISSUE1_INV.Inf",
+      "extension": ".inf",
+      "size_bytes": 92,
+      "last_write_time": 1087811100.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSUE1_ORD.Inf",
+      "extension": ".inf",
+      "size_bytes": 103,
+      "last_write_time": 1167108690.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=4595,40,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSUE1_PO.Inf",
+      "extension": ".inf",
+      "size_bytes": 94,
+      "last_write_time": 1176327744.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=4595,40,15280,6395\""
+      ]
+    },
+    {
+      "name": "ISSUE1_RET.Inf",
+      "extension": ".inf",
+      "size_bytes": 83,
+      "last_write_time": 1179225148.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSUE1_SA.Inf",
+      "extension": ".inf",
+      "size_bytes": 92,
+      "last_write_time": 1087811430.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,1140.095,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "ISSUE1_SR.Inf",
+      "extension": ".inf",
+      "size_bytes": 83,
+      "last_write_time": 1167899816.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"DBGrid1=705.2599,3000.189,945.0709,1244.976,1769.953,\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "MAC5DB.CFG",
+      "extension": ".cfg",
+      "size_bytes": 350,
+      "last_write_time": 1352023577.384218,
+      "key_count": 0,
+      "keys": [],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "!\u0018\u00028ä\u001f\u0000\u0018V\u001báë\u0016];\b\t",
+        "\u001f\u000f\u0015Z¼\u000eIª§J·¯¤®§F±·¤®§R«°§R£«´b§»¸[µ¿¸W04/11/2012!\u0018\u00028ä\u001f\u0000\u0018V\u001báë\u0016];\b\t",
+        "\u001f\u000f\u0015Z¼\u000eIª§J·¯¤®§F±·¤®§R«°§R£«´b§»¸[µ¿¸W04/11/2012!\u0018\u00028ä\u001f\u0000\u0018V\u001báë\u0016];\b\t",
+        "\u001f\u000f\u0015Z¼\u000eIª§J·¯¤®§F±·¤®§R«°§R£«´b§»¸[µ¿¸W04/11/2012!\u0018\u00028ä\u001f\u0000\u0018V\u001báë\u0016];\b\t",
+        "\u001f\u000f\u0015Z¼\u000eIª§J·¯¤®§F±·¤®§R«°§R£«´b§»¸[µ¿¸W04/11/2012!\u0018\u00028ä\u001f\u0000\u0018V\u001báë\u0016];\b\t",
+        "\u001f\u000f\u0015Z¼\u000eIª§J·¯¤®§F±·¤®§R«°§R£«´b§»¸[µ¿¸W04/11/2012"
+      ]
+    },
+    {
+      "name": "MALI-POSENTST.cfg",
+      "extension": ".cfg",
+      "size_bytes": 167,
+      "last_write_time": 1279003662.0,
+      "key_count": 10,
+      "keys": [
+        "BARCODE",
+        "CASHM",
+        "CODECASHREGISTER",
+        "NATIONCFG",
+        "PRINTERNAME",
+        "PRINTERSLIP",
+        "SALECFG",
+        "STATECASHREGISTER",
+        "TABLEHAVE",
+        "USEPORT"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "STATECASHREGISTER=1",
+        "USEPORT=COM1",
+        "CODECASHREGISTER=7",
+        "PRINTERSLIP=N",
+        "PRINTERNAME=EPSON TM-U210B Partial cut",
+        "TABLEHAVE=N",
+        "CASHM=N",
+        "SALECFG=N",
+        "NATIONCFG=Y",
+        "BARCODE=Y"
+      ]
+    },
+    {
+      "name": "MALI-POSENTST_Back.cfg",
+      "extension": ".cfg",
+      "size_bytes": 156,
+      "last_write_time": 1278055304.0,
+      "key_count": 9,
+      "keys": [
+        "CASHM",
+        "CODECASHREGISTER",
+        "NATIONCFG",
+        "PRINTERNAME",
+        "PRINTERSLIP",
+        "SALECFG",
+        "STATECASHREGISTER",
+        "TABLEHAVE",
+        "USEPORT"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "STATECASHREGISTER=1",
+        "USEPORT=COM1",
+        "CODECASHREGISTER=7",
+        "PRINTERSLIP=N",
+        "PRINTERNAME=EPSON TM-U210B Partial cut",
+        "TABLEHAVE=N",
+        "CASHM=N",
+        "SALECFG=N",
+        "NATIONCFG=Y"
+      ]
+    },
+    {
+      "name": "MALI-POSENTST_Back2.cfg",
+      "extension": ".cfg",
+      "size_bytes": 57,
+      "last_write_time": 1277796882.0,
+      "key_count": 0,
+      "keys": [],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "1",
+        "COM1",
+        "7",
+        "Y",
+        "EPSON TM-U210B Partial cut",
+        "N",
+        "N",
+        "N",
+        "Y",
+        ""
+      ]
+    },
+    {
+      "name": "MAST1_BANKACC.Inq",
+      "extension": ".inq",
+      "size_bytes": 141,
+      "last_write_time": 1345121751.5819764,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1409.953,2580.095,1860.095,1409.953,1679.811,1679.811,1590.236,1950.236,2399.811,2039.811,1950.236,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "MAST1_CARDTYPE.Inq",
+      "extension": ".inq",
+      "size_bytes": 114,
+      "last_write_time": 1240477804.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1409.953,3209.953,1860.095,1409.953,1679.811,1679.811,1590.236,1950.236,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "MAST1_COMPANY.Inf",
+      "extension": ".inf",
+      "size_bytes": 41,
+      "last_write_time": 1163075426.0,
+      "key_count": 1,
+      "keys": [
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"\"",
+        "\"FindSQLPos=4595,40,15280,6395\""
+      ]
+    },
+    {
+      "name": "MAST1_CUSTOMER.Inf",
+      "extension": ".inf",
+      "size_bytes": 154,
+      "last_write_time": 1164363386.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1140.095,3374.929,4965.166,2310.236,1860.095,1860.095,1860.095,1860.095,1049.953,1860.095,1140.095,\"",
+        "\"FindSQLPos=4155,-285,11940,5075\""
+      ]
+    },
+    {
+      "name": "MAST1_ICGROUP.Inf",
+      "extension": ".inf",
+      "size_bytes": 41,
+      "last_write_time": 1164196934.0,
+      "key_count": 1,
+      "keys": [
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"\"",
+        "\"FindSQLPos=3350,40,11920,5150\""
+      ]
+    },
+    {
+      "name": "MAST1_ICMAST.Inf",
+      "extension": ".inf",
+      "size_bytes": 127,
+      "last_write_time": 1164348104.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1409.953,6735.119,1230.236,1140.095,1500.095,1950.236,1319.811,1319.811,\"",
+        "\"FindSQLPos=4725,2550,11920,5075\""
+      ]
+    },
+    {
+      "name": "MAST1_ICUNIT.Inf",
+      "extension": ".inf",
+      "size_bytes": 30,
+      "last_write_time": 1164348706.0,
+      "key_count": 1,
+      "keys": [
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "MAST1_SALE.Inf",
+      "extension": ".inf",
+      "size_bytes": 80,
+      "last_write_time": 1164351192.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1140.095,1860.095,3119.811,\"",
+        "\"FindSQLPos=3335,40,11920,5135\""
+      ]
+    },
+    {
+      "name": "MAST1_SALE.Inq",
+      "extension": ".inq",
+      "size_bytes": 60,
+      "last_write_time": 1527132727.7159464,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1230.236,2759.811,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "MAST1_SENDPLACE.Inf",
+      "extension": ".inf",
+      "size_bytes": 41,
+      "last_write_time": 1163667574.0,
+      "key_count": 1,
+      "keys": [
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"\"",
+        "\"FindSQLPos=4595,40,15280,6395\""
+      ]
+    },
+    {
+      "name": "MAST1_SUPPLIER.Inf",
+      "extension": ".inf",
+      "size_bytes": 41,
+      "last_write_time": 1164281036.0,
+      "key_count": 1,
+      "keys": [
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"\"",
+        "\"FindSQLPos=3350,40,11920,5150\""
+      ]
+    },
+    {
+      "name": "MAST1_SUPPLIER.Inq",
+      "extension": ".inq",
+      "size_bytes": 60,
+      "last_write_time": 1419843366.2181854,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1214.929,3209.953,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "MAST1_ZICACCGROUP.Inq",
+      "extension": ".inq",
+      "size_bytes": 141,
+      "last_write_time": 1345633801.8078036,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1409.953,2849.953,1860.095,1409.953,1679.811,1679.811,1590.236,1950.236,2399.811,2039.811,1950.236,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "MAST1_ZONE.Inf",
+      "extension": ".inf",
+      "size_bytes": 43,
+      "last_write_time": 1164351286.0,
+      "key_count": 1,
+      "keys": [
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"\"",
+        "\"FindSQLPos=3450,-405,15280,6395\""
+      ]
+    },
+    {
+      "name": "MNYENT_-.Inq",
+      "extension": ".inq",
+      "size_bytes": 69,
+      "last_write_time": 1240481328.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1409.953,2940.095,1860.095,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "MONEY.Inq",
+      "extension": ".inq",
+      "size_bytes": 69,
+      "last_write_time": 1240482622.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1409.953,3030.236,1860.095,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "POS.GEI",
+      "extension": ".gei",
+      "size_bytes": 705,
+      "last_write_time": 1506583601.8285174,
+      "key_count": 33,
+      "keys": [
+        "AUTOBONUS",
+        "AUTONEWBILL",
+        "BARCODE",
+        "CASHM",
+        "CLEVEL",
+        "CODECASHREGISTER",
+        "CUSDISPLAYPORT",
+        "MONEYCHANGE",
+        "MachineType",
+        "NATIONCFG",
+        "PRINTCOPY",
+        "PRINTERCER",
+        "PRINTERSLIP",
+        "PRINTERSLP",
+        "PRINTERTAX",
+        "REBILL",
+        "SALECFG",
+        "SALECODE",
+        "SHOWDISCOUNT",
+        "SHOWPCS",
+        "STATECASHREGISTER",
+        "TABLEHAVE",
+        "TAXINVFULL",
+        "TRANSPORT",
+        "USEPORT"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "PRINTERSLP=",
+        "PRINTERTAX=Foxit Reader PDF Printer",
+        "PRINTERCER=Foxit Reader PDF Printer",
+        "PRINTERSLP=",
+        "TRANSPORT=Y",
+        "MachineType=TK",
+        "//MachineNo=12",
+        "STATECASHREGISTER=1",
+        "USEPORT=COM3",
+        "CUSDISPLAYPORT=COM4",
+        "CODECASHREGISTER=3",
+        "PRINTERSLIP=N"
+      ]
+    },
+    {
+      "name": "POS.RG",
+      "extension": ".rg",
+      "size_bytes": 2031,
+      "last_write_time": 1427885580.5431478,
+      "key_count": 80,
+      "keys": [
+        "MachineNo",
+        "PRINTERCER",
+        "PRINTERSLP",
+        "PRINTERTAX",
+        "TRANSPORT"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "MachineNo=202",
+        "PRINTERTAX=PDFCreator",
+        "PRINTERCER=SnagIt 7",
+        "PRINTERSLP=",
+        "PRINTERTAX=PDFCreator",
+        "PRINTERCER=SnagIt 7",
+        "PRINTERSLP=",
+        "PRINTERTAX=PDFCreator",
+        "PRINTERCER=SnagIt 7",
+        "PRINTERSLP=",
+        "PRINTERTAX=PDFCreator",
+        "PRINTERCER=PDFCreator"
+      ]
+    },
+    {
+      "name": "POS.RPP",
+      "extension": ".rpp",
+      "size_bytes": 209,
+      "last_write_time": 1351963152.2230155,
+      "key_count": 13,
+      "keys": [
+        "BARCODE",
+        "CASHM",
+        "CODECASHREGISTER",
+        "CUSDISPLAYPORT",
+        "MACHINENO",
+        "NATIONCFG",
+        "PRINTCOPY",
+        "PRINTERNAME",
+        "PRINTERSLIP",
+        "SALECFG",
+        "STATECASHREGISTER",
+        "TABLEHAVE",
+        "USEPORT"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "STATECASHREGISTER=1",
+        "USEPORT=COM3",
+        "CUSDISPLAYPORT=COM4",
+        "CODECASHREGISTER=3",
+        "PRINTERNAME=EPSON TM-T88IV Receipt",
+        "TABLEHAVE=N",
+        "CASHM=N",
+        "SALECFG=N",
+        "NATIONCFG=Y",
+        "PRINTERSLIP=N",
+        "BARCODE=Y",
+        "PRINTCOPY=2"
+      ]
+    },
+    {
+      "name": "POS.RT",
+      "extension": ".rt",
+      "size_bytes": 184,
+      "last_write_time": 1318388676.0,
+      "key_count": 11,
+      "keys": [
+        "BARCODE",
+        "CASHM",
+        "CODECASHREGISTER",
+        "CUSDISPLAYPORT",
+        "NATIONCFG",
+        "PRINTERNAME",
+        "PRINTERSLIP",
+        "SALECFG",
+        "STATECASHREGISTER",
+        "TABLEHAVE",
+        "USEPORT"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "STATECASHREGISTER=1",
+        "USEPORT=COM3",
+        "CUSDISPLAYPORT=COM4",
+        "CODECASHREGISTER=7",
+        "PRINTERSLIP=Y",
+        "PRINTERNAME=EPSON TM-T88IV Receipt",
+        "TABLEHAVE=N",
+        "CASHM=N",
+        "SALECFG=N",
+        "NATIONCFG=Y",
+        "BARCODE=Y"
+      ]
+    },
+    {
+      "name": "POSCOM_NOP.Inq",
+      "extension": ".inq",
+      "size_bytes": 123,
+      "last_write_time": 1391133488.0,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=870.2363,1860.095,3119.811,1860.095,1860.095,1140.095,1860.095,1860.095,1860.095,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "POSENTM.cfg",
+      "extension": ".cfg",
+      "size_bytes": 51,
+      "last_write_time": 1348648151.2828526,
+      "key_count": 0,
+      "keys": [],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "1",
+        "COM1",
+        "7",
+        "Y",
+        "EPSON TM-U210B Partial cut",
+        "N",
+        "N",
+        ""
+      ]
+    },
+    {
+      "name": "POSENTM_Back.cfg",
+      "extension": ".cfg",
+      "size_bytes": 51,
+      "last_write_time": 1276150396.0,
+      "key_count": 0,
+      "keys": [],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "1",
+        "COM1",
+        "7",
+        "Y",
+        "EPSON TM-U210B Partial cut",
+        "Y",
+        "N",
+        ""
+      ]
+    },
+    {
+      "name": "POSFin.cfg",
+      "extension": ".cfg",
+      "size_bytes": 21,
+      "last_write_time": 1285315824.0,
+      "key_count": 2,
+      "keys": [
+        "over",
+        "refresh"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "refresh=10",
+        "over=20"
+      ]
+    },
+    {
+      "name": "PRINTFRM_I1_Epson LQ-2550.cfg",
+      "extension": ".cfg",
+      "size_bytes": 27,
+      "last_write_time": 1242815358.0,
+      "key_count": 2,
+      "keys": [
+        "LeftMargin",
+        "TopMargin"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "TopMargin=1",
+        "LeftMargin=3"
+      ]
+    },
+    {
+      "name": "PRINTFRM_I1_HP LaserJet 1022.cfg",
+      "extension": ".cfg",
+      "size_bytes": 34,
+      "last_write_time": 1242812130.0,
+      "key_count": 2,
+      "keys": [
+        "LeftMargin",
+        "TopMargin"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "LeftMargin=0.60",
+        "TopMargin=-0.20"
+      ]
+    },
+    {
+      "name": "PRINTPE_I.txt",
+      "extension": ".txt",
+      "size_bytes": 304,
+      "last_write_time": 1198143434.0,
+      "key_count": 0,
+      "keys": [],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        " \u001fqJ3 JÞÔ¢li%qþ\u0003´6Xü9LÛÁÙ",
+        "Ñ3!ÂØÄ¿>\u001b\u0005âiGþVÁ\b\u001bÍÉÂÈkð·½íìYP\u000eýçÕ×*NHh£^z0-ÏÚ?\u0012ÇõlÉbÜ/ô@+Ní\bz¼-3_*¨¦Øx",
+        "¤²9ð¶]|",
+        "=Ý?BiÍÐÂ;F*¤´^I$o¿,u[(2\u001aQJ'½\u0001IÖ\u0001î\u001f_ÓürLæDÚ\u0017ø³Hu,ïå\u0018 [}º×µ",
+        "¼Á´R^Ã¶8IÛ¨p75¯\u0010@³?[­",
+        "Z¹fmÄy6Í`\u0019´×MîýüîçáI@s³OÃËxÊ[åpÂFÝ+[½¡Än5%è\u000f¨øÁÙ÷w",
+        "Ü\u0003b\u0019â^qzw$^º'ÆNcb]t%\u0018¶À"
+      ]
+    },
+    {
+      "name": "PRINTPE_IA.txt",
+      "extension": ".txt",
+      "size_bytes": 304,
+      "last_write_time": 1349503314.7111611,
+      "key_count": 0,
+      "keys": [],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        " \u001fqJ3 JÞÔ¢li%qþLRn,yyø6äY",
+        "WÉ.­á²hudq<ÀËhCØþâ7²ÐW8_Ô[N¦çxu%æÿ\u00179a6Í8\u001b\u0004xQ\u0013CûÍéMúÅçñ|n=\u001bK\u0018þ\u0011\u0013\"cs©\u0011¾[?¯O;\u0007ãýI¦l&9úótS.äÓ\u00116GmtÌµ²¹Öòl­¼\u0000¶ª`\u0011üY,\u0003Ã\u000f¥kÜ$º\u0011WU~^\u0006ñ_÷ùBíªcwª3'rgãÏèçÈjgÎSÜV\u001a¦ÆR ´sæ³d\t]\u0004K4E=W]7Ë\u001b(\bÛ",
+        "©ßUæÎÒÇ7OxÃEÉ§8þ",
+        "]\u0018Dîp",
+        "ÿÝ:»¾T\u0011\"\t",
+        "R©/%Þ_X+$",
+        "xÖô\u0017­^\u0014\u0010Ð(>>¡¡t2*ÂÐFØ\\T"
+      ]
+    },
+    {
+      "name": "Refund.GEI",
+      "extension": ".gei",
+      "size_bytes": 143,
+      "last_write_time": 1572847488.0,
+      "key_count": 3,
+      "keys": [
+        "PRINTERREFUND"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "PRINTERREFUND=Foxit Reader PDF Printer",
+        "PRINTERREFUND=\\\\110.100.111.30\\HP LaserJet Professional P1102",
+        "PRINTERREFUND=Foxit Reader PDF Printer"
+      ]
+    },
+    {
+      "name": "RSR-FRONT-POSENTST.cfg",
+      "extension": ".cfg",
+      "size_bytes": 185,
+      "last_write_time": 1293092628.0,
+      "key_count": 11,
+      "keys": [
+        "BARCODE",
+        "CASHM",
+        "CODECASHREGISTER",
+        "NATIONCFG",
+        "PRINTERNAME",
+        "PRINTERSLIP",
+        "SALECFG",
+        "STATECASHREGISTER",
+        "TABLEGROUP",
+        "TABLEHAVE",
+        "USEPORT"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "STATECASHREGISTER=1",
+        "USEPORT=COM1",
+        "CODECASHREGISTER=7",
+        "PRINTERSLIP=Y",
+        "PRINTERNAME=EPSON TM-U210B Partial cut",
+        "TABLEHAVE=N",
+        "CASHM=N",
+        "SALECFG=Y",
+        "NATIONCFG=N",
+        "BARCODE=Y",
+        "TABLEGROUP=N",
+        ""
+      ]
+    },
+    {
+      "name": "RSR-POSENTST-2.cfg",
+      "extension": ".cfg",
+      "size_bytes": 169,
+      "last_write_time": 1292991602.0,
+      "key_count": 10,
+      "keys": [
+        "BARCODE",
+        "CASHM",
+        "CODECASHREGISTER",
+        "NATIONCFG",
+        "PRINTERNAME",
+        "PRINTERSLIP",
+        "SALECFG",
+        "STATECASHREGISTER",
+        "TABLEHAVE",
+        "USEPORT"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "STATECASHREGISTER=1",
+        "USEPORT=COM1",
+        "CODECASHREGISTER=7",
+        "PRINTERSLIP=N",
+        "PRINTERNAME=EPSON TM-U210B Partial cut",
+        "TABLEHAVE=N",
+        "CASHM=N",
+        "SALECFG=Y",
+        "NATIONCFG=N",
+        "BARCODE=Y",
+        ""
+      ]
+    },
+    {
+      "name": "RSR-POSENTST.cfg",
+      "extension": ".cfg",
+      "size_bytes": 183,
+      "last_write_time": 1298443754.0,
+      "key_count": 11,
+      "keys": [
+        "BARCODE",
+        "CASHM",
+        "CODECASHREGISTER",
+        "NATIONCFG",
+        "PRINTERNAME",
+        "PRINTERSLIP",
+        "SALECFG",
+        "STATECASHREGISTER",
+        "TABLEGROUP",
+        "TABLEHAVE",
+        "USEPORT"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "STATECASHREGISTER=1",
+        "USEPORT=COM1",
+        "CODECASHREGISTER=7",
+        "PRINTERSLIP=Y",
+        "PRINTERNAME=EPSON TM-U210B Partial cut",
+        "TABLEHAVE=Y",
+        "CASHM=N",
+        "SALECFG=Y",
+        "NATIONCFG=N",
+        "BARCODE=Y",
+        "TABLEGROUP=Y",
+        ""
+      ]
+    },
+    {
+      "name": "SELJOURNAL.Inq",
+      "extension": ".inq",
+      "size_bytes": 141,
+      "last_write_time": 1345716101.686756,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1409.953,3479.811,1860.095,1409.953,1679.811,1679.811,1590.236,1950.236,2399.811,2039.811,1950.236,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    },
+    {
+      "name": "SYSPA.CFG",
+      "extension": ".cfg",
+      "size_bytes": 446,
+      "last_write_time": 1511922747.3828304,
+      "key_count": 8,
+      "keys": [
+        "Access",
+        "CompanyName",
+        "JobName",
+        "SQL",
+        "SQLCONNECTNet",
+        "SQLConnect",
+        "ServerName",
+        "Thai"
+      ],
+      "contains_connection_or_sensitive_marker": true,
+      "redacted_preview": [
+        "'DataDir    = C:\\IVACC\\",
+        "'DataFile   = ",
+        "'PrgDir      = c:\\BET\\PRG\\",
+        "'ReportDir = c:\\BTE\\RPT\\",
+        "'PicDir=C:\\Picture\\",
+        "'SourcePicDir=C:\\Picture1\\",
+        "SQL=Y",
+        "",
+        "SQLConnect=Driver={SQL Server};Server=<redacted>;Database=GEI_ACC;UID=<redacted>;PWD=<redacted>;",
+        "",
+        "SQLCONNECTNet=Data Source=<redacted>;Initial Catalog=GEI_ACC;User ID=<redacted>;Password=<redacted>;",
+        ""
+      ]
+    },
+    {
+      "name": "System.cfg",
+      "extension": ".cfg",
+      "size_bytes": 323,
+      "last_write_time": 1496471151.327264,
+      "key_count": 6,
+      "keys": [
+        "Access",
+        "CompanyName",
+        "JobName",
+        "SQL",
+        "SQLConnect",
+        "Thai"
+      ],
+      "contains_connection_or_sensitive_marker": true,
+      "redacted_preview": [
+        "'DataDir    = C:\\IVACC\\",
+        "'DataFile   = ",
+        "'PrgDir      = c:\\BET\\PRG\\",
+        "'ReportDir = c:\\BTE\\RPT\\",
+        "'PicDir=C:\\Picture\\",
+        "'SourcePicDir=C:\\Picture1\\",
+        "SQL=Y",
+        "SQLConnect=Driver={SQL Server};Server=<redacted>;Database=RG_ACC;UID=<redacted>;PWD=<redacted>; ",
+        "",
+        "'ServerName=Office1",
+        "",
+        "Thai=Y"
+      ]
+    },
+    {
+      "name": "TAXINVOICE.Inq",
+      "extension": ".inq",
+      "size_bytes": 105,
+      "last_write_time": 1534919453.272784,
+      "key_count": 2,
+      "keys": [
+        "\"DBGrid1Find",
+        "\"FindSQLPos"
+      ],
+      "contains_connection_or_sensitive_marker": false,
+      "redacted_preview": [
+        "\"\"",
+        "\"DBGrid1Find=1860.095,1860.095,1230.236,780.0945,1409.953,1860.095,1860.095,\"",
+        "\"FindSQLPos=0,0,0,0\""
+      ]
+    }
+  ]
+}
