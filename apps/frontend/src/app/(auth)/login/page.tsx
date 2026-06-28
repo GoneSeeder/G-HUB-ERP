@@ -235,7 +235,7 @@ export default function LoginPage() {
             {loading && !showTransition ? 'Signing in...' : 'Sign in'}
           </button>
 
-          <div className="mt-5 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+          <div className="mt-4 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
             <span>ERP 2026</span>
             <span className="font-medium text-slate-700">G-HUB</span>
           </div>

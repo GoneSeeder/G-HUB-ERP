@@ -5,6 +5,8 @@ import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { GoogleStrategy } from './strategies/google.strategy';
+import { GoogleHrStrategy } from './strategies/google-hr.strategy';
 import { RolesGuard } from './guards/roles.guard';
 import { AppAccessGuard } from './guards/app-access.guard';
 
@@ -23,7 +25,7 @@ import { AppAccessGuard } from './guards/app-access.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, RolesGuard, AppAccessGuard],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, GoogleHrStrategy, RolesGuard, AppAccessGuard],
   exports: [AuthService, RolesGuard, AppAccessGuard],
 })
 export class AuthModule {}

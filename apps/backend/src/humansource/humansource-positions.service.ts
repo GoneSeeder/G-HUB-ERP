@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePositionDto, UpdatePositionDto } from './dto/position.dto';
 
@@ -22,6 +22,7 @@ export class HumansourcePositionsService {
         jobLevelId: dto.jobLevelId,
         companyId: dto.companyId ?? '',
         employeeTypes: dto.employeeTypes ?? [],
+        employmentTypeIds: dto.employmentTypeIds ?? [],
         salaryMin: dto.salaryMin ?? 0,
         salaryMax: dto.salaryMax ?? 0,
         overview: dto.overview ?? '',
@@ -35,15 +36,23 @@ export class HumansourcePositionsService {
 
   async update(id: string, dto: UpdatePositionDto) {
     await this.ensureExists(id);
-    const { employeeTypes, ...rest } = dto;
+    const { employeeTypes, employmentTypeIds, ...rest } = dto;
     return this.prisma.hrPosition.update({
       where: { id },
-      data: employeeTypes !== undefined ? { ...rest, employeeTypes } : rest,
+      data: {
+        ...rest,
+        ...(employeeTypes !== undefined && { employeeTypes }),
+        ...(employmentTypeIds !== undefined && { employmentTypeIds }),
+      },
     });
   }
 
   async remove(id: string) {
     await this.ensureExists(id);
+    const activeEmployees = await this.prisma.hrEmployee.count({ where: { positionId: id, active: true } });
+    if (activeEmployees > 0) {
+      throw new BadRequestException('Cannot delete a position with active employees');
+    }
     await this.prisma.hrPosition.delete({ where: { id } });
     return { id };
   }

@@ -27,6 +27,7 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 COPY package*.json ./
+COPY prisma.config.ts ./
 COPY --from=builder /app/prisma ./prisma
 RUN npm install --only=production
 RUN DATABASE_URL="postgresql://admin:admin@localhost:5432/g-hub" npx prisma generate

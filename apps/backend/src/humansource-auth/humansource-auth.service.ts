@@ -15,7 +15,7 @@ type HrSession = {
 function toSession(account: {
   email: string; displayName: string; authSource: string;
   accountStatus: string; membershipStatus: string;
-  hasGhubLink: boolean; createdAt: Date;
+  hasGhubLink: boolean;
 }): HrSession {
   return {
     authSource: account.authSource,
@@ -24,7 +24,7 @@ function toSession(account: {
     accountStatus: account.accountStatus,
     membershipStatus: account.membershipStatus,
     hasGhubLink: account.hasGhubLink,
-    createdAt: account.createdAt.toISOString(),
+    createdAt: new Date().toISOString(),
   };
 }
 
@@ -91,6 +91,39 @@ export class HumansourceAuthService {
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
     await this.prisma.hrLinkCode.create({ data: { code, accountId: account.id, expiresAt } });
     return { code, expiresAt };
+  }
+
+  // ── Login with G-HUB account ─────────────────────────────────────────────────
+  async loginWithGhub(userId: string, name: string, email: string) {
+    let account = await this.prisma.hrAccount.findFirst({
+      where: { OR: [{ userId }, { email }] },
+    });
+
+    if (!account) {
+      account = await this.prisma.hrAccount.create({
+        data: {
+          email,
+          displayName: name,
+          passwordHash: await hash(userId + process.env.JWT_SECRET, 10),
+          authSource: 'ghub',
+          accountStatus: 'active',
+          membershipStatus: 'none',
+          hasGhubLink: true,
+          userId,
+        },
+      });
+    } else if (!account.userId) {
+      account = await this.prisma.hrAccount.update({
+        where: { id: account.id },
+        data: { userId, hasGhubLink: true, authSource: 'ghub' },
+      });
+    }
+
+    if (account.accountStatus === 'disabled') {
+      throw new UnauthorizedException('บัญชีนี้ถูกระงับการใช้งาน');
+    }
+
+    return { session: toSession(account) };
   }
 
   // ── Redeem link code ──────────────────────────────────────────────────────────

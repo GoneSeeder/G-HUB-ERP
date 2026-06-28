@@ -51,4 +51,8 @@ export class AuthService {
 
     return authUser;
   }
+
+  async signTokenForUser(user: AuthUser): Promise<string> {
+    return this.jwtService.signAsync({ sub: user.sub });
+  }
 }

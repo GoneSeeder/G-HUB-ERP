@@ -32,10 +32,14 @@ const COMPANIES = [
 ];
 
 const JOB_LEVELS = [
-  { id: 'JL-EXEC', nameTh: 'ผู้บริหาร',  nameEn: 'Executive',  rank: 1, active: true },
-  { id: 'JL-MGR',  nameTh: 'ผู้จัดการ',  nameEn: 'Manager',    rank: 2, active: true },
-  { id: 'JL-SUP',  nameTh: 'หัวหน้างาน', nameEn: 'Supervisor', rank: 3, active: true },
-  { id: 'JL-STF',  nameTh: 'พนักงาน',    nameEn: 'Staff',      rank: 4, active: true },
+  { id: 'JL-CEO', nameTh: 'CEO', nameEn: 'CEO', rank: 1, active: true },
+  { id: 'JL-E',   nameTh: 'E',   nameEn: 'E',   rank: 2, active: true },
+  { id: 'JL-M',   nameTh: 'M',   nameEn: 'M',   rank: 3, active: true },
+  { id: 'JL-O3',  nameTh: 'O3',  nameEn: 'O3',  rank: 4, active: true },
+  { id: 'JL-O2',  nameTh: 'O2',  nameEn: 'O2',  rank: 5, active: true },
+  { id: 'JL-O1',  nameTh: 'O1',  nameEn: 'O1',  rank: 6, active: true },
+  { id: 'JL-T',   nameTh: 'T',   nameEn: 'T',   rank: 7, active: true },
+  { id: 'JL-P',   nameTh: 'P',   nameEn: 'P',   rank: 8, active: true },
 ];
 
 const POSITIONS = [

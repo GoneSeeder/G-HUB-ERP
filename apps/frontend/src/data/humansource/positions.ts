@@ -14,6 +14,7 @@ export type Position = {
   jobLevelId: string;
   companyId: string;        // '' = ทุกบริษัท
   employeeTypes: string[];  // subset of EMPLOYEE_TYPE_KEYS
+  employmentTypeIds?: string[];
   salaryMin: number;        // 0 = ไม่ระบุ
   salaryMax: number;
   overview: string;
@@ -35,14 +36,18 @@ export const EMPLOYEE_TYPE_CHIPS: { key: string; label: string }[] = [
 ];
 
 export const JOB_LEVEL_SEED: JobLevel[] = [
-  { id: 'JL-EXEC', nameTh: 'ผู้บริหาร',  nameEn: 'Executive',  rank: 1, active: true },
-  { id: 'JL-MGR',  nameTh: 'ผู้จัดการ',  nameEn: 'Manager',    rank: 2, active: true },
-  { id: 'JL-SUP',  nameTh: 'หัวหน้างาน', nameEn: 'Supervisor', rank: 3, active: true },
-  { id: 'JL-STF',  nameTh: 'พนักงาน',    nameEn: 'Staff',      rank: 4, active: true },
+  { id: 'JL-CEO', nameTh: 'CEO', nameEn: 'CEO', rank: 1, active: true },
+  { id: 'JL-E',   nameTh: 'E',   nameEn: 'E',   rank: 2, active: true },
+  { id: 'JL-M',   nameTh: 'M',   nameEn: 'M',   rank: 3, active: true },
+  { id: 'JL-O3',  nameTh: 'O3',  nameEn: 'O3',  rank: 4, active: true },
+  { id: 'JL-O2',  nameTh: 'O2',  nameEn: 'O2',  rank: 5, active: true },
+  { id: 'JL-O1',  nameTh: 'O1',  nameEn: 'O1',  rank: 6, active: true },
+  { id: 'JL-T',   nameTh: 'T',   nameEn: 'T',   rank: 7, active: true },
+  { id: 'JL-P',   nameTh: 'P',   nameEn: 'P',   rank: 8, active: true },
 ];
 
-const _p = (overrides: Omit<Position, 'companyId' | 'employeeTypes' | 'salaryMin' | 'salaryMax' | 'overview' | 'responsibilities' | 'qualifications' | 'hasBenefits'>): Position => ({
-  companyId: '', employeeTypes: [], salaryMin: 0, salaryMax: 0,
+const _p = (overrides: Omit<Position, 'companyId' | 'employeeTypes' | 'employmentTypeIds' | 'salaryMin' | 'salaryMax' | 'overview' | 'responsibilities' | 'qualifications' | 'hasBenefits'>): Position => ({
+  companyId: '', employeeTypes: [], employmentTypeIds: [], salaryMin: 0, salaryMax: 0,
   overview: '', responsibilities: '', qualifications: '', hasBenefits: false,
   ...overrides,
 });

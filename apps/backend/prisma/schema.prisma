@@ -10,6 +10,8 @@ model User {
   id           String              @id @default(uuid())
   username     String              @unique
   name         String
+  email        String?             @unique
+  googleId     String?             @unique
   passwordHash String
   isActive     Boolean             @default(true)
   roles        UserRole[]
@@ -479,6 +481,7 @@ model HrPosition {
   jobLevelId       String  @default("")
   companyId        String  @default("")
   employeeTypes    Json    @default("[]")
+  employmentTypeIds Json   @default("[]")
   salaryMin        Int     @default(0)
   salaryMax        Int     @default(0)
   overview         String  @default("")

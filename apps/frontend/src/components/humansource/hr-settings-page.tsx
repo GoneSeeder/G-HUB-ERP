@@ -25,6 +25,7 @@ import { PayrollGeneralSettings } from './hr-payroll-general';
 import { PayrollEmploymentTypes } from './hr-payroll-employment-types';
 import { PayrollPayPeriods } from './hr-payroll-pay-periods';
 import { PayrollPayItems } from './hr-payroll-pay-items';
+import { type Company } from '@/data/humansource/companies';
 
 type GroupKey = HrSettingsGroup['key'];
 
@@ -481,7 +482,7 @@ function TimeSettingsTable({
     activeItem.path.includes('network');
 
   return (
-    <div className="p-5">
+    <div className="hr-shift-page p-5">
       <div className="hr-settings-toolbar">
         <div className="hr-settings-toolbar__filters">
           <input type="search" placeholder="ค้นหา..." className="hr-settings-search" />
@@ -824,13 +825,6 @@ function FilterChipSelect({
   );
 }
 
-const SHIFT_FILTER_COMPANY_OPTIONS = [
-  { value: 'ใช้กับทุกบริษัท', label: 'ใช้กับทุกบริษัท' },
-  { value: 'G-HUB Enterprise',  label: 'G-HUB Enterprise' },
-  { value: 'Operations',         label: 'Operations' },
-  { value: 'ฝ่ายขาย',           label: 'ฝ่ายขาย' },
-  { value: 'คลังสินค้า',        label: 'คลังสินค้า' },
-];
 const SHIFT_FILTER_TYPE_OPTIONS = [
   { value: 'กะปกติ',    label: 'กะปกติ' },
   { value: 'กะพิเศษ',   label: 'กะพิเศษ' },
@@ -873,7 +867,7 @@ type ApiShift = {
 
 function apiShiftToRow(s: ApiShift): ShiftRow {
   return {
-    enabled: s.enabled, code: s.code, name: s.name, type: s.type,
+    id: s.id, enabled: s.enabled, code: s.code, name: s.name, type: s.type,
     time: s.time, company: s.companyScope,
     updatedBy: s.updatedBy ?? '', updatedAt: s.updatedAt ?? '',
     groupKey: (s.groupKey as ShiftGroupKey) ?? 'same-day',
@@ -886,10 +880,54 @@ function apiShiftToRow(s: ApiShift): ShiftRow {
   };
 }
 
+function parseShiftTime(time: string) {
+  const [workPart, restPart] = time.split('/').map((part) => part.trim());
+  const [startTime = '08:30', endOrBreakStart = '17:30'] = (workPart || '').split('-').map((part) => part.trim());
+  const [breakEnd = '', endTime = restPart ? '17:30' : endOrBreakStart] = restPart
+    ? restPart.split('-').map((part) => part.trim())
+    : ['', endOrBreakStart];
+  return {
+    startTime,
+    breakStart: restPart ? endOrBreakStart : '',
+    breakEnd,
+    endTime,
+  };
+}
+
+function shiftRowToForm(row: ShiftRow): ShiftForm {
+  const parsedTime = parseShiftTime(row.time);
+  return {
+    code: row.code,
+    name: row.name,
+    description: row.description ?? '',
+    groupKey: row.groupKey,
+    startTime: parsedTime.startTime,
+    endTime: parsedTime.endTime,
+    breakStart: parsedTime.breakStart,
+    breakEnd: parsedTime.breakEnd,
+    company: row.company,
+    timezone: row.timezone ?? TIMEZONE_OPTIONS[0],
+    color: row.color ?? '',
+    attendanceRule: row.attendanceRule ?? ATTENDANCE_RULE_OPTIONS[0],
+    flexibleEntryEnabled: row.flexibleEntryEnabled ?? false,
+    flexibleMinutes: String(row.flexibleMinutes ?? 0),
+    minimumWorkHours: String(row.minimumWorkHours ?? 8),
+    trackBreak: row.trackBreak ?? true,
+    shiftAllowanceEnabled: row.shiftAllowanceEnabled ?? false,
+    shiftAllowanceAmount: String(row.shiftAllowanceAmount ?? 0),
+    prorateShiftAllowance: row.prorateShiftAllowance ?? true,
+    holidayPremiumEnabled: row.holidayPremiumEnabled ?? false,
+    overtimePremiumEnabled: row.overtimePremiumEnabled ?? false,
+    enabled: row.enabled,
+  };
+}
+
 function ShiftSettingsBoard({ accent }: { accent: string }) {
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingShiftId, setEditingShiftId] = useState('');
   const [form, setForm] = useState<ShiftForm>(EMPTY_SHIFT_FORM);
   const [formError, setFormError] = useState('');
   const [filterCompany, setFilterCompany] = useState('');
@@ -899,8 +937,17 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
 
   useEffect(() => {
     isMounted.current = true;
-    publicApiFetch<ApiShift[]>('/api/humansource/shifts')
-      .then((data) => { if (isMounted.current) { setShifts(data.map(apiShiftToRow)); setLoading(false); } })
+    Promise.all([
+      publicApiFetch<ApiShift[]>('/api/humansource/shifts'),
+      publicApiFetch<Company[]>('/api/humansource/org-structure/companies'),
+    ])
+      .then(([shiftRows, companyRows]) => {
+        if (isMounted.current) {
+          setShifts(shiftRows.map(apiShiftToRow));
+          setCompanies(companyRows);
+          setLoading(false);
+        }
+      })
       .catch(() => { if (isMounted.current) setLoading(false); });
     return () => { isMounted.current = false; };
   }, []);
@@ -913,12 +960,21 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
 
   const openCreateModal = () => {
     setForm(EMPTY_SHIFT_FORM);
+    setEditingShiftId('');
+    setFormError('');
+    setShowCreateModal(true);
+  };
+
+  const openEditModal = (row: ShiftRow) => {
+    setForm(shiftRowToForm(row));
+    setEditingShiftId(row.id);
     setFormError('');
     setShowCreateModal(true);
   };
 
   const closeCreateModal = () => {
     setShowCreateModal(false);
+    setEditingShiftId('');
     setFormError('');
   };
 
@@ -927,7 +983,11 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
     const code = form.code.trim().toUpperCase();
     const name = form.name.trim();
     const company = form.company.trim();
-    const allCodes = shiftGroups.flatMap((group) => group.rows.map((row) => row.code.toUpperCase()));
+    const allCodes = shiftGroups.flatMap((group) =>
+      group.rows
+        .filter((row) => row.id !== editingShiftId)
+        .map((row) => row.code.toUpperCase()),
+    );
 
     if (!code || !name || !company || !form.startTime || !form.endTime) {
       setFormError('กรุณากรอกข้อมูลที่จำเป็นให้ครบ');
@@ -948,40 +1008,52 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
       ? `${form.startTime}-${form.breakStart} / ${form.breakEnd}-${form.endTime}`
       : `${form.startTime}-${form.endTime}`;
 
-    publicApiFetch<ApiShift>('/api/humansource/shifts', {
-      method: 'POST',
-      body: JSON.stringify({
-        code,
-        name,
-        type: SHIFT_GROUP_META[form.groupKey].type,
-        time,
-        companyScope: company,
-        groupKey: form.groupKey,
-        enabled: form.enabled,
-        description: form.description.trim() || undefined,
-        timezone: form.timezone || undefined,
-        color: form.color || undefined,
-        attendanceRule: form.attendanceRule || undefined,
-        flexibleEntryEnabled: form.flexibleEntryEnabled,
-        flexibleMinutes: Number(form.flexibleMinutes) || 0,
-        minimumWorkHours: Number(form.minimumWorkHours) || 0,
-        trackBreak: form.trackBreak,
-        shiftAllowanceEnabled: form.shiftAllowanceEnabled,
-        shiftAllowanceAmount: Number(form.shiftAllowanceAmount) || 0,
-        prorateShiftAllowance: form.prorateShiftAllowance,
-        holidayPremiumEnabled: form.holidayPremiumEnabled,
-        overtimePremiumEnabled: form.overtimePremiumEnabled,
-        updatedBy: 'HR Admin',
-      }),
+    const body = {
+      code,
+      name,
+      type: SHIFT_GROUP_META[form.groupKey].type,
+      time,
+      companyScope: company,
+      groupKey: form.groupKey,
+      enabled: form.enabled,
+      description: form.description.trim() || undefined,
+      timezone: form.timezone || undefined,
+      color: form.color || undefined,
+      attendanceRule: form.attendanceRule || undefined,
+      flexibleEntryEnabled: form.flexibleEntryEnabled,
+      flexibleMinutes: Number(form.flexibleMinutes) || 0,
+      minimumWorkHours: Number(form.minimumWorkHours) || 0,
+      trackBreak: form.trackBreak,
+      shiftAllowanceEnabled: form.shiftAllowanceEnabled,
+      shiftAllowanceAmount: Number(form.shiftAllowanceAmount) || 0,
+      prorateShiftAllowance: form.prorateShiftAllowance,
+      holidayPremiumEnabled: form.holidayPremiumEnabled,
+      overtimePremiumEnabled: form.overtimePremiumEnabled,
+      updatedBy: 'HR Admin',
+    };
+
+    publicApiFetch<ApiShift>(editingShiftId ? `/api/humansource/shifts/${editingShiftId}` : '/api/humansource/shifts', {
+      method: editingShiftId ? 'PATCH' : 'POST',
+      body: JSON.stringify(body),
     })
-      .then((created) => {
-        setShifts((prev) => [...prev, apiShiftToRow(created)]);
+      .then((saved) => {
+        const savedRow = apiShiftToRow(saved);
+        setShifts((prev) => editingShiftId
+          ? prev.map((row) => (row.id === savedRow.id ? savedRow : row))
+          : [...prev, savedRow],
+        );
         closeCreateModal();
       })
       .catch(() => setFormError('ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่'));
   };
 
   const allShiftRows = loading ? [] : shiftGroups.flatMap((group) => group.rows);
+  const companyOptions = [
+    { value: COMPANY_OPTIONS[0], label: COMPANY_OPTIONS[0] },
+    ...companies
+      .filter((company) => company.active)
+      .map((company) => ({ value: company.tradeName, label: company.tradeName })),
+  ];
   const filteredShiftRows = allShiftRows.filter((row) => {
     if (filterCompany && row.company !== filterCompany) return false;
     if (filterType && row.type !== filterType) return false;
@@ -1001,7 +1073,7 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
           />
         </div>
         <div className="hr-filter-chip-group">
-          <FilterChipSelect label="บริษัท"   value={filterCompany} options={SHIFT_FILTER_COMPANY_OPTIONS} onChange={setFilterCompany} accent={accent} />
+          <FilterChipSelect label="บริษัท"   value={filterCompany} options={companyOptions} onChange={setFilterCompany} accent={accent} />
           <FilterChipSelect label="ประเภทกะ" value={filterType}    options={SHIFT_FILTER_TYPE_OPTIONS}    onChange={setFilterType}    accent={accent} />
           <FilterChipSelect label="สถานะ"    value={filterStatus}  options={SHIFT_FILTER_STATUS_OPTIONS}   onChange={setFilterStatus}  accent={accent} />
           <button
@@ -1015,9 +1087,17 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
         </div>
       </div>
 
-      <div className="hr-settings-table-wrap">
-        <table className="hr-settings-table">
-          <thead>
+      <div className="hr-settings-table-wrap hr-shift-table-wrap">
+        <table className="hr-settings-table hr-shift-table">
+          <colgroup>
+            <col className="hr-shift-col--name" />
+            <col className="hr-shift-col--code" />
+            <col className="hr-shift-col--type" />
+            <col className="hr-shift-col--company" />
+            <col className="hr-shift-col--updated" />
+            <col className="hr-shift-col--status" />
+          </colgroup>
+          <thead className="hr-shift-table__head">
             <tr>
               {['ชื่อกะ', 'รหัสกะ', 'รายละเอียด', 'บริษัท', 'แก้ไขล่าสุด', 'สถานะ'].map((header) => (
                 <th key={header}>
@@ -1027,26 +1107,33 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
             </tr>
           </thead>
           <tbody>
-            {filteredShiftRows.map((row) => (
-              <tr key={row.code}>
+            {loading ? (
+              <tr><td colSpan={6} className="hr-position-empty">กำลังโหลด...</td></tr>
+            ) : filteredShiftRows.length === 0 ? (
+              <tr><td colSpan={6} className="hr-position-empty">ไม่พบข้อมูลกะ</td></tr>
+            ) : filteredShiftRows.map((row) => (
+              <tr
+                key={row.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openEditModal(row)}
+                onKeyDown={(event) => { if (event.key === 'Enter') openEditModal(row); }}
+              >
                 <td>
-                  <div className="flex flex-col gap-1">
-                    <span className="hr-settings-table__primary">{row.name}</span>
-                    <span className="hr-settings-table__secondary">{row.type}</span>
-                  </div>
+                  <span className="hr-settings-table__primary">{row.name}</span>
                 </td>
                 <td>
-                  <span className="hr-settings-table__code">{row.code}</span>
+                  <span className="hr-shift-code">{row.code}</span>
                 </td>
                 <td>
-                  <p className="hr-settings-table__detail">{row.time}</p>
+                  <span className="hr-settings-table__primary">{row.description || row.type}</span>
                 </td>
                 <td>
-                  <p className="hr-settings-table__company">{row.company}</p>
+                  <span className="hr-shift-company">{row.company}</span>
                 </td>
                 <td>
-                  <p className="hr-settings-table__detail font-medium">{row.updatedBy}</p>
-                  <p className="hr-settings-table__secondary mt-0.5 text-[11px]">{row.updatedAt}</p>
+                  <span className="hr-shift-updated-by">{row.updatedBy}</span>
+                  <span className="hr-shift-updated-at">{row.updatedAt}</span>
                 </td>
                 <td>
                   <span
@@ -1077,7 +1164,7 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
                   ←
                 </button>
                 <div className="min-w-0">
-                  <h3 id="create-shift-title" className="text-base font-semibold text-slate-950">เพิ่มกะการทำงาน</h3>
+                  <h3 id="create-shift-title" className="text-base font-semibold text-slate-950">{editingShiftId ? 'แก้ไขกะการทำงาน' : 'เพิ่มกะการทำงาน'}</h3>
                   <p className="text-xs font-normal text-slate-500">ตั้งค่าข้อมูล เวลา และนโยบายการลงเวลาของกะ</p>
                 </div>
               </div>
@@ -1114,7 +1201,7 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
                       <HrCustomSelect
                         label="บริษัท"
                         value={form.company}
-                        options={COMPANY_OPTIONS}
+                        options={companyOptions}
                         onChange={(company) => setForm({ ...form, company })}
                       />
                     </ShiftFormField>
@@ -1320,8 +1407,8 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
                 <button type="button" onClick={closeCreateModal} className="h-10 rounded-lg px-5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950">
                   ยกเลิก
                 </button>
-                <button type="submit" className="h-10 rounded-lg bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700">
-                  บันทึกกะการทำงาน
+                <button type="submit" className="h-10 rounded-lg px-5 text-sm font-semibold text-white shadow-sm transition" style={{ backgroundColor: accent }}>
+                  {editingShiftId ? 'บันทึกการแก้ไข' : 'บันทึกกะการทำงาน'}
                 </button>
               </div>
             </footer>

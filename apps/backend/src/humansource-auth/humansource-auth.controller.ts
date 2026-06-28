@@ -1,6 +1,9 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { HrLinkCodeDto, HrLoginDto, HrRegisterDto } from './dto/hr-auth.dto';
 import { HumansourceAuthService } from './humansource-auth.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AuthUser } from '../auth/interfaces/auth-user.interface';
 
 @Controller('api/humansource/auth')
 export class HumansourceAuthController {
@@ -24,5 +27,12 @@ export class HumansourceAuthController {
   @Get('generate-link-code')
   generateCode(@Query('email') email: string) {
     return this.humansourceAuthService.generateLinkCode(email);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('login-with-ghub')
+  loginWithGhub(@CurrentUser() user: AuthUser) {
+    const email = user.email ?? `${user.username}@ghub.internal`;
+    return this.humansourceAuthService.loginWithGhub(user.sub, user.name, email);
   }
 }

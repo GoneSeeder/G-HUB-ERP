@@ -371,7 +371,7 @@ function EmployeeListPage({ onAdd, onSelectEmployee }: { onAdd: () => void; onSe
   const toggleFilter = (key: FilterKey, value: string) => {
     setActiveFilters((prev) => {
       const current = prev[key] ?? [];
-      const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      const next = current.includes(value) ? [] : [value];
       return { ...prev, [key]: next };
     });
     setPage(1);
@@ -934,6 +934,14 @@ function EmployeeLinkCodeDrawer({
 
 // ─── Multi-level Filter Panel ────────────────────────────────────────────────
 
+type RangeOp = 'between' | 'gte' | 'lte' | 'eq';
+const RANGE_OPS: { key: RangeOp; label: string; symbol: string }[] = [
+  { key: 'between', label: 'ระหว่าง', symbol: '↔' },
+  { key: 'gte',     label: '≥ มากกว่าหรือเท่ากับ', symbol: '≥' },
+  { key: 'lte',     label: '≤ น้อยกว่าหรือเท่ากับ', symbol: '≤' },
+  { key: 'eq',      label: '= เท่ากับ',             symbol: '=' },
+];
+
 function FilterPanel({
   activeFilters,
   activeDim,
@@ -951,8 +959,13 @@ function FilterPanel({
   const [rangeMin, setRangeMin] = useState('');
   const [rangeMax, setRangeMax] = useState('');
   const [rangeUnit, setRangeUnit] = useState(0);
+  const [rangeOp, setRangeOp] = useState<RangeOp>('between');
+  const [opMenuOpen, setOpMenuOpen] = useState(false);
+  const [hoveredDim, setHoveredDim] = useState<FilterKey | null>(null);
 
-  const currentDim = FILTER_DIMS.find((d) => d.key === activeDim);
+  // Show left panel for whichever dim is hovered; fall back to activeDim
+  const previewDim = hoveredDim ?? activeDim;
+  const currentDim = FILTER_DIMS.find((d) => d.key === previewDim);
 
   const handleSetDim = (key: FilterKey) => {
     onSetDim(key);
@@ -960,57 +973,75 @@ function FilterPanel({
     setRangeMin('');
     setRangeMax('');
     setRangeUnit(0);
+    setRangeOp('between');
   };
 
-  return (
-    <div className="hr-emp-filter-panel">
-      {/* Left: value picker */}
-      <div className="hr-emp-filter-panel__left">
-        {!activeDim && (
-          <div className="hr-emp-filter-hint">เลือกหมวดหมู่จากด้านขวา</div>
-        )}
+  const currentOp = RANGE_OPS.find((o) => o.key === rangeOp)!;
 
-        {activeDim && currentDim?.type === 'range' && (
+  return (
+    <>
+      {/* Box 2: filter inputs — appears to the left of Box 1 on hover */}
+      {previewDim && (
+      <div className="hr-emp-filter-box2">
+        {currentDim?.type === 'range' && (
           <>
-            {/* Range row */}
+            {/* Operator + range inputs */}
             <div className="hr-emp-filter-range">
-              <svg className="hr-emp-filter-range__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4 4 4M17 8v12m0 0 4-4m-4 4-4-4"/></svg>
-              <input
-                className="hr-emp-filter-range__input"
-                type="number"
-                placeholder="0"
-                value={rangeMin}
-                onChange={(e) => setRangeMin(e.target.value)}
-                min={0}
-              />
-              <span className="hr-emp-filter-range__sep">-</span>
-              <input
-                className="hr-emp-filter-range__input"
-                type="number"
-                placeholder="99"
-                value={rangeMax}
-                onChange={(e) => setRangeMax(e.target.value)}
-                min={0}
-              />
+              {/* Operator dropdown */}
+              <div className="hr-emp-filter-op" style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="hr-emp-filter-op__btn"
+                  onClick={() => setOpMenuOpen((v) => !v)}
+                  title={currentOp.label}
+                >
+                  <span>{currentOp.symbol}</span>
+                  <svg style={{ width: '0.6rem', height: '0.6rem' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" /></svg>
+                </button>
+                {opMenuOpen && (
+                  <div className="hr-emp-filter-op__menu">
+                    {RANGE_OPS.map((op) => (
+                      <button
+                        key={op.key}
+                        type="button"
+                        className={`hr-emp-filter-op__item${rangeOp === op.key ? ' hr-emp-filter-op__item--active' : ''}`}
+                        onClick={() => { setRangeOp(op.key); setOpMenuOpen(false); setRangeMin(''); setRangeMax(''); }}
+                      >
+                        <span className="hr-emp-filter-op__symbol">{op.symbol}</span>
+                        <span>{op.key === 'between' ? 'ระหว่าง' : op.key === 'gte' ? 'มากกว่าหรือเท่ากับ' : op.key === 'lte' ? 'น้อยกว่าหรือเท่ากับ' : 'เท่ากับ'}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Input(s) based on operator */}
+              {rangeOp === 'between' && (
+                <>
+                  <input className="hr-emp-filter-range__input" type="number" placeholder="0" value={rangeMin} onChange={(e) => setRangeMin(e.target.value)} min={0} />
+                  <span className="hr-emp-filter-range__sep">-</span>
+                  <input className="hr-emp-filter-range__input" type="number" placeholder="99" value={rangeMax} onChange={(e) => setRangeMax(e.target.value)} min={0} />
+                </>
+              )}
+              {(rangeOp === 'gte' || rangeOp === 'lte' || rangeOp === 'eq') && (
+                <input className="hr-emp-filter-range__input" type="number" placeholder={rangeOp === 'gte' ? 'ค่าต่ำสุด' : rangeOp === 'lte' ? 'ค่าสูงสุด' : 'ค่า'} value={rangeMin} onChange={(e) => setRangeMin(e.target.value)} min={0} style={{ flex: 1 }} />
+              )}
+
               {/* Unit toggle */}
               <div className="hr-emp-filter-range__units">
                 {currentDim.units.map((u, i) => (
-                  <button
-                    key={u}
-                    type="button"
-                    className={`hr-emp-filter-range__unit${rangeUnit === i ? ' hr-emp-filter-range__unit--active' : ''}`}
-                    onClick={() => setRangeUnit(i)}
-                  >{u}</button>
+                  <button key={u} type="button" className={`hr-emp-filter-range__unit${rangeUnit === i ? ' hr-emp-filter-range__unit--active' : ''}`} onClick={() => setRangeUnit(i)}>{u}</button>
                 ))}
               </div>
             </div>
+
             {/* Presets */}
             <div className="hr-emp-filter-options">
               {currentDim.presets.map((p) => {
-                const checked = activeFilters[activeDim]?.includes(p) ?? false;
+                const checked = activeFilters[previewDim]?.includes(p) ?? false;
                 return (
                   <label key={p} className={`hr-emp-filter-option${checked ? ' hr-emp-filter-option--checked' : ''}`}>
-                    <input type="checkbox" checked={checked} onChange={() => onToggle(activeDim, p)} className="hr-emp-filter-option__check" />
+                    <input type="radio" name={`filter-${previewDim}`} checked={checked} onChange={() => onToggle(previewDim, p)} className="hr-emp-filter-option__check" />
                     {p}
                   </label>
                 );
@@ -1019,28 +1050,21 @@ function FilterPanel({
           </>
         )}
 
-        {activeDim && currentDim?.type === 'list' && (
+        {currentDim?.type === 'list' && (
           <>
             <div className="hr-emp-filter-search">
               <svg className="hr-emp-filter-search__icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input
-                className="hr-emp-filter-search__input"
-                placeholder="ค้นหา"
-                value={dimSearch}
-                onChange={(e) => setDimSearch(e.target.value)}
-              />
+              <input className="hr-emp-filter-search__input" placeholder="ค้นหา" value={dimSearch} onChange={(e) => setDimSearch(e.target.value)} />
             </div>
             <div className="hr-emp-filter-options">
               {(() => {
-                const opts = currentDim.options.filter(
-                  (o) => !dimSearch || o.toLowerCase().includes(dimSearch.toLowerCase()),
-                );
+                const opts = currentDim.options.filter((o) => !dimSearch || o.toLowerCase().includes(dimSearch.toLowerCase()));
                 if (opts.length === 0) return <p className="hr-emp-filter-empty">ไม่มีข้อมูล</p>;
                 return opts.map((opt) => {
-                  const checked = activeFilters[activeDim]?.includes(opt) ?? false;
+                  const checked = activeFilters[previewDim]?.includes(opt) ?? false;
                   return (
                     <label key={opt} className={`hr-emp-filter-option${checked ? ' hr-emp-filter-option--checked' : ''}`}>
-                      <input type="checkbox" checked={checked} onChange={() => onToggle(activeDim, opt)} className="hr-emp-filter-option__check" />
+                      <input type="radio" name={`filter-${previewDim}`} checked={checked} onChange={() => onToggle(previewDim, opt)} className="hr-emp-filter-option__check" />
                       {opt}
                     </label>
                   );
@@ -1050,15 +1074,20 @@ function FilterPanel({
           </>
         )}
       </div>
+      )}
 
-      {/* Right: dimension list */}
-      <div className="hr-emp-filter-panel__right">
+      {/* Box 1: dimension list */}
+      <div
+        className="hr-emp-filter-box1"
+        onMouseLeave={() => setHoveredDim(null)}
+      >
         {FILTER_DIMS.map((dim) => {
           const count = activeFilters[dim.key]?.length ?? 0;
           return (
             <button
               key={dim.key}
               type="button"
+              onMouseEnter={() => setHoveredDim(dim.key)}
               onClick={() => handleSetDim(dim.key)}
               className={`hr-emp-filter-dim${activeDim === dim.key ? ' hr-emp-filter-dim--active' : ''}`}
             >
@@ -1082,7 +1111,7 @@ function FilterPanel({
           );
         })}
       </div>
-    </div>
+    </>
   );
 }
 
@@ -2775,7 +2804,7 @@ function HrConfirmDialog({
   );
 }
 
-function PersonalInfoForm({ employee, onDirtyChange }: { employee: Employee; onDirtyChange?: (dirty: boolean) => void }) {
+function PersonalInfoForm({ employee, onDirtyChange, onSaveRequest, onResetRequest }: { employee: Employee; onDirtyChange?: (dirty: boolean) => void; onSaveRequest?: (fn: () => void) => void; onResetRequest?: (fn: () => void) => void }) {
   const nameParts = employee.name.split(' ');
   const [nationality, setNationality] = useState<'thai' | 'foreign'>('thai');
   const [title, setTitle] = useState('');
@@ -2804,6 +2833,28 @@ function PersonalInfoForm({ employee, onDirtyChange }: { employee: Employee; onD
     dirtyRef.current = false;
     onDirtyChange?.(false);
   }
+
+  function handleReset() {
+    setNationality('thai');
+    setTitle('');
+    setFirstNameTh(nameParts[0] ?? '');
+    setLastNameTh(nameParts[1] ?? '');
+    setFirstNameEn(nameParts[0] ?? '');
+    setLastNameEn(nameParts[1] ?? '');
+    setNicknameTh('');
+    setNicknameEn('');
+    setBirthDate('');
+    setGender('');
+    setIdCard('');
+    dirtyRef.current = false;
+  }
+
+  const saveClickRef = useRef(handleSaveClick);
+  saveClickRef.current = handleSaveClick;
+  const resetFnRef = useRef(handleReset);
+  resetFnRef.current = handleReset;
+  useEffect(() => { onSaveRequest?.(() => saveClickRef.current()); }, [onSaveRequest]);
+  useEffect(() => { onResetRequest?.(() => resetFnRef.current()); }, [onResetRequest]);
 
   return (
     <div className="hr-pif-wrap" onInput={markDirty}>
@@ -2921,11 +2972,11 @@ function PersonalInfoForm({ employee, onDirtyChange }: { employee: Employee; onD
         <div className="hr-pif-grid">
           <div className="hr-field">
             <label className="hr-field__label">เชื้อชาติ</label>
-            <HrCustomSelect value="" onChange={() => {}} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'thai', label: 'ไทย' }, { value: 'chinese', label: 'จีน' }, { value: 'other', label: 'อื่นๆ' }]} />
+            <HrCustomSelect value="" onChange={() => { markDirty(); }} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'thai', label: 'ไทย' }, { value: 'chinese', label: 'จีน' }, { value: 'other', label: 'อื่นๆ' }]} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">สัญชาติ</label>
-            <HrCustomSelect value="" onChange={() => {}} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'thai', label: 'ไทย' }, { value: 'other', label: 'อื่นๆ' }]} />
+            <HrCustomSelect value="" onChange={() => { markDirty(); }} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'thai', label: 'ไทย' }, { value: 'other', label: 'อื่นๆ' }]} />
           </div>
         </div>
 
@@ -2933,11 +2984,11 @@ function PersonalInfoForm({ employee, onDirtyChange }: { employee: Employee; onD
         <div className="hr-pif-grid">
           <div className="hr-field">
             <label className="hr-field__label">ศาสนา</label>
-            <HrCustomSelect value="" onChange={() => {}} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'buddhism', label: 'พุทธ' }, { value: 'islam', label: 'อิสลาม' }, { value: 'christianity', label: 'คริสต์' }, { value: 'none', label: 'ไม่มีศาสนา' }]} />
+            <HrCustomSelect value="" onChange={() => { markDirty(); }} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'buddhism', label: 'พุทธ' }, { value: 'islam', label: 'อิสลาม' }, { value: 'christianity', label: 'คริสต์' }, { value: 'none', label: 'ไม่มีศาสนา' }]} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">สถานภาพสมรส</label>
-            <HrCustomSelect value="" onChange={() => {}} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'single', label: 'โสด' }, { value: 'married', label: 'สมรส' }, { value: 'divorced', label: 'หย่าร้าง' }, { value: 'widowed', label: 'หม้าย' }]} />
+            <HrCustomSelect value="" onChange={() => { markDirty(); }} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'single', label: 'โสด' }, { value: 'married', label: 'สมรส' }, { value: 'divorced', label: 'หย่าร้าง' }, { value: 'widowed', label: 'หม้าย' }]} />
           </div>
         </div>
 
@@ -2945,11 +2996,11 @@ function PersonalInfoForm({ employee, onDirtyChange }: { employee: Employee; onD
         <div className="hr-pif-grid">
           <div className="hr-field">
             <label className="hr-field__label">สถานภาพเกณฑ์ทหาร</label>
-            <HrCustomSelect value="" onChange={() => {}} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'exempted', label: 'ได้รับการยกเว้น' }, { value: 'completed', label: 'ผ่านการเกณฑ์แล้ว' }, { value: 'na', label: 'ไม่เกี่ยวข้อง' }]} />
+            <HrCustomSelect value="" onChange={() => { markDirty(); }} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'exempted', label: 'ได้รับการยกเว้น' }, { value: 'completed', label: 'ผ่านการเกณฑ์แล้ว' }, { value: 'na', label: 'ไม่เกี่ยวข้อง' }]} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">หมู่เลือด</label>
-            <HrCustomSelect value="" onChange={() => {}} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'AB', label: 'AB' }, { value: 'O', label: 'O' }]} />
+            <HrCustomSelect value="" onChange={() => { markDirty(); }} options={[{ value: '', label: 'กรุณาเลือก' }, { value: 'A', label: 'A' }, { value: 'B', label: 'B' }, { value: 'AB', label: 'AB' }, { value: 'O', label: 'O' }]} />
           </div>
         </div>
 
@@ -2990,12 +3041,7 @@ function PersonalInfoForm({ employee, onDirtyChange }: { employee: Employee; onD
           </div>
         </div>
 
-        {/* Save action */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem' }}>
-          <button type="button" className="hr-button hr-button--primary" onClick={handleSaveClick}>บันทึกข้อมูล</button>
-        </div>
       </div>
-
     </div>
   );
 }
@@ -3015,7 +3061,7 @@ const EI_HOLIDAY_OPTS = ['วันหยุดพนักงานขาย', 
 const EI_CONTRACT_OPTS = ['รายวัน', 'รายสัปดาห์', 'รายเดือน', 'โครงการ', 'ไม่มีกำหนด'].map((v) => ({ value: v, label: v }));
 const EI_BANK_OPTS = ['ธนาคารกสิกรไทย (KBANK)', 'ธนาคารไทยพาณิชย์ (SCB)', 'ธนาคารกรุงไทย (KTB)', 'ธนาคารกรุงเทพ (BBL)', 'ธนาคารทหารไทย (TTB)'].map((v) => ({ value: v, label: v }));
 
-function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; onDirtyChange?: (dirty: boolean) => void }) {
+function EmploymentInfoForm({ employee, onDirtyChange, onSaveRequest, onResetRequest }: { employee: Employee; onDirtyChange?: (dirty: boolean) => void; onSaveRequest?: (fn: () => void) => void; onResetRequest?: (fn: () => void) => void }) {
   const [company, setCompany] = useState('G-HUB Enterprise');
   const [dept, setDept] = useState(employee.department);
   const [level, setLevel] = useState('CEO (ประธานเจ้าหน้าที่บริหาร)');
@@ -3054,6 +3100,37 @@ function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; o
     onDirtyChange?.(false);
   }
 
+  function handleReset() {
+    setCompany('G-HUB Enterprise');
+    setDept(employee.department);
+    setLevel('CEO (ประธานเจ้าหน้าที่บริหาร)');
+    setPosition(employee.position);
+    setEmpCode(employee.code);
+    setLocation(employee.branch);
+    setShift(employee.schedule);
+    setStartDate(employee.startDate);
+    setStatus(employee.status as string);
+    setEmpType(employee.empType);
+    setSupervisor('');
+    setContractEnd('');
+    setHolidayCal('วันหยุดพนักงานขาย');
+    setLicenseNo('');
+    setWorkforce('new');
+    setTimeRecord('yes');
+    setContractType('รายเดือน');
+    setPayMethod('bank');
+    setBank('');
+    setAccountNo('');
+    dirtyRef.current = false;
+  }
+
+  const saveClickRef = useRef(handleSaveClick);
+  saveClickRef.current = handleSaveClick;
+  const resetFnRef = useRef(handleReset);
+  resetFnRef.current = handleReset;
+  useEffect(() => { onSaveRequest?.(() => saveClickRef.current()); }, [onSaveRequest]);
+  useEffect(() => { onResetRequest?.(() => resetFnRef.current()); }, [onResetRequest]);
+
   return (
     <div className="hr-pif-wrap" onInput={markDirty}>
       <HrConfirmDialog
@@ -3073,19 +3150,19 @@ function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; o
         <div className="hr-pif-grid">
           <div className="hr-field">
             <label className="hr-field__label">บริษัท<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={company} onChange={setCompany} options={EI_COMPANY_OPTS} />
+            <HrCustomSelect value={company} onChange={(v) => { setCompany(v); markDirty(); }} options={EI_COMPANY_OPTS} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">สังกัด<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={dept} onChange={setDept} options={EI_DEPT_OPTS} />
+            <HrCustomSelect value={dept} onChange={(v) => { setDept(v); markDirty(); }} options={EI_DEPT_OPTS} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">ระดับ<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={level} onChange={setLevel} options={EI_LEVEL_OPTS} />
+            <HrCustomSelect value={level} onChange={(v) => { setLevel(v); markDirty(); }} options={EI_LEVEL_OPTS} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">ตำแหน่ง<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={position} onChange={setPosition} options={EI_POSITION_OPTS} />
+            <HrCustomSelect value={position} onChange={(v) => { setPosition(v); markDirty(); }} options={EI_POSITION_OPTS} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">รหัสพนักงาน<span className="hr-field__req">*</span></label>
@@ -3093,11 +3170,11 @@ function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; o
           </div>
           <div className="hr-field">
             <label className="hr-field__label">สถานที่ทำงาน</label>
-            <HrCustomSelect value={location} onChange={setLocation} options={EI_LOCATION_OPTS} />
+            <HrCustomSelect value={location} onChange={(v) => { setLocation(v); markDirty(); }} options={EI_LOCATION_OPTS} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">กะทำงาน<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={shift} onChange={setShift} options={EI_SHIFT_OPTS} />
+            <HrCustomSelect value={shift} onChange={(v) => { setShift(v); markDirty(); }} options={EI_SHIFT_OPTS} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">วันเริ่มงาน<span className="hr-field__req">*</span></label>
@@ -3112,15 +3189,15 @@ function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; o
         <div className="hr-pif-grid">
           <div className="hr-field">
             <label className="hr-field__label">สถานะ<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={status} onChange={setStatus} options={EI_STATUS_OPTS} />
+            <HrCustomSelect value={status} onChange={(v) => { setStatus(v); markDirty(); }} options={EI_STATUS_OPTS} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">ประเภทพนักงาน<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={empType} onChange={setEmpType} options={EI_EMPTYPE_OPTS} />
+            <HrCustomSelect value={empType} onChange={(v) => { setEmpType(v); markDirty(); }} options={EI_EMPTYPE_OPTS} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">ผู้บังคับบัญชา</label>
-            <HrCustomSelect value={supervisor} onChange={setSupervisor} options={EI_SUPERVISOR_OPTS} />
+            <HrCustomSelect value={supervisor} onChange={(v) => { setSupervisor(v); markDirty(); }} options={EI_SUPERVISOR_OPTS} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">วันสิ้นสุดสัญญาจ้าง</label>
@@ -3128,7 +3205,7 @@ function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; o
           </div>
           <div className="hr-field">
             <label className="hr-field__label">ปฏิทินวันหยุด</label>
-            <HrCustomSelect value={holidayCal} onChange={setHolidayCal} options={EI_HOLIDAY_OPTS} />
+            <HrCustomSelect value={holidayCal} onChange={(v) => { setHolidayCal(v); markDirty(); }} options={EI_HOLIDAY_OPTS} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">เลขที่ใบขับขี่</label>
@@ -3137,22 +3214,22 @@ function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; o
           <div className="hr-field">
             <label className="hr-field__label">ประเภทกำลังคน<span className="hr-field__req">*</span></label>
             <div className="hr-pif-type-group">
-              <button type="button" className={`hr-pif-type-btn${workforce === 'new' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setWorkforce('new')}>ใหม่</button>
-              <button type="button" className={`hr-pif-type-btn${workforce === 'replace' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setWorkforce('replace')}>ทดแทน</button>
+              <button type="button" className={`hr-pif-type-btn${workforce === 'new' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => { setWorkforce('new'); markDirty(); }}>ใหม่</button>
+              <button type="button" className={`hr-pif-type-btn${workforce === 'replace' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => { setWorkforce('replace'); markDirty(); }}>ทดแทน</button>
             </div>
           </div>
           <div className="hr-field">
             <label className="hr-field__label">บันทึกเวลาเข้าออก<span className="hr-field__req">*</span></label>
             <div className="hr-pif-type-group">
-              <button type="button" className={`hr-pif-type-btn${timeRecord === 'yes' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setTimeRecord('yes')}>บันทึก</button>
-              <button type="button" className={`hr-pif-type-btn${timeRecord === 'no' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setTimeRecord('no')}>ไม่บันทึก</button>
+              <button type="button" className={`hr-pif-type-btn${timeRecord === 'yes' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => { setTimeRecord('yes'); markDirty(); }}>บันทึก</button>
+              <button type="button" className={`hr-pif-type-btn${timeRecord === 'no' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => { setTimeRecord('no'); markDirty(); }}>ไม่บันทึก</button>
             </div>
           </div>
         </div>
         <div className="hr-pif-grid hr-pif-grid--full">
           <div className="hr-field">
             <label className="hr-field__label">ประเภทการจ้าง<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={contractType} onChange={setContractType} options={EI_CONTRACT_OPTS} />
+            <HrCustomSelect value={contractType} onChange={(v) => { setContractType(v); markDirty(); }} options={EI_CONTRACT_OPTS} />
           </div>
         </div>
 
@@ -3162,8 +3239,8 @@ function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; o
         <p className="hr-pif-section-title">ข้อมูลการจ่ายเงิน</p>
         <div className="hr-field">
           <div className="hr-pif-type-group">
-            <button type="button" className={`hr-pif-type-btn${payMethod === 'bank' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setPayMethod('bank')}>ธนาคาร</button>
-            <button type="button" className={`hr-pif-type-btn${payMethod === 'cash' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => setPayMethod('cash')}>เงินสด</button>
+            <button type="button" className={`hr-pif-type-btn${payMethod === 'bank' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => { setPayMethod('bank'); markDirty(); }}>ธนาคาร</button>
+            <button type="button" className={`hr-pif-type-btn${payMethod === 'cash' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => { setPayMethod('cash'); markDirty(); }}>เงินสด</button>
           </div>
         </div>
         {payMethod === 'bank' && (
@@ -3178,11 +3255,6 @@ function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; o
             </div>
           </div>
         )}
-
-        {/* Save action */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.75rem' }}>
-          <button type="button" className="hr-button hr-button--primary" onClick={handleSaveClick}>บันทึกข้อมูล</button>
-        </div>
 
       </div>
     </div>
@@ -3263,25 +3335,41 @@ function AccountInfoForm({ employee }: { employee: Employee }) {
 
 function OverviewTab({ employee, section, onSection }: { employee: Employee; section: string; onSection: (s: string) => void }) {
   const [selfEdit, setSelfEdit] = useState(false);
-  const hasForm = section === 'personal' || section === 'account';
+  const hasForm = section === 'personal' || section === 'employment' || section === 'account';
   const [dirty, setDirty] = useState(false);
+  const saveRef = useRef<(() => void) | null>(null);
+  const resetRef = useRef<(() => void) | null>(null);
   const [pendingSection, setPendingSection] = useState<string | null>(null);
+  // discardMode: 'navigate' = เปลี่ยนหน้าหลัง confirm, 'reset' = reset form อยู่หน้าเดิม
+  const [discardMode, setDiscardMode] = useState<'navigate' | 'reset'>('navigate');
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
 
   function tryNavigate(key: string) {
     if (dirty && key !== section) {
       setPendingSection(key);
+      setDiscardMode('navigate');
       setShowDiscardDialog(true);
     } else {
       setDirty(false);
       onSection(key);
     }
   }
+  function tryDiscardInPlace() {
+    if (dirty) {
+      setDiscardMode('reset');
+      setShowDiscardDialog(true);
+    }
+  }
   function confirmDiscard() {
-    setDirty(false);
     setShowDiscardDialog(false);
-    if (pendingSection) onSection(pendingSection);
-    setPendingSection(null);
+    if (discardMode === 'navigate') {
+      setDirty(false);
+      if (pendingSection) onSection(pendingSection);
+      setPendingSection(null);
+    } else {
+      resetRef.current?.();
+      setDirty(false);
+    }
   }
   function cancelDiscard() {
     setShowDiscardDialog(false);
@@ -3348,7 +3436,7 @@ function OverviewTab({ employee, section, onSection }: { employee: Employee; sec
 
         {/* Personal */}
         {section === 'personal' && (
-          <PersonalInfoForm employee={employee} onDirtyChange={setDirty} />
+          <PersonalInfoForm employee={employee} onDirtyChange={setDirty} onSaveRequest={(fn) => { saveRef.current = fn; }} onResetRequest={(fn) => { resetRef.current = fn; }} />
         )}
 
         {/* Account */}
@@ -3391,7 +3479,7 @@ function OverviewTab({ employee, section, onSection }: { employee: Employee; sec
 
         {/* Employment */}
         {section === 'employment' && (
-          <EmploymentInfoForm employee={employee} onDirtyChange={setDirty} />
+          <EmploymentInfoForm employee={employee} onDirtyChange={setDirty} onSaveRequest={(fn) => { saveRef.current = fn; }} onResetRequest={(fn) => { resetRef.current = fn; }} />
         )}
 
         {/* Salary */}
@@ -3478,8 +3566,8 @@ function OverviewTab({ employee, section, onSection }: { employee: Employee; sec
       </aside>}
     </div>
 
-    {/* Sticky bottom bar — full-width, below sidenav + main */}
-    {hasForm && (
+    {/* Sticky bottom bar — always visible on personal (has toggle), visible only when dirty on other sections */}
+    {hasForm && (section === 'personal' || dirty) && (
       <div className="hr-profile-sticky-bar">
         <div className="hr-profile-sticky-bar__left">
           {section === 'personal' && (
@@ -3496,8 +3584,8 @@ function OverviewTab({ employee, section, onSection }: { employee: Employee; sec
           )}
         </div>
         <div className="hr-profile-sticky-bar__right">
-          <button type="button" className="hr-button hr-button--ghost" style={{ border: '1px solid #374151', color: '#374151' }} onClick={() => onSection('overview')}>ยกเลิก</button>
-          <button type="button" className="hr-button hr-button--primary">บันทึก</button>
+          <button type="button" className="hr-button hr-button--ghost" style={{ border: '1px solid #374151', color: '#374151' }} onClick={tryDiscardInPlace}>ยกเลิก</button>
+          <button type="button" className="hr-button hr-button--primary" onClick={() => saveRef.current?.()}>บันทึก</button>
         </div>
       </div>
     )}
@@ -3545,17 +3633,39 @@ const SHIFTCAL_MONTH_SHIFTS: Record<number, string> = {
 const SHIFTCAL_OFF_DOWS = new Set(['ส', 'ส.', 'อา', 'อา.']);
 type ShiftCalDay = { dow: string; date: number; shift: string | null; off: boolean };
 
-const SHIFTCAL_TODAY_DATE = 27; // mock: June 27
 const SHIFTCAL_MONTH_COL_PX = 72; // 4.5rem at 16px base
+
+const THAI_DOW_SHORT = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+const THAI_MONTH_LONG = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+function buildWeekDays(today: Date): Array<{ dow: string; date: number; today: boolean }> {
+  const dow = today.getDay(); // 0=Sun..6=Sat
+  // Start from Monday of this week
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((dow === 0 ? 7 : dow) - 1));
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return { dow: THAI_DOW_SHORT[d.getDay()], date: d.getDate(), today: d.toDateString() === today.toDateString() };
+  });
+}
 
 function ShiftScheduleTab({ employee }: { employee: Employee }) {
   const [view, setView] = useState<'week' | 'month'>('week');
   const [workWeekOnly, setWorkWeekOnly] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const initials = employee.name.slice(0, 2);
+  const [nowDate, setNowDate] = useState<Date | null>(null);
+  useEffect(() => { setNowDate(new Date()); }, []);
 
-  const weekDays: ShiftCalDay[] = SHIFTCAL_DAYS.map((d, i) => ({ dow: d.dow, date: d.date, shift: SHIFTCAL_ROW[i] ?? null, off: SHIFTCAL_OFF_DOWS.has(d.dow) }));
-  const monthDays: ShiftCalDay[] = Array.from({ length: SHIFTCAL_MONTH_DAYS }, (_, i) => {
+  const todayDate = nowDate?.getDate() ?? 0;
+  const dynamicWeekDays = nowDate ? buildWeekDays(nowDate) : SHIFTCAL_DAYS.map((d) => ({ ...d, today: false }));
+  const currentMonth = nowDate ? THAI_MONTH_LONG[nowDate.getMonth()] : 'มิถุนายน';
+  const currentYear = nowDate ? nowDate.getFullYear() + 543 : 2569;
+  const daysInMonth = nowDate ? new Date(nowDate.getFullYear(), nowDate.getMonth() + 1, 0).getDate() : SHIFTCAL_MONTH_DAYS;
+
+  const weekDays: ShiftCalDay[] = dynamicWeekDays.map((d, i) => ({ dow: d.dow, date: d.date, shift: SHIFTCAL_ROW[i] ?? null, off: SHIFTCAL_OFF_DOWS.has(d.dow) }));
+  const monthDays: ShiftCalDay[] = Array.from({ length: daysInMonth }, (_, i) => {
     const dow = SHIFTCAL_MONTH_WEEKDAYS[i % 7];
     return { dow, date: i + 1, shift: SHIFTCAL_MONTH_SHIFTS[i + 1] ?? null, off: SHIFTCAL_OFF_DOWS.has(dow) };
   });
@@ -3565,11 +3675,16 @@ function ShiftScheduleTab({ employee }: { employee: Employee }) {
   const colTemplate = view === 'month'
     ? `repeat(${days.length}, 4.5rem)`
     : `repeat(${days.length}, minmax(0, 1fr))`;
-  const rangeLabel = view === 'week' ? '22 - 28 มิถุนายน 2569' : '1 - 30 มิถุนายน 2569';
+
+  const weekStart = dynamicWeekDays[0]?.date ?? 0;
+  const weekEnd = dynamicWeekDays[6]?.date ?? 0;
+  const rangeLabel = view === 'week'
+    ? `${weekStart} - ${weekEnd} ${currentMonth} ${currentYear}`
+    : `1 - ${daysInMonth} ${currentMonth} ${currentYear}`;
 
   const scrollToToday = () => {
     if (!scrollRef.current || view !== 'month') return;
-    const todayIndex = days.findIndex((d) => d.date === SHIFTCAL_TODAY_DATE);
+    const todayIndex = days.findIndex((d) => d.date === todayDate);
     if (todayIndex < 0) return;
     scrollRef.current.scrollLeft = Math.max(0, (todayIndex - 2) * SHIFTCAL_MONTH_COL_PX);
   };
@@ -3655,7 +3770,7 @@ function ShiftScheduleTab({ employee }: { employee: Employee }) {
           <div className="hr-shiftcal-grid" style={{ gridTemplateColumns: colTemplate, width: view === 'month' ? 'max-content' : '100%' }}>
             {/* Head */}
             {days.map((d, i) => (
-              <div key={i} className={`hr-shiftcal-cell hr-shiftcal-headcell hr-shiftcal-dayhead${d.date === SHIFTCAL_TODAY_DATE && view === 'month' ? ' hr-shiftcal-dayhead--today' : ''}`}>
+              <div key={i} className={`hr-shiftcal-cell hr-shiftcal-headcell hr-shiftcal-dayhead${d.date === todayDate ? ' hr-shiftcal-dayhead--today' : ''}`}>
                 <span className="hr-shiftcal-dayhead__dow">{d.dow}</span>
                 <span className="hr-shiftcal-dayhead__date">{d.date}</span>
               </div>

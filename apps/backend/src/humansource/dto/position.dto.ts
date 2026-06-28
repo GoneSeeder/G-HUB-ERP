@@ -25,6 +25,11 @@ export class CreatePositionDto {
   employeeTypes?: string[];
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  employmentTypeIds?: string[];
+
+  @IsOptional()
   @IsInt()
   @Min(0)
   salaryMin?: number;
@@ -82,6 +87,11 @@ export class UpdatePositionDto {
   @IsArray()
   @IsString({ each: true })
   employeeTypes?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  employmentTypeIds?: string[];
 
   @IsOptional()
   @IsInt()

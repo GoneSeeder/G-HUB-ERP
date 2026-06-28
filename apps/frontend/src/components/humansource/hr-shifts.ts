@@ -3,6 +3,7 @@ export const CUSTOM_SHIFTS_STORAGE_KEY = 'g-hub.hr.custom-shifts';
 export type HrShiftGroupKey = 'same-day' | 'overnight' | 'total-hours' | 'combined';
 
 export type HrShiftRow = {
+  id: string;
   enabled: boolean;
   code: string;
   name: string;
@@ -32,6 +33,7 @@ export const BASE_SHIFT_GROUPS: Array<{ groupKey: HrShiftGroupKey; rows: HrShift
     groupKey: 'same-day',
     rows: [
       {
+        id: 'WC001',
         enabled: true,
         code: 'WC001',
         name: 'สำนักงาน 08.30-17.30',
@@ -44,6 +46,7 @@ export const BASE_SHIFT_GROUPS: Array<{ groupKey: HrShiftGroupKey; rows: HrShift
         color: '#8b5cf6',
       },
       {
+        id: 'WC002',
         enabled: true,
         code: 'WC002',
         name: 'สำนักงานครึ่งวัน',
@@ -61,6 +64,7 @@ export const BASE_SHIFT_GROUPS: Array<{ groupKey: HrShiftGroupKey; rows: HrShift
     groupKey: 'overnight',
     rows: [
       {
+        id: 'WC003',
         enabled: true,
         code: 'WC003',
         name: 'กะดึก 22.00-06.00',
@@ -78,6 +82,7 @@ export const BASE_SHIFT_GROUPS: Array<{ groupKey: HrShiftGroupKey; rows: HrShift
     groupKey: 'total-hours',
     rows: [
       {
+        id: 'WC004',
         enabled: false,
         code: 'WC004',
         name: 'ภาคสนาม 8 ชั่วโมง',
@@ -95,6 +100,7 @@ export const BASE_SHIFT_GROUPS: Array<{ groupKey: HrShiftGroupKey; rows: HrShift
     groupKey: 'combined',
     rows: [
       {
+        id: 'WC005',
         enabled: false,
         code: 'WC005',
         name: 'ควบเช้า-บ่าย',

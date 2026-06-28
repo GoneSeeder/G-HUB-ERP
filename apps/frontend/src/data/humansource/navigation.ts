@@ -117,7 +117,7 @@ export const hrSettingsGroups: HrSettingsGroup[] = [
         description: 'ตำแหน่งงานและระดับงาน (Level/Grade)',
         children: [
           { label: 'ตำแหน่งงาน', path: '/humansource/organization/positions', description: 'ชื่อตำแหน่งและรหัสตำแหน่ง' },
-          { label: 'ระดับงาน', path: '/humansource/organization/job-levels', description: 'Level, Grade และช่วงเงินเดือน' },
+          { label: 'ระดับตำแหน่ง', path: '/humansource/organization/job-levels', description: 'Level, Grade และช่วงเงินเดือน' },
         ],
       },
       {

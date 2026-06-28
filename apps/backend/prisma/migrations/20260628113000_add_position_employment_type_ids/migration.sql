@@ -1,0 +1,2 @@
+ALTER TABLE "hr_position"
+ADD COLUMN IF NOT EXISTS "employmentTypeIds" JSONB NOT NULL DEFAULT '[]';

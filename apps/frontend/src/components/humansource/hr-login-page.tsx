@@ -137,15 +137,6 @@ function IconLogOut({ className }: { className?: string }) {
   );
 }
 
-function IconGhub({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <rect x="2" y="3" width="20" height="14" rx="2" />
-      <path d="M8 21h8M12 17v4" />
-      <path d="m7 10 3 3 7-7" />
-    </svg>
-  );
-}
 
 function IconGoogle({ className }: { className?: string }) {
   return (
@@ -168,7 +159,6 @@ export function HrLoginPage() {
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [formError, setFormError] = useState('');
@@ -277,20 +267,20 @@ export function HrLoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setGoogleLoading(true);
+  const handleGoogleLogin = () => {
+    window.location.href = '/api/auth/google-hr';
+  };
+
+  const handleGhubBypass = async () => {
+    setLoading(true);
     try {
-      await new Promise(r => setTimeout(r, 900));
-      const session = await loginHrAccount('google.user@gmail.com', 'google-oauth-mock');
-      // Bypass: Google login treats account as already linked (no real OAuth yet)
-      const linkedSession = { ...session, hasGhubLink: true };
-      setHrSessionSnapshot(linkedSession);
-      window.localStorage.setItem('g-hub.hr.ghub-linked', 'true');
-      router.push(getHrSessionDestination(linkedSession));
+      const session = await loginHrAccount('admin@ghub.hr', 'Admin1234!');
+      setHrSessionSnapshot(session);
+      router.push(getHrSessionDestination(session));
     } catch {
-      // Google OAuth ยังไม่เชื่อม backend — stub
+      setFormError('ไม่สามารถเข้าสู่ระบบ bypass ได้');
     } finally {
-      setGoogleLoading(false);
+      setLoading(false);
     }
   };
 
@@ -481,13 +471,11 @@ export function HrLoginPage() {
               <button
                 type="button"
                 className="hr-login-btn-secondary"
-                disabled={loading || googleLoading}
+                disabled={loading}
                 onClick={handleGoogleLogin}
               >
-                {googleLoading
-                  ? <span className="hr-login-spinner" aria-hidden="true" />
-                  : <IconGoogle className="hr-login-icon-sm" />}
-                {googleLoading ? 'กำลังเชื่อมต่อ Google...' : 'เข้าสู่ระบบด้วย Google'}
+                <IconGoogle className="hr-login-icon-sm" />
+                เข้าสู่ระบบด้วย Google
               </button>
 
               <div className="hr-login-social-sep" aria-hidden="true" />
@@ -495,10 +483,11 @@ export function HrLoginPage() {
               <button
                 type="button"
                 className="hr-login-btn-secondary"
-                disabled={loading || googleLoading}
-                onClick={() => {/* G-HUB OAuth — Phase 2 */}}
+                disabled={loading}
+                onClick={handleGhubBypass}
               >
-                <IconGhub className="hr-login-icon-sm" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo-ghub.png" alt="" className="hr-login-icon-sm" style={{ objectFit: 'contain' }} />
                 เข้าสู่ระบบด้วย G-HUB
               </button>
             </div>

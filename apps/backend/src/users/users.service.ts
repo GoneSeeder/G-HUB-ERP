@@ -141,6 +141,46 @@ export class UsersService {
       sub: user.id,
       username: user.username,
       name: user.name,
+      email: user.email ?? null,
+      roles: roleCodes,
+      apps: appCodes,
+    };
+  }
+
+  async findOrCreateGoogleUser(params: { googleId: string; email: string; name: string }): Promise<AuthUser> {
+    const { googleId, email, name } = params;
+
+    let user = await this.prisma.user.findFirst({
+      where: { OR: [{ googleId }, { email }] },
+      include: this.userAccessInclude(),
+    });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          username: email,
+          name,
+          email,
+          googleId,
+          passwordHash: '',
+          isActive: true,
+        },
+        include: this.userAccessInclude(),
+      });
+    } else if (!user.googleId) {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { googleId, email: user.email ?? email },
+        include: this.userAccessInclude(),
+      });
+    }
+
+    const { roleCodes, appCodes } = this.getEffectiveAccess(user);
+    return {
+      sub: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email ?? null,
       roles: roleCodes,
       apps: appCodes,
     };

@@ -255,11 +255,13 @@ function DateTimePicker({
   required,
   value,
   onChange,
+  accent,
 }: {
   label: string;
   required?: boolean;
   value: string;
   onChange: (iso: string) => void;
+  accent: string;
 }) {
   const { date: selectedDate, h: initH, min: initMin } = dtpParseISO(value);
 
@@ -424,10 +426,12 @@ function DateTimePicker({
                     onClick={() => emitDatetime(date, hour, minute)}
                     className={cn(
                       'mx-auto flex h-8 w-8 items-center justify-center rounded-md text-xs transition',
-                      isSel   && 'bg-indigo-600 font-semibold text-white',
-                      !isSel  && isToday  && 'border border-indigo-300 font-semibold text-indigo-700',
-                      !isSel  && !isToday && 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700',
-                    )}>
+                      isSel && 'font-semibold text-white',
+                      !isSel && isToday && 'border font-semibold',
+                      !isSel && !isToday && 'text-slate-700 hover:bg-slate-50',
+                    )}
+                    style={isSel ? { backgroundColor: accent } : isToday ? { borderColor: `${accent}66`, color: accent } : undefined}
+                  >
                     {date.getDate()}
                   </button>
                 );
@@ -441,7 +445,9 @@ function DateTimePicker({
               <button key={m} type="button"
                 onClick={() => { setViewDate(new Date(year, i, 1)); setView('days'); }}
                 className={cn('h-10 rounded-md text-xs transition',
-                  i === viewDate.getMonth() ? 'bg-indigo-600 font-semibold text-white' : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700')}>
+                  i === viewDate.getMonth() ? 'font-semibold text-white' : 'text-slate-600 hover:bg-slate-50')}
+                style={i === viewDate.getMonth() ? { backgroundColor: accent } : undefined}
+              >
                 {m}
               </button>
             ))}
@@ -453,7 +459,9 @@ function DateTimePicker({
               <button key={y} type="button"
                 onClick={() => { setViewDate(new Date(y, viewDate.getMonth(), 1)); setView('months'); }}
                 className={cn('h-10 rounded-md text-xs transition',
-                  y === year ? 'bg-indigo-600 font-semibold text-white' : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700')}>
+                  y === year ? 'font-semibold text-white' : 'text-slate-600 hover:bg-slate-50')}
+                style={y === year ? { backgroundColor: accent } : undefined}
+              >
                 {y + 543}
               </button>
             ))}
@@ -470,7 +478,7 @@ function DateTimePicker({
             value={Number(hour)}
             onChange={(e) => changeHour(e.target.value)}
             onMouseDown={(e) => e.stopPropagation()}
-            className="w-12 rounded border border-slate-200 px-1 py-0.5 text-center text-xs font-mono text-slate-800 outline-none focus:border-indigo-400"
+            className="w-12 rounded border border-slate-200 px-1 py-0.5 text-center text-xs font-mono text-slate-800 outline-none focus:border-orange-400"
           />
           <span className="text-xs font-semibold text-slate-400">:</span>
           <input
@@ -478,7 +486,7 @@ function DateTimePicker({
             value={Number(minute)}
             onChange={(e) => changeMinute(e.target.value)}
             onMouseDown={(e) => e.stopPropagation()}
-            className="w-12 rounded border border-slate-200 px-1 py-0.5 text-center text-xs font-mono text-slate-800 outline-none focus:border-indigo-400"
+            className="w-12 rounded border border-slate-200 px-1 py-0.5 text-center text-xs font-mono text-slate-800 outline-none focus:border-orange-400"
           />
         </div>
         <span className="ml-1 text-[11px] text-slate-400">น.</span>
@@ -493,7 +501,9 @@ function DateTimePicker({
         </button>
         <button type="button"
           onClick={() => { emitDatetime(today, hour, minute); setOpen(false); }}
-          className="h-7 rounded-md px-2.5 text-[11px] font-semibold text-indigo-600 transition hover:bg-indigo-50">
+          className="h-7 rounded-md px-2.5 text-[11px] font-semibold transition hover:bg-orange-50"
+          style={{ color: accent }}
+        >
           วันนี้
         </button>
       </div>
@@ -507,7 +517,8 @@ function DateTimePicker({
       </span>
       <div
         ref={triggerRef}
-        className="flex h-9 w-full items-center overflow-hidden rounded-lg border border-slate-200 bg-white transition focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-50 hover:border-slate-300"
+        className="flex h-9 w-full items-center overflow-hidden rounded-lg border border-slate-200 bg-white transition hover:border-slate-300"
+        style={focused ? { borderColor: accent, boxShadow: `0 0 0 2px ${accent}14` } : undefined}
       >
         <input
           ref={inputRef}
@@ -531,7 +542,9 @@ function DateTimePicker({
           onClick={() => { setView('days'); setOpen((v) => !v); }}
           className="flex h-full w-9 shrink-0 items-center justify-center outline-none hover:bg-slate-50"
         >
-          <CalendarIcon className="h-4 w-4 text-indigo-500" />
+          <span style={{ color: accent }}>
+            <CalendarIcon className="h-4 w-4" />
+          </span>
         </button>
       </div>
       {mounted && open ? createPortal(popup, document.body) : null}
@@ -760,8 +773,8 @@ function AnnounceDrawer({
               {timing === 'scheduled' && (
                 <div className="hr-announce-setting-row-expand">
                   <div className="hr-announce-dt-row">
-                    <DateTimePicker label="วันที่เริ่มประกาศ" required value={publishAt} onChange={setPublishAt} />
-                    <DateTimePicker label="วันที่จบประกาศ" value={publishEnd} onChange={setPublishEnd} />
+                    <DateTimePicker label="วันที่เริ่มประกาศ" required value={publishAt} onChange={setPublishAt} accent={accent} />
+                    <DateTimePicker label="วันที่จบประกาศ" value={publishEnd} onChange={setPublishEnd} accent={accent} />
                   </div>
                 </div>
               )}
