@@ -105,8 +105,9 @@ function reconcileBranchesWithTree(companies: Company[], tree: OrgNode[]): Compa
 }
 
 export function OrgStructureBoard({ accent }: { accent: string }) {
-  const [tree, setTree] = useState<OrgNode[]>(ORG_STRUCTURE_SEED);
-  const [companies, setCompanies] = useState<Company[]>(COMPANY_SEED);
+  const [tree, setTree] = useState<OrgNode[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [draft, setDraft] = useState<Draft | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<OrgNode | null>(null);
@@ -118,31 +119,38 @@ export function OrgStructureBoard({ accent }: { accent: string }) {
   const isMounted = useRef(true);
   useEffect(() => { isMounted.current = true; return () => { isMounted.current = false; }; }, []);
 
-  // Load from API on mount.
+  // Load from API on mount — fallback to seed only if API returns nothing.
   useEffect(() => {
     Promise.all([
       publicApiFetch<OrgNode[]>('/api/humansource/org-structure/tree'),
       publicApiFetch<Company[]>('/api/humansource/org-structure/companies'),
     ]).then(([t, c]) => {
       if (!isMounted.current) return;
-      if (Array.isArray(t) && t.length) setTree(t);
-      if (Array.isArray(c) && c.length) setCompanies(c);
-    }).catch(() => {});
+      setTree(Array.isArray(t) && t.length ? t : ORG_STRUCTURE_SEED);
+      setCompanies(Array.isArray(c) && c.length ? c : COMPANY_SEED);
+      setHydrated(true);
+    }).catch(() => {
+      setTree(ORG_STRUCTURE_SEED);
+      setCompanies(COMPANY_SEED);
+      setHydrated(true);
+    });
   }, []);
 
-  // Persist tree to API whenever it changes.
+  // Persist tree to API only after hydration and on subsequent changes.
   const treeInitialized = useRef(false);
   useEffect(() => {
+    if (!hydrated) return;
     if (!treeInitialized.current) { treeInitialized.current = true; return; }
     publicApiFetch('/api/humansource/org-structure/tree', { method: 'PUT', body: JSON.stringify(tree) }).catch(() => {});
-  }, [tree]);
+  }, [tree, hydrated]);
 
-  // Persist companies to API whenever they change.
+  // Persist companies to API only after hydration and on subsequent changes.
   const companiesInitialized = useRef(false);
   useEffect(() => {
+    if (!hydrated) return;
     if (!companiesInitialized.current) { companiesInitialized.current = true; return; }
     publicApiFetch('/api/humansource/org-structure/companies', { method: 'PUT', body: JSON.stringify(companies) }).catch(() => {});
-  }, [companies]);
+  }, [companies, hydrated]);
 
   // Branch records aligned to the tree — what the detail modal displays (no orphans).
   const displayCompanies = useMemo(() => reconcileBranchesWithTree(companies, tree), [companies, tree]);

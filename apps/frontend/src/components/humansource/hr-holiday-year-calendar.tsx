@@ -1141,3 +1141,6 @@ export function HolidayYearCalendar({ accent }: { accent: string }) {
     </div>
   );
 }
+
+export type { HolidayCalendar };
+export { CALENDARS_STORAGE_KEY, DEFAULT_CALENDARS };

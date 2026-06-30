@@ -6,13 +6,15 @@ import { HrCustomSelect } from './hr-ui';
 import { publicApiFetch } from '@/lib/api';
 import {
   EMPLOYEE_TYPE_SEED,
-  taxLabel,
   type EmployeeType,
   type EmployeeTypeTax,
 } from '@/data/humansource/employee-types';
 import {
   EMPLOYEE_DEFAULTS_SEED,
   RUNNING_NUMBER_SEED,
+  AUTO_EMP_CODE_KEY,
+  AUTO_EMP_CODE_DEFAULT,
+  type AutoEmpCodeSetting,
   type EmployeeDefaults,
   type RunningNumberConfig,
   type RunningNumberDateToken,
@@ -120,6 +122,149 @@ function ConfirmDelete({
   );
 }
 
+// ─── Auto Employee Code Setting Card ─────────────────────────────────────────
+
+function buildEmpCodePreview(s: AutoEmpCodeSetting): string {
+  if (s.mode === 'standard') {
+    const yy = String(new Date().getFullYear()).slice(-2);
+    return `${yy}${String(s.standardNextNumber).padStart(s.standardPadding, '0')}`;
+  }
+  const year = s.customWithYear ? String(new Date().getFullYear()) : '';
+  const num = String(s.customNextNumber).padStart(s.customPadding, '0');
+  return `${s.customPrefix}${year}${num}`;
+}
+
+function AutoEmpCodeCard({ accent }: { accent: string }) {
+  const [setting, setSetting] = useState<AutoEmpCodeSetting>(AUTO_EMP_CODE_DEFAULT);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(AUTO_EMP_CODE_KEY);
+      if (raw) setSetting({ ...AUTO_EMP_CODE_DEFAULT, ...(JSON.parse(raw) as Partial<AutoEmpCodeSetting>) });
+    } catch { /* ignore */ }
+    setHydrated(true);
+  }, []);
+
+  const update = (patch: Partial<AutoEmpCodeSetting>) => {
+    setSetting((prev) => {
+      const next = { ...prev, ...patch };
+      localStorage.setItem(AUTO_EMP_CODE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  if (!hydrated) return null;
+
+  const preview = buildEmpCodePreview(setting);
+
+  return (
+    <div className="hr-auto-code-card">
+      <div className="hr-auto-code-card__header">
+        <div className="hr-auto-code-card__icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </div>
+        <div className="hr-auto-code-card__text">
+          <p className="hr-auto-code-card__title">กำหนดรหัสพนักงานให้อัตโนมัติ</p>
+          <p className="hr-auto-code-card__desc">
+            {setting.enabled && setting.mode === 'standard'
+              ? `รหัสพนักงานจะเริ่มต้นด้วยตัวเลข ${setting.standardPadding} หลัก ตามด้วยตัวเลข 5 ตัว`
+              : 'ระบบจะกำหนดรหัสพนักงานให้แบบอัตโนมัติ โดยสามารถกำหนดรูปแบบที่ต้องการได้'}
+          </p>
+        </div>
+        <label className="hr-auto-code-card__toggle" aria-label="เปิด/ปิด กำหนดรหัสอัตโนมัติ">
+          <input
+            type="checkbox"
+            checked={setting.enabled}
+            onChange={(e) => update({ enabled: e.target.checked })}
+          />
+          <span className="hr-leave-switch" style={setting.enabled ? { backgroundColor: accent } : undefined}>
+            <span className="hr-leave-switch__thumb" />
+          </span>
+        </label>
+      </div>
+
+      {setting.enabled ? (
+        <div className="hr-auto-code-card__options">
+          {/* Mode radios */}
+          <label className="hr-auto-code-card__radio">
+            <input type="radio" name="auto-code-mode" value="standard" checked={setting.mode === 'standard'} onChange={() => update({ mode: 'standard' })} style={{ accentColor: accent }} />
+            <span className="hr-auto-code-card__radio-label">แบบมาตรฐาน</span>
+          </label>
+          {setting.mode === 'standard' && (
+            <div className="hr-auto-code-card__sub">
+              <p className="hr-auto-code-card__sub-hint">รหัสพนักงานจะเพิ่มขึ้นต้นตั้งแต่ปัจจุบัน ตามด้วยตัวเลข {setting.standardPadding} ตัว</p>
+              <p className="hr-auto-code-card__preview-label">รหัสพนักงานคนถัดไป</p>
+              <p className="hr-auto-code-card__preview">{preview}</p>
+            </div>
+          )}
+
+          <label className="hr-auto-code-card__radio" style={{ marginTop: 8 }}>
+            <input type="radio" name="auto-code-mode" value="custom" checked={setting.mode === 'custom'} onChange={() => update({ mode: 'custom' })} style={{ accentColor: accent }} />
+            <span className="hr-auto-code-card__radio-label">แบบกำหนดเอง</span>
+          </label>
+          {setting.mode === 'custom' && (
+            <div className="hr-auto-code-card__sub">
+              <div className="hr-auto-code-card__fields">
+                <div className="hr-auto-code-card__field">
+                  <label className="hr-auto-code-card__field-label">จำนวนหลัก</label>
+                  <input
+                    type="number"
+                    min={1} max={10}
+                    value={setting.customPadding}
+                    onChange={(e) => update({ customPadding: Math.max(1, Math.min(10, Number(e.target.value))) })}
+                    className="hr-auto-code-card__input hr-auto-code-card__input--short"
+                  />
+                </div>
+                <div className="hr-auto-code-card__field">
+                  <label className="hr-auto-code-card__field-label">ตัวอักษรเริ่มต้น <span className="hr-auto-code-card__field-hint">(ไม่แนะนำ)</span></label>
+                  <input
+                    type="text"
+                    value={setting.customPrefix}
+                    onChange={(e) => update({ customPrefix: e.target.value })}
+                    className="hr-auto-code-card__input"
+                    placeholder="เช่น EMP"
+                  />
+                </div>
+              </div>
+              <div className="hr-auto-code-card__fields" style={{ marginTop: 8 }}>
+                <div className="hr-auto-code-card__field">
+                  <label className="hr-auto-code-card__field-label">ลำดับเลขปัจจุบัน</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={setting.customNextNumber}
+                    onChange={(e) => update({ customNextNumber: Math.max(1, Number(e.target.value)) })}
+                    className="hr-auto-code-card__input"
+                  />
+                </div>
+                <div className="hr-auto-code-card__field hr-auto-code-card__field--checkbox">
+                  <label className="hr-auto-code-card__checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={setting.customWithYear}
+                      onChange={(e) => update({ customWithYear: e.target.checked })}
+                      style={{ accentColor: accent }}
+                    />
+                    <span>นำหน้าด้วยปีปัจจุบัน (ค.ศ.)</span>
+                  </label>
+                </div>
+              </div>
+              <p className="hr-auto-code-card__preview-label">รหัสพนักงานคนถัดไป</p>
+              <p className="hr-auto-code-card__preview">{preview}</p>
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 // ─── Employee Type CRUD ────────────────────────────────────────────────────────
 
 const TAX_OPTIONS: { value: EmployeeTypeTax; label: string }[] = [
@@ -181,26 +326,25 @@ function EmpTypeModal({
   };
 
   return (
-    <div className="hr-leave-modal-overlay" role="dialog" aria-modal="true">
-      <form className="hr-leave-modal-shell" onSubmit={submit}>
-        <header className="hr-leave-modal-head">
-          <div className="hr-leave-modal-head__lead">
-            <button type="button" onClick={onCancel} aria-label="กลับ" className="hr-leave-modal-head__back">
-              <XIcon className="h-4 w-4" />
-            </button>
-            <div className="hr-leave-modal-head__title-block">
-              <h3 className="hr-leave-modal-head__title">
-                {mode === 'create' ? 'เพิ่มประเภทพนักงาน' : 'แก้ไขประเภทพนักงาน'}
-              </h3>
-              <p className="hr-leave-modal-head__subtitle">กำหนดรหัสและชื่อประเภทพนักงาน</p>
-            </div>
+    <>
+      <button type="button" className="hr-scrim" data-open="true" aria-label="ปิด" onClick={onCancel} />
+      <form className="hr-drawer" data-open="true" role="dialog" aria-modal="true" onSubmit={submit}>
+        <header className="hr-drawer__head">
+          <div>
+            <h3 className="hr-drawer__title">
+              {mode === 'create' ? 'เพิ่มประเภทพนักงาน' : 'แก้ไขประเภทพนักงาน'}
+            </h3>
+            <p className="hr-drawer__subtitle">กำหนดรหัสและชื่อประเภทพนักงาน</p>
           </div>
+          <button type="button" onClick={onCancel} aria-label="ปิด" className="hr-drawer__close">
+            <XIcon className="h-4 w-4" />
+          </button>
         </header>
 
-        <div className="hr-leave-modal-body">
-          <div className="hr-leave-modal-body__inner">
-            {error ? <p className="hr-leave-modal-error">{error}</p> : null}
+        <div className="hr-drawer__body">
+          {error ? <p className="hr-leave-modal-error">{error}</p> : null}
 
+          <div className="hr-fgroup">
             <GroupHeading>ข้อมูลประเภทพนักงาน</GroupHeading>
             <div className="hr-leave-form__grid">
               <Field label="รหัส" required>
@@ -235,23 +379,23 @@ function EmpTypeModal({
                 />
               </Field>
             </div>
+          </div>
 
-            <div className="mt-6">
-              <ToggleField label="เปิดใช้งาน" checked={draft.active} onChange={(v) => update({ active: v })} />
-            </div>
+          <div className="hr-fgroup">
+            <ToggleField label="เปิดใช้งาน" checked={draft.active} onChange={(v) => update({ active: v })} />
           </div>
         </div>
 
-        <footer className="hr-leave-modal-foot">
-          <button type="button" className="hr-leave-modal-foot__cancel" onClick={onCancel}>
+        <footer className="hr-drawer__foot">
+          <button type="button" className="hr-button hr-button--secondary" onClick={onCancel}>
             ยกเลิก
           </button>
-          <button type="submit" className="hr-leave-modal-foot__save" style={{ backgroundColor: accent }}>
+          <button type="submit" className="hr-button hr-button--primary" style={{ backgroundColor: accent }}>
             บันทึก
           </button>
         </footer>
       </form>
-    </div>
+    </>
   );
 }
 
@@ -263,7 +407,31 @@ function EmployeeTypeBoard({ accent }: { accent: string }) {
   const [editMode, setEditMode] = useState<'create' | 'edit'>('create');
   const [confirmDel, setConfirmDel] = useState<EmployeeType | null>(null);
   const [search, setSearch] = useState('');
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const dragIdRef = useRef<string | null>(null);
   const isMounted = useRef(true);
+
+  const handleDragStart = (id: string) => { dragIdRef.current = id; };
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    setDragOverId(id);
+  };
+  const handleDrop = (targetId: string) => {
+    const sourceId = dragIdRef.current;
+    if (!sourceId || sourceId === targetId) { setDragOverId(null); return; }
+    setRows((prev) => {
+      const next = [...prev];
+      const from = next.findIndex((r) => r.id === sourceId);
+      const to = next.findIndex((r) => r.id === targetId);
+      if (from === -1 || to === -1) return prev;
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+    dragIdRef.current = null;
+    setDragOverId(null);
+  };
+  const handleDragEnd = () => { dragIdRef.current = null; setDragOverId(null); };
 
   useEffect(() => {
     isMounted.current = true;
@@ -348,60 +516,77 @@ function EmployeeTypeBoard({ accent }: { accent: string }) {
       ) : null}
 
       <header className="hr-leave-board__toolbar">
-        <div className="hr-leave-board__toolbar-left">
-          <div className="hr-leave-board__search">
-            <SearchIcon className="h-3.5 w-3.5" />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="ค้นหาประเภทพนักงาน"
-              className="hr-leave-board__search-input"
-            />
-          </div>
-        </div>
-        <div className="hr-leave-board__toolbar-right">
-          <button
-            type="button"
-            onClick={openCreate}
-            className="hr-leave-board__add"
-            style={{ backgroundColor: accent }}
-          >
-            <PlusIcon className="h-4 w-4" />
-            เพิ่มประเภทพนักงาน
-          </button>
-        </div>
-      </header>
+            <div className="hr-leave-board__toolbar-left">
+              <div className="hr-leave-board__search">
+                <SearchIcon className="h-3.5 w-3.5" />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="ค้นหาประเภทพนักงาน"
+                  className="hr-leave-board__search-input"
+                />
+              </div>
+            </div>
+            <div className="hr-leave-board__toolbar-right">
+              <button
+                type="button"
+                onClick={openCreate}
+                className="hr-leave-board__add"
+                style={{ backgroundColor: accent }}
+              >
+                <PlusIcon className="h-4 w-4" />
+                เพิ่มประเภทพนักงาน
+              </button>
+            </div>
+          </header>
 
-      <div className="hr-leave-board__table-wrap">
+          <div className="hr-leave-board__table-wrap">
         {loading ? (
           <p className="hr-leave-board__empty">กำลังโหลด...</p>
         ) : (
         <table className="hr-leave-board__table">
           <thead>
             <tr>
-              <th>รหัส</th>
-              <th>ชื่อ</th>
-              <th>ภาษาอังกฤษ</th>
-              <th>การหักภาษี</th>
-              <th>จำนวนพนักงาน</th>
-              <th>สถานะ</th>
+              <th className="hr-emp-type-col--order">ลำดับ</th>
+              <th className="hr-emp-type-col--shrink">ชื่อ</th>
+              <th className="hr-emp-type-col--gap" />
+              <th className="hr-emp-type-col--shrink">รายละเอียด</th>
+              <th className="hr-emp-type-col--fill" />
+              <th className="hr-emp-type-col--status">สถานะ</th>
               <th />
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row) => (
-              <tr key={row.id} onClick={() => openEdit(row)}>
-                <td>
-                  <span className="hr-leave-board__mono">{row.code}</span>
+            {filtered.map((row, index) => (
+              <tr
+                key={row.id}
+                className={`hr-emp-type-row${dragOverId === row.id ? ' hr-emp-type-row--drag-over' : ''}`}
+                draggable
+                onDragStart={() => handleDragStart(row.id)}
+                onDragOver={(e) => handleDragOver(e, row.id)}
+                onDrop={() => handleDrop(row.id)}
+                onDragEnd={handleDragEnd}
+                onClick={() => openEdit(row)}
+              >
+                <td className="hr-emp-type-col--order" onClick={(e) => e.stopPropagation()}>
+                  <span className="hr-emp-type-drag-handle">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="4.5" cy="3.5" r="1.2" fill="currentColor"/>
+                      <circle cx="9.5" cy="3.5" r="1.2" fill="currentColor"/>
+                      <circle cx="4.5" cy="7" r="1.2" fill="currentColor"/>
+                      <circle cx="9.5" cy="7" r="1.2" fill="currentColor"/>
+                      <circle cx="4.5" cy="10.5" r="1.2" fill="currentColor"/>
+                      <circle cx="9.5" cy="10.5" r="1.2" fill="currentColor"/>
+                    </svg>
+                    {index + 1}
+                  </span>
                 </td>
-                <td>
-                  <strong>{row.nameTh}</strong>
-                </td>
-                <td className="text-gray-500">{row.nameEn}</td>
-                <td className="text-gray-500">{taxLabel(row.tax)}</td>
-                <td className="text-gray-400">0</td>
-                <td onClick={(e) => e.stopPropagation()}>
+                <td className="hr-emp-type-col--shrink">{row.nameTh}</td>
+                <td className="hr-emp-type-col--gap" />
+                <td className="hr-emp-type-col--shrink text-gray-500">{row.nameEn}</td>
+                <td className="hr-emp-type-col--fill" />
+                <td className="hr-emp-type-col--status" onClick={(e) => e.stopPropagation()}>
                   <label className="hr-leave-board__inline-toggle">
                     <input
                       type="checkbox"
@@ -420,14 +605,7 @@ function EmployeeTypeBoard({ accent }: { accent: string }) {
                 >
                   <button
                     type="button"
-                    aria-label="แก้ไข"
-                    onClick={() => openEdit(row)}
-                  >
-                    <EditIcon className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className="hr-leave-board__action-danger"
+                    className="hr-emp-type-row__delete"
                     aria-label="ลบ"
                     onClick={() => setConfirmDel(row)}
                   >
@@ -446,18 +624,18 @@ function EmployeeTypeBoard({ accent }: { accent: string }) {
           </tbody>
         </table>
         )}
-      </div>
+          </div>
 
-      {editing ? (
-        <EmpTypeModal
-          initial={editing}
-          mode={editMode}
-          existingCodes={existingCodes}
-          onCancel={close}
-          onSave={handleSave}
-          accent={accent}
-        />
-      ) : null}
+          {editing ? (
+            <EmpTypeModal
+              initial={editing}
+              mode={editMode}
+              existingCodes={existingCodes}
+              onCancel={close}
+              onSave={handleSave}
+              accent={accent}
+            />
+          ) : null}
 
       {confirmDel ? (
         <ConfirmDelete
@@ -856,7 +1034,8 @@ function RunningNumberBoard({ accent }: { accent: string }) {
 export type BasicSettingsSub =
   | 'employee-type'
   | 'employee-defaults'
-  | 'running-number';
+  | 'running-number'
+  | 'basic-settings';
 
 export function BasicSettingsBoard({
   sub,
@@ -867,5 +1046,6 @@ export function BasicSettingsBoard({
 }) {
   if (sub === 'employee-defaults') return <EmployeeDefaultsForm accent={accent} />;
   if (sub === 'running-number')    return <RunningNumberBoard accent={accent} />;
+  if (sub === 'basic-settings')    return <div className="px-4 pt-4"><AutoEmpCodeCard accent={accent} /></div>;
   return <EmployeeTypeBoard accent={accent} />;
 }

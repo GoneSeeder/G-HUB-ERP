@@ -30,7 +30,7 @@ export class HumansourcePositionsService {
         qualifications: dto.qualifications ?? '',
         hasBenefits: dto.hasBenefits ?? false,
         active: dto.active ?? true,
-      },
+      } as any,
     });
   }
 
@@ -43,7 +43,7 @@ export class HumansourcePositionsService {
         ...rest,
         ...(employeeTypes !== undefined && { employeeTypes }),
         ...(employmentTypeIds !== undefined && { employmentTypeIds }),
-      },
+      } as any,
     });
   }
 

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
+  createHrSessionFromEmail,
   getHrSessionSnapshot,
   getHrSessionDestination,
   linkHrAccountWithCode,
@@ -274,9 +275,20 @@ export function HrLoginPage() {
   const handleGhubBypass = async () => {
     setLoading(true);
     try {
-      const session = await loginHrAccount('admin@ghub.hr', 'Admin1234!');
-      setHrSessionSnapshot(session);
-      router.push(getHrSessionDestination(session));
+      if (process.env.NODE_ENV !== 'development') {
+        handleGoogleLogin();
+        return;
+      }
+
+      await new Promise(r => setTimeout(r, 350));
+      const linkedSession = createHrSessionFromEmail('google.user@gmail.com', {
+        authSource: 'ghub',
+        displayName: 'G-HUB User',
+        hasGhubLink: true,
+      });
+      setHrSessionSnapshot(linkedSession);
+      window.localStorage.setItem('g-hub.hr.ghub-linked', 'true');
+      router.push(getHrSessionDestination(linkedSession));
     } catch {
       setFormError('ไม่สามารถเข้าสู่ระบบ bypass ได้');
     } finally {

@@ -59,8 +59,19 @@ type ShiftForm = {
   prorateShiftAllowance: boolean;
   holidayPremiumEnabled: boolean;
   overtimePremiumEnabled: boolean;
+  effectiveDays: string[];
   enabled: boolean;
 };
+
+const WEEK_DAYS = [
+  { key: 'mon', label: 'จ.' },
+  { key: 'tue', label: 'อ.' },
+  { key: 'wed', label: 'พ.' },
+  { key: 'thu', label: 'พฤ.' },
+  { key: 'fri', label: 'ศ.' },
+  { key: 'sat', label: 'ส.' },
+  { key: 'sun', label: 'อา.' },
+];
 
 const EMPTY_SHIFT_FORM: ShiftForm = {
   code: '',
@@ -84,6 +95,7 @@ const EMPTY_SHIFT_FORM: ShiftForm = {
   prorateShiftAllowance: true,
   holidayPremiumEnabled: false,
   overtimePremiumEnabled: false,
+  effectiveDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   enabled: true,
 };
 
@@ -104,6 +116,17 @@ const SHIFT_TYPE_OPTIONS: Array<{
   { key: 'total-hours', label: 'ชั่วโมงรวม', description: 'กำหนดจำนวนชั่วโมง โดยไม่บังคับเวลาเข้าออกตายตัว' },
   { key: 'combined', label: 'ควบกะ', description: 'รวมช่วงเวลาทำงานมากกว่าหนึ่งกะในวันเดียวกัน' },
 ];
+
+const SHIFT_TYPE_SELECT_META: Record<ShiftGroupKey, {
+  label: string;
+  icon: 'morning' | 'day' | 'night' | 'rotation';
+  color: string;
+}> = {
+  'same-day': { label: 'เช้า', icon: 'morning', color: '#3b82f6' },
+  overnight: { label: 'บ่าย', icon: 'day', color: '#f97316' },
+  'total-hours': { label: 'ดึก', icon: 'night', color: '#334155' },
+  combined: { label: 'ควบกะ', icon: 'rotation', color: '#4f46e5' },
+};
 
 const SHIFT_COLORS = [
   '#dc2626', '#f43f5e', '#ec4899', '#a855f7', '#7c3aed', '#4f46e5',
@@ -371,20 +394,25 @@ function FocusPage({
 
             {showTabs ? (
               <div className="hr-settings-focus__tabs mt-3 flex items-center gap-0 overflow-x-auto border-b border-gray-200">
-                {tabs.map((tab, index) => {
-                  const tabActive = tab.path ? normalizePath(tab.path) === activePath : index === 0;
-                  return (
-                    <Link
-                      key={tab.path ?? tab.label}
-                      href={getSettingsRouteHref(tab.path ?? getSettingsPath(group, activeTopic))}
-                      className={`hr-settings-focus__tab -mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
-                        tabActive ? 'hr-settings-focus__tab--active' : 'border-transparent text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
-                      {tab.label}
-                    </Link>
-                  );
-                })}
+                {(() => {
+                  const anyMatch = tabs.some((t) => t.path && normalizePath(t.path) === activePath);
+                  return tabs.map((tab, index) => {
+                    const tabActive = tab.path
+                      ? normalizePath(tab.path) === activePath || (!anyMatch && index === 0)
+                      : index === 0;
+                    return (
+                      <Link
+                        key={tab.path ?? tab.label}
+                        href={getSettingsRouteHref(tab.path ?? getSettingsPath(group, activeTopic))}
+                        className={`hr-settings-focus__tab -mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+                          tabActive ? 'hr-settings-focus__tab--active' : 'border-transparent text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        {tab.label}
+                      </Link>
+                    );
+                  });
+                })()}
               </div>
             ) : (
               <div className="border-b border-gray-200" />
@@ -418,7 +446,8 @@ function SettingsWorkbench({
     if (activeItem.path.includes('company/employee-defaults')) return <BasicSettingsBoard sub="employee-defaults" accent={accent} />;
     if (activeItem.path.includes('company/running-number'))    return <BasicSettingsBoard sub="running-number"    accent={accent} />;
     if (activeItem.path.includes('organization/employee-type')) return <BasicSettingsBoard sub="employee-type"   accent={accent} />;
-    if (activeItem.path.includes('company/general'))                    return <BasicSettingsBoard sub="employee-type"    accent={accent} />;
+    if (activeItem.path.includes('company/general/basic'))  return <BasicSettingsBoard sub="basic-settings" accent={accent} />;
+    if (activeItem.path.includes('company/general'))        return <BasicSettingsBoard sub="basic-settings" accent={accent} />;
     if (activeItem.path.includes('settings/announcements'))           return <AnnouncementsBoard accent={accent} />;
     return null;
   }
@@ -459,7 +488,7 @@ function TimeSettingsTable({
   const [filterWiStatus, setFilterWiStatus] = useState('');
 
   if (activeItem.path === '/humansource/time/general') {
-    return <TimeGeneralSettings accent={accent} />;
+    return <TimeGeneralSettings />;
   }
 
   if (activeItem.path.includes('holiday-calendar')) {
@@ -918,8 +947,47 @@ function shiftRowToForm(row: ShiftRow): ShiftForm {
     prorateShiftAllowance: row.prorateShiftAllowance ?? true,
     holidayPremiumEnabled: row.holidayPremiumEnabled ?? false,
     overtimePremiumEnabled: row.overtimePremiumEnabled ?? false,
+    effectiveDays: row.effectiveDays ?? ['mon', 'tue', 'wed', 'thu', 'fri'],
     enabled: row.enabled,
   };
+}
+
+function ShiftTypeIcon({ type, color }: { type: 'morning' | 'day' | 'night' | 'rotation'; color: string }) {
+  if (type === 'night') {
+    return (
+      <svg className="hr-shift-type-icon" viewBox="0 0 24 24" aria-hidden="true" style={{ color }}>
+        <path d="M20.2 15.8A7.8 7.8 0 0 1 8.2 3.8 8 8 0 1 0 20.2 15.8Z" />
+      </svg>
+    );
+  }
+
+  if (type === 'rotation') {
+    return (
+      <svg className="hr-shift-type-icon" viewBox="0 0 24 24" aria-hidden="true" style={{ color }}>
+        <path d="M20 11a8 8 0 0 0-14.9-4" />
+        <path d="M4 5v5h5" />
+        <path d="M4 13a8 8 0 0 0 14.9 4" />
+        <path d="M20 19v-5h-5" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className="hr-shift-type-icon" viewBox="0 0 24 24" aria-hidden="true" style={{ color }}>
+      <circle cx="12" cy="12" r={type === 'morning' ? '3.2' : '3.6'} />
+      <path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" />
+    </svg>
+  );
+}
+
+function ShiftTypeSelectLabel({ groupKey }: { groupKey: ShiftGroupKey }) {
+  const meta = SHIFT_TYPE_SELECT_META[groupKey];
+  return (
+    <span className="hr-shift-type-select__label">
+      <ShiftTypeIcon type={meta.icon} color={meta.color} />
+      <span>{meta.label}</span>
+    </span>
+  );
 }
 
 function ShiftSettingsBoard({ accent }: { accent: string }) {
@@ -933,6 +1001,7 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
   const [filterCompany, setFilterCompany] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState('');
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -976,6 +1045,21 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
     setShowCreateModal(false);
     setEditingShiftId('');
     setFormError('');
+  };
+
+  const confirmDelete = (id: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setDeleteConfirmId(id);
+  };
+
+  const deleteShift = () => {
+    if (!deleteConfirmId) return;
+    publicApiFetch(`/api/humansource/shifts/${deleteConfirmId}`, { method: 'DELETE' })
+      .then(() => {
+        setShifts((prev) => prev.filter((row) => row.id !== deleteConfirmId));
+        setDeleteConfirmId('');
+      })
+      .catch(() => setDeleteConfirmId(''));
   };
 
   const saveShift = (event: FormEvent<HTMLFormElement>) => {
@@ -1104,18 +1188,20 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
                   {header}
                 </th>
               ))}
+              <th className="hr-shift-col--action" />
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="hr-position-empty">กำลังโหลด...</td></tr>
+              <tr><td colSpan={7} className="hr-position-empty">กำลังโหลด...</td></tr>
             ) : filteredShiftRows.length === 0 ? (
-              <tr><td colSpan={6} className="hr-position-empty">ไม่พบข้อมูลกะ</td></tr>
+              <tr><td colSpan={7} className="hr-position-empty">ไม่พบข้อมูลกะ</td></tr>
             ) : filteredShiftRows.map((row) => (
               <tr
                 key={row.id}
                 role="button"
                 tabIndex={0}
+                className="hr-shift-table__row"
                 onClick={() => openEditModal(row)}
                 onKeyDown={(event) => { if (event.key === 'Enter') openEditModal(row); }}
               >
@@ -1144,11 +1230,52 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
                     {row.enabled ? 'ใช้งาน' : 'ปิดใช้งาน'}
                   </span>
                 </td>
+                <td className="hr-shift-col--action">
+                  <button
+                    type="button"
+                    className="hr-shift-delete-btn"
+                    aria-label="ลบกะนี้"
+                    onClick={(e) => confirmDelete(row.id, e)}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                    </svg>
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {deleteConfirmId ? (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setDeleteConfirmId('')} />
+          <div className="relative w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <h4 className="mb-2 text-base font-semibold text-slate-900">ยืนยันการลบ</h4>
+            <p className="mb-6 text-sm text-slate-500">ต้องการลบกะการทำงานนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmId('')}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="button"
+                onClick={deleteShift}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+              >
+                ลบ
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showCreateModal ? (
         <div className="fixed inset-0 z-[80] flex flex-col bg-[#f7f8fb] text-slate-950" role="dialog" aria-modal="true" aria-labelledby="create-shift-title">
@@ -1177,107 +1304,160 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
             </header>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <div className="mx-auto w-full max-w-5xl space-y-5 px-5 py-7 sm:px-8 lg:px-12 lg:py-10">
-                <ShiftFormSection number="1" title="ข้อมูลกะ" description="ข้อมูลพื้นฐานที่ใช้ค้นหาและเลือกกะให้พนักงาน">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <ShiftFormField label="ชื่อกะ*" className="md:col-span-2">
+              <div className="hr-shift-modal-body mx-auto w-full max-w-5xl space-y-5 px-5 py-7 sm:px-8 lg:px-12 lg:py-10">
+
+                {/* ชื่อกะ (กว้าง) + รหัสกะ (แคบ) แถวเดียวกัน */}
+                <div className="hr-shift-basic-grid">
+                  <div>
+                    <ShiftFormField label="ชื่อกะ*">
                       <input
                         autoFocus
                         value={form.name}
                         onChange={(event) => setForm({ ...form, name: event.target.value })}
                         className="hr-shift-control"
-                        placeholder="เช่น สำนักงาน 08.30-17.30"
+                        placeholder="เช่น สำนักงาน 08.00-17.00"
                       />
                     </ShiftFormField>
-                    <ShiftFormField label="รหัสกะ*" hint="ใช้ตัวอักษรอังกฤษหรือตัวเลข และต้องไม่ซ้ำ">
+                  </div>
+                  <div>
+                    <ShiftFormField label="รหัสกะ*">
                       <input
                         value={form.code}
                         onChange={(event) => setForm({ ...form, code: event.target.value })}
                         className="hr-shift-control uppercase"
-                        placeholder="เช่น WC006"
+                        placeholder="S1"
                       />
                     </ShiftFormField>
-                    <ShiftFormField label="บริษัท*">
+                  </div>
+                </div>
+
+                {/* บริษัท full-width */}
+                <ShiftFormField label="บริษัท*">
+                  <HrCustomSelect
+                    label="บริษัท"
+                    value={form.company}
+                    options={companyOptions}
+                    onChange={(company) => setForm({ ...form, company })}
+                  />
+                </ShiftFormField>
+
+                {/* inline rows: ประเภทกะ / สีประจำกะ / เขตเวลา / รายละเอียด */}
+                <ShiftFormField label="Time Zone*">
+                  <HrCustomSelect
+                    label="Time Zone"
+                    value={form.timezone}
+                    options={TIMEZONE_OPTIONS}
+                    onChange={(timezone) => setForm({ ...form, timezone })}
+                  />
+                </ShiftFormField>
+
+                <div className="hr-shift-basic-grid__full">
+                  <ShiftFormField label="รายละเอียด">
+                    <textarea
+                      value={form.description}
+                      onChange={(event) => setForm({ ...form, description: event.target.value })}
+                      className="hr-shift-control"
+                      placeholder="รายละเอียดเพิ่มเติม"
+                    />
+                  </ShiftFormField>
+                </div>
+
+                <div className="hr-shift-compact-rows hr-shift-basic-grid__full">
+                  <div className="hr-shift-inline-row">
+                    <span className="hr-shift-inline-row__label">ประเภทกะ</span>
+                    <div className="hr-shift-type-select">
+                      <span className="hr-shift-type-select__overlay" aria-hidden="true">
+                        <ShiftTypeSelectLabel groupKey={form.groupKey} />
+                      </span>
                       <HrCustomSelect
-                        label="บริษัท"
-                        value={form.company}
-                        options={companyOptions}
-                        onChange={(company) => setForm({ ...form, company })}
+                        label="ประเภทกะ"
+                        value={form.groupKey}
+                        className="hr-shift-type-select__control"
+                        menuClassName="hr-shift-type-select__menu"
+                        options={SHIFT_TYPE_OPTIONS.map((o) => ({ value: o.key, label: SHIFT_TYPE_SELECT_META[o.key].label }))}
+                        onChange={(v) => setForm({ ...form, groupKey: v as ShiftGroupKey })}
+                        renderOption={(option) => <ShiftTypeSelectLabel groupKey={option.value as ShiftGroupKey} />}
                       />
-                    </ShiftFormField>
-                    <ShiftFormField label="เขตเวลา">
+                    </div>
+                  </div>
+                  <div className="hr-shift-inline-row">
+                    <span className="hr-shift-inline-row__label">สีประจำกะ</span>
+                    <ShiftColorPicker value={form.color} onChange={(color) => setForm({ ...form, color })} />
+                  </div>
+                  <div className="hr-shift-inline-row">
+                    <span className="hr-shift-inline-row__label">เขตเวลา</span>
+                    <div className="w-56 shrink-0">
                       <HrCustomSelect
                         label="เขตเวลา"
                         value={form.timezone}
                         options={TIMEZONE_OPTIONS}
                         onChange={(timezone) => setForm({ ...form, timezone })}
                       />
-                    </ShiftFormField>
-                    <ShiftFormField label="สีประจำกะ">
-                      <ShiftColorPicker value={form.color} onChange={(color) => setForm({ ...form, color })} />
-                    </ShiftFormField>
-                    <ShiftFormField label="รายละเอียด" className="md:col-span-2">
-                      <textarea
-                        value={form.description}
-                        onChange={(event) => setForm({ ...form, description: event.target.value })}
-                        className="hr-shift-control"
-                        placeholder="รายละเอียดเพิ่มเติมของกะการทำงาน"
-                      />
-                    </ShiftFormField>
+                    </div>
                   </div>
-                </ShiftFormSection>
-
-                <ShiftFormSection number="2" title="ประเภทกะ" description="เลือกรูปแบบที่ตรงกับวิธีนับวันและเวลาออก">
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {SHIFT_TYPE_OPTIONS.map((option) => {
-                      const selected = form.groupKey === option.key;
-                      return (
-                        <button
-                          key={option.key}
-                          type="button"
-                          onClick={() => setForm({ ...form, groupKey: option.key })}
-                          className={`hr-shift-option ${selected ? 'hr-shift-option--selected' : ''}`}
-                        >
-                          <span
-                            className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border ${
-                              selected ? 'border-transparent text-white' : 'border-gray-300 bg-white'
-                            }`}
-                            style={selected ? { backgroundColor: accent } : undefined}
-                          >
-                            {selected ? '✓' : ''}
-                          </span>
-                          <span>
-                            <span className="block text-sm font-medium text-slate-800">{option.label}</span>
-                            <span className="mt-1 block text-xs font-normal leading-5 text-slate-500">{option.description}</span>
-                          </span>
-                        </button>
-                      );
-                    })}
+                  <div className="hr-shift-inline-row">
+                    <span className="hr-shift-inline-row__label">รายละเอียด</span>
+                    <input
+                      value={form.description}
+                      onChange={(event) => setForm({ ...form, description: event.target.value })}
+                      className="hr-shift-control min-w-0 flex-1"
+                      placeholder="รายละเอียดเพิ่มเติม"
+                    />
                   </div>
-                </ShiftFormSection>
+                </div>
 
-                <ShiftFormSection number="3" title="ช่วงเวลา" description="กำหนดเวลาเข้าออกและเวลาพักในรูปแบบ 24 ชั่วโมง">
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <ShiftFormField label="เวลาเข้า*">
-                      <TimePicker24 value={form.startTime} onChange={(startTime) => setForm({ ...form, startTime })} label="เวลาเข้า" />
-                    </ShiftFormField>
-                    <ShiftFormField label="เริ่มพัก">
-                      <TimePicker24 value={form.breakStart} onChange={(breakStart) => setForm({ ...form, breakStart })} label="เวลาเริ่มพัก" allowEmpty />
-                    </ShiftFormField>
-                    <ShiftFormField label="สิ้นสุดพัก">
-                      <TimePicker24 value={form.breakEnd} onChange={(breakEnd) => setForm({ ...form, breakEnd })} label="เวลาสิ้นสุดพัก" allowEmpty />
-                    </ShiftFormField>
-                    <ShiftFormField label="เวลาออก*">
-                      <TimePicker24 value={form.endTime} onChange={(endTime) => setForm({ ...form, endTime })} label="เวลาออก" />
-                    </ShiftFormField>
+                <div className="border-t border-gray-100 pt-5 space-y-3">
+                  <h4 className="text-sm font-semibold text-slate-700">ช่วงเวลากะ</h4>
+                  <div className="flex flex-wrap items-end gap-6">
+                    <div>
+                      <p className="mb-1.5 text-xs text-slate-500">เวลาทำงาน</p>
+                      <div className="flex items-center gap-2">
+                        <TimePicker24 value={form.startTime} onChange={(startTime) => setForm({ ...form, startTime })} label="เวลาเข้า" />
+                        <TimePicker24 value={form.endTime} onChange={(endTime) => setForm({ ...form, endTime })} label="เวลาออก" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-xs text-slate-500">เวลาพัก</p>
+                      <div className="flex items-center gap-2">
+                        <TimePicker24 value={form.breakStart} onChange={(breakStart) => setForm({ ...form, breakStart })} label="เริ่มพัก" allowEmpty />
+                        <TimePicker24 value={form.breakEnd} onChange={(breakEnd) => setForm({ ...form, breakEnd })} label="สิ้นสุดพัก" allowEmpty />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-xs text-slate-500">วันที่มีผล</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {WEEK_DAYS.map((day) => {
+                          const active = form.effectiveDays.includes(day.key);
+                          return (
+                            <button
+                              key={day.key}
+                              type="button"
+                              onClick={() => {
+                                const next = active
+                                  ? form.effectiveDays.filter((d) => d !== day.key)
+                                  : [...form.effectiveDays, day.key];
+                                setForm({ ...form, effectiveDays: next });
+                              }}
+                              className="hr-shift-day-btn"
+                              data-active={active ? 'true' : undefined}
+                              style={active ? { backgroundColor: 'transparent', borderColor: accent, color: accent } : undefined}
+                            >
+                              {day.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                </ShiftFormSection>
+                </div>
 
-                <ShiftFormSection number="4" title="นโยบายการลงเวลา" description="เงื่อนไขสำหรับตรวจสอบเวลาเข้าออกของกะนี้">
-                  <div className="space-y-5">
-                    <ShiftFormField label="เงื่อนไขการลงเวลา">
+                <div className="border-t border-gray-100 pt-5 space-y-0">
+                  <h4 className="mb-3 text-sm font-semibold text-slate-700">นโยบายการเข้างาน</h4>
+                  <div className="hr-shift-inline-row">
+                    <span className="hr-shift-inline-row__label">เงื่อนไขการเข้างาน</span>
+                    <div className="w-56">
                       <HrCustomSelect
-                        label="เงื่อนไขการลงเวลา"
+                        label="เงื่อนไขการเข้างาน"
                         value={form.attendanceRule}
                         options={ATTENDANCE_RULE_OPTIONS}
                         onChange={(attendanceRule) => setForm({
@@ -1288,55 +1468,52 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
                             : false,
                         })}
                       />
-                    </ShiftFormField>
-
-                    {form.attendanceRule === ATTENDANCE_RULE_OPTIONS[0] ? (
-                      <div className="hr-shift-setting-panel">
-                        <div className="hr-shift-setting-panel__header">
-                          <div>
-                            <p className="hr-shift-setting-panel__title">อนุญาตให้เข้างานแบบยืดหยุ่นได้</p>
-                            <p className="hr-shift-setting-panel__description">พนักงานสามารถเริ่มงานคลาดเคลื่อนจากเวลาในกะได้</p>
-                          </div>
-                          <ShiftToggle
-                            checked={form.flexibleEntryEnabled}
-                            onChange={(flexibleEntryEnabled) => setForm({ ...form, flexibleEntryEnabled })}
-                            ariaLabel="อนุญาตให้เข้างานแบบยืดหยุ่นได้"
-                            accent={accent}
-                          />
-                        </div>
-                        {form.flexibleEntryEnabled ? (
-                          <div className="hr-shift-setting-panel__body">
-                            <ShiftFormField label="ยืดหยุ่นได้" suffix="นาที">
-                              <input
-                                type="number"
-                                min="0"
-                                value={form.flexibleMinutes}
-                                onChange={(event) => setForm({ ...form, flexibleMinutes: event.target.value })}
-                                className="hr-shift-control pr-14 text-right"
-                              />
-                            </ShiftFormField>
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    {form.attendanceRule === ATTENDANCE_RULE_OPTIONS[1] ? (
-                      <ShiftFormField label="ทำงานอย่างน้อย" suffix="ชั่วโมง">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.5"
-                          value={form.minimumWorkHours}
-                          onChange={(event) => setForm({ ...form, minimumWorkHours: event.target.value })}
-                          className="hr-shift-control pr-16 text-right"
-                        />
-                      </ShiftFormField>
-                    ) : null}
+                    </div>
                   </div>
-                </ShiftFormSection>
 
-                <ShiftFormSection number="5" title="ตั้งค่าเพิ่มเติม" description="กำหนดค่ากะและเงื่อนไขการคำนวณเพิ่มเติม">
-                  <div className="hr-shift-setting-panel mb-4">
+                  {form.attendanceRule === ATTENDANCE_RULE_OPTIONS[0] ? (
+                    <div className="hr-shift-inline-row">
+                      <span className="hr-shift-inline-row__label">อนุญาตให้เข้างานแบบยืดหยุ่นได้</span>
+                      <ShiftToggle
+                        checked={form.flexibleEntryEnabled}
+                        onChange={(flexibleEntryEnabled) => setForm({ ...form, flexibleEntryEnabled })}
+                        ariaLabel="อนุญาตให้เข้างานแบบยืดหยุ่นได้"
+                        accent={accent}
+                      />
+                    </div>
+                  ) : null}
+
+                  {form.attendanceRule === ATTENDANCE_RULE_OPTIONS[0] && form.flexibleEntryEnabled ? (
+                    <div className="hr-shift-inline-row">
+                      <span className="hr-shift-inline-row__label">ยืดหยุ่นได้ (นาที)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.flexibleMinutes}
+                        onChange={(event) => setForm({ ...form, flexibleMinutes: event.target.value })}
+                        className="hr-shift-control w-24 text-right"
+                      />
+                    </div>
+                  ) : null}
+
+                  {form.attendanceRule === ATTENDANCE_RULE_OPTIONS[1] ? (
+                    <div className="hr-shift-inline-row">
+                      <span className="hr-shift-inline-row__label">ทำงานอย่างน้อย (ชั่วโมง)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={form.minimumWorkHours}
+                        onChange={(event) => setForm({ ...form, minimumWorkHours: event.target.value })}
+                        className="hr-shift-control w-24 text-right"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="border-t border-gray-100 pt-5 space-y-4">
+                  <h4 className="text-sm font-semibold text-slate-700">ตั้งค่าเพิ่มเติม</h4>
+                  <div className="hr-shift-setting-panel">
                     <div className="hr-shift-setting-panel__header">
                       <div>
                         <p className="hr-shift-setting-panel__title">คำนวณสถานะช่วงพัก</p>
@@ -1393,7 +1570,7 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
                       </div>
                     ) : null}
                   </div>
-                </ShiftFormSection>
+                </div>
 
                 {formError ? (
                   <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{formError}</div>
@@ -1401,13 +1578,13 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
               </div>
             </div>
 
-            <footer className="flex min-h-16 flex-shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-3 sm:px-7">
-              <p className="text-xs font-normal text-slate-400">เวลาใช้รูปแบบ 24 ชั่วโมง</p>
+            <footer className="flex flex-shrink-0 items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-2 sm:px-7">
+              <p className="text-xs text-slate-400">เวลาใช้รูปแบบ 24 ชั่วโมง</p>
               <div className="flex gap-2">
-                <button type="button" onClick={closeCreateModal} className="h-10 rounded-lg px-5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950">
+                <button type="button" onClick={closeCreateModal} className="h-8 rounded-lg px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950">
                   ยกเลิก
                 </button>
-                <button type="submit" className="h-10 rounded-lg px-5 text-sm font-semibold text-white shadow-sm transition" style={{ backgroundColor: accent }}>
+                <button type="submit" className="h-8 rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition" style={{ backgroundColor: accent }}>
                   {editingShiftId ? 'บันทึกการแก้ไข' : 'บันทึกกะการทำงาน'}
                 </button>
               </div>
@@ -1455,7 +1632,7 @@ function TimePicker24({
   }, [open]);
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="hr-shift-time-picker relative">
       <button
         type="button"
         aria-label={label}
@@ -1668,32 +1845,6 @@ function ShiftFormField({
   );
 }
 
-function ShiftFormSection({
-  number,
-  title,
-  description,
-  children,
-}: {
-  number: string;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="hr-shift-section">
-      <div className="hr-shift-section__header">
-        <span className="hr-shift-section__number">
-          {number}
-        </span>
-        <div>
-          <h4 className="hr-shift-section__title">{title}</h4>
-          <p className="hr-shift-section__description">{description}</p>
-        </div>
-      </div>
-      <div className="hr-shift-section__body">{children}</div>
-    </section>
-  );
-}
 
 function ShiftToggle({
   checked,

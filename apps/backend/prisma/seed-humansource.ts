@@ -43,13 +43,13 @@ const JOB_LEVELS = [
 ];
 
 const POSITIONS = [
-  { id: 'P001', code: 'EX001', nameTh: 'ผู้บริหาร',      nameEn: 'Executive',   level: 'Executive',  jobLevelId: 'JL-EXEC', companyId: '', employeeTypes: [], salaryMin: 100000, salaryMax: 200000, overview: '', responsibilities: '', qualifications: '', hasBenefits: true,  active: true  },
-  { id: 'P002', code: 'MG001', nameTh: 'ผู้จัดการ',      nameEn: 'Manager',     level: 'Manager',    jobLevelId: 'JL-MGR',  companyId: '', employeeTypes: [], salaryMin: 55000,  salaryMax: 80000,  overview: '', responsibilities: '', qualifications: '', hasBenefits: true,  active: true  },
-  { id: 'P003', code: 'SV001', nameTh: 'หัวหน้างาน',    nameEn: 'Supervisor',  level: 'Supervisor', jobLevelId: 'JL-SUP',  companyId: '', employeeTypes: [], salaryMin: 32000,  salaryMax: 45000,  overview: '', responsibilities: '', qualifications: '', hasBenefits: true,  active: true  },
-  { id: 'P004', code: 'ST001', nameTh: 'พนักงานขาย',    nameEn: 'Sales Staff', level: 'Staff',      jobLevelId: 'JL-STF',  companyId: '', employeeTypes: [], salaryMin: 20000,  salaryMax: 30000,  overview: '', responsibilities: '', qualifications: '', hasBenefits: false, active: true  },
-  { id: 'P005', code: 'ST002', nameTh: 'พนักงานบัญชี',  nameEn: 'Accountant',  level: 'Staff',      jobLevelId: 'JL-STF',  companyId: '', employeeTypes: [], salaryMin: 22000,  salaryMax: 32000,  overview: '', responsibilities: '', qualifications: '', hasBenefits: false, active: true  },
-  { id: 'P006', code: 'ST003', nameTh: 'พนักงานทั่วไป', nameEn: 'General',     level: 'Staff',      jobLevelId: 'JL-STF',  companyId: '', employeeTypes: [], salaryMin: 18000,  salaryMax: 25000,  overview: '', responsibilities: '', qualifications: '', hasBenefits: false, active: false },
-  { id: 'P007', code: 'ST004', nameTh: 'ผู้อำนวยการ',   nameEn: 'Director',    level: 'Executive',  jobLevelId: 'JL-EXEC', companyId: '', employeeTypes: [], salaryMin: 90000,  salaryMax: 150000, overview: '', responsibilities: '', qualifications: '', hasBenefits: true,  active: true  },
+  { id: 'P001', code: 'EX001', nameTh: 'ผู้บริหาร',      nameEn: 'Executive',   level: 'Executive',  jobLevelId: 'JL-E',  companyId: '', employeeTypes: [], salaryMin: 100000, salaryMax: 200000, overview: '', responsibilities: '', qualifications: '', hasBenefits: true,  active: true  },
+  { id: 'P002', code: 'MG001', nameTh: 'ผู้จัดการ',      nameEn: 'Manager',     level: 'Manager',    jobLevelId: 'JL-M',  companyId: '', employeeTypes: [], salaryMin: 55000,  salaryMax: 80000,  overview: '', responsibilities: '', qualifications: '', hasBenefits: true,  active: true  },
+  { id: 'P003', code: 'SV001', nameTh: 'หัวหน้างาน',    nameEn: 'Supervisor',  level: 'Supervisor', jobLevelId: 'JL-O3', companyId: '', employeeTypes: [], salaryMin: 32000,  salaryMax: 45000,  overview: '', responsibilities: '', qualifications: '', hasBenefits: true,  active: true  },
+  { id: 'P004', code: 'ST001', nameTh: 'พนักงานขาย',    nameEn: 'Sales Staff', level: 'Staff',      jobLevelId: 'JL-O1', companyId: '', employeeTypes: [], salaryMin: 20000,  salaryMax: 30000,  overview: '', responsibilities: '', qualifications: '', hasBenefits: false, active: true  },
+  { id: 'P005', code: 'ST002', nameTh: 'พนักงานบัญชี',  nameEn: 'Accountant',  level: 'Staff',      jobLevelId: 'JL-O1', companyId: '', employeeTypes: [], salaryMin: 22000,  salaryMax: 32000,  overview: '', responsibilities: '', qualifications: '', hasBenefits: false, active: true  },
+  { id: 'P006', code: 'ST003', nameTh: 'พนักงานทั่วไป', nameEn: 'General',     level: 'Staff',      jobLevelId: 'JL-O1', companyId: '', employeeTypes: [], salaryMin: 18000,  salaryMax: 25000,  overview: '', responsibilities: '', qualifications: '', hasBenefits: false, active: false },
+  { id: 'P007', code: 'ST004', nameTh: 'ผู้อำนวยการ',   nameEn: 'Director',    level: 'Executive',  jobLevelId: 'JL-E',  companyId: '', employeeTypes: [], salaryMin: 90000,  salaryMax: 150000, overview: '', responsibilities: '', qualifications: '', hasBenefits: true,  active: true  },
 ];
 
 // ─── Shifts (base definitions, mirrors hr-shifts.ts BASE_SHIFT_GROUPS) ────────
@@ -62,6 +62,13 @@ const BASE_SHIFTS = [
 ];
 
 // ─── Leave types seed (mirrors leave-types.ts LEAVE_TYPE_SEED) ─────────────────
+const CANONICAL_SHIFTS = [
+  { id: 'WC001', code: 'S1', name: 'สำนักงาน 08.00-17.00', type: 'กะเช้า', time: '08:00-12:00 / 13:00-17:00', companyScope: 'ใช้กับทุกบริษัท', groupKey: 'same-day', enabled: true, description: 'พนักงานออฟฟิศ', timezone: 'Asia/Bangkok (UTC+07:00)', color: '#bf5a5a', attendanceRule: 'ตามเวลาทำงานในกะ', flexibleEntryEnabled: false, flexibleMinutes: 0, minimumWorkHours: 8, trackBreak: true, shiftAllowanceEnabled: false, shiftAllowanceAmount: 0, prorateShiftAllowance: true, holidayPremiumEnabled: false, overtimePremiumEnabled: false, updatedBy: 'empeo Team' },
+  { id: 'WC002', code: 'S2', name: 'กะเช้า 06.00-14.00', type: 'กะเช้า', time: '06:00-10:00 / 10:30-14:00', companyScope: 'ใช้กับทุกบริษัท', groupKey: 'same-day', enabled: true, description: 'พนักงานกะเช้า', timezone: 'Asia/Bangkok (UTC+07:00)', color: '#3b82f6', attendanceRule: 'ตามเวลาทำงานในกะ', flexibleEntryEnabled: false, flexibleMinutes: 0, minimumWorkHours: 8, trackBreak: true, shiftAllowanceEnabled: false, shiftAllowanceAmount: 0, prorateShiftAllowance: true, holidayPremiumEnabled: false, overtimePremiumEnabled: false, updatedBy: 'empeo Team' },
+  { id: 'WC003', code: 'S3', name: 'กะบ่าย 14.00-22.00', type: 'กะบ่าย', time: '14:00-18:00 / 18:30-22:00', companyScope: 'ใช้กับทุกบริษัท', groupKey: 'overnight', enabled: true, description: 'พนักงานกะบ่าย', timezone: 'Asia/Bangkok (UTC+07:00)', color: '#f97316', attendanceRule: 'ตามเวลาทำงานในกะ', flexibleEntryEnabled: false, flexibleMinutes: 0, minimumWorkHours: 8, trackBreak: true, shiftAllowanceEnabled: false, shiftAllowanceAmount: 0, prorateShiftAllowance: true, holidayPremiumEnabled: false, overtimePremiumEnabled: false, updatedBy: 'empeo Team' },
+  { id: 'WC004', code: 'S4', name: 'กะดึก 22.00-06.00', type: 'กะดึก', time: '22:00-02:00 / 02:30-06:00', companyScope: 'ใช้กับทุกบริษัท', groupKey: 'total-hours', enabled: true, description: 'พนักงานกะดึก', timezone: 'Asia/Bangkok (UTC+07:00)', color: '#334155', attendanceRule: 'ตามเวลาทำงานในกะ', flexibleEntryEnabled: false, flexibleMinutes: 0, minimumWorkHours: 8, trackBreak: true, shiftAllowanceEnabled: false, shiftAllowanceAmount: 0, prorateShiftAllowance: true, holidayPremiumEnabled: false, overtimePremiumEnabled: false, updatedBy: 'empeo Team' },
+] satisfies typeof BASE_SHIFTS;
+
 const _br = { payType: 'paid', countBasis: 'working-day', countHolidayAsLeave: false, minMinutes: 60, allowHalfDay: true, advanceDays: 7, backdateDays: 3, maxConsecutiveDays: null, requireAttachment: false, requireAttachmentOverDays: null, rounding: 'half', carryOver: false, carryOverCap: null, carryOverExpiryMonths: null };
 const _be = { gender: 'all', requirePassProbation: false, minTenureMonths: 0, positionIds: [], orgNodeIds: [], employeeIds: [] };
 const _ba = { useDefaultTemplate: true, templateDocType: null };
@@ -214,9 +221,8 @@ export async function seedHumanSource(prisma: PrismaClient): Promise<void> {
   for (const t of EMPLOYEE_TYPES) {
     await prisma.hrEmployeeType.upsert({ where: { id: t.id }, update: t, create: t });
   }
-  for (const s of BASE_SHIFTS) {
-    await prisma.hrShift.upsert({ where: { id: s.id }, update: s, create: s });
-  }
+  await prisma.hrShift.deleteMany();
+  await prisma.hrShift.createMany({ data: CANONICAL_SHIFTS });
   for (const lt of LEAVE_TYPES) {
     await prisma.hrLeaveType.upsert({ where: { id: lt.id }, update: lt as never, create: lt as never });
   }

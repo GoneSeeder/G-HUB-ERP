@@ -26,6 +26,7 @@ export type HrShiftRow = {
   prorateShiftAllowance?: boolean;
   holidayPremiumEnabled?: boolean;
   overtimePremiumEnabled?: boolean;
+  effectiveDays?: string[];
 };
 
 export const BASE_SHIFT_GROUPS: Array<{ groupKey: HrShiftGroupKey; rows: HrShiftRow[] }> = [
@@ -116,6 +117,125 @@ export const BASE_SHIFT_GROUPS: Array<{ groupKey: HrShiftGroupKey; rows: HrShift
   },
 ];
 
+export const CANONICAL_SHIFT_GROUPS: Array<{ groupKey: HrShiftGroupKey; rows: HrShiftRow[] }> = [
+  {
+    groupKey: 'same-day',
+    rows: [
+      {
+        id: 'WC001',
+        enabled: true,
+        code: 'S1',
+        name: 'สำนักงาน 08.00-17.00',
+        type: 'กะเช้า',
+        time: '08:00-12:00 / 13:00-17:00',
+        company: 'ใช้กับทุกบริษัท',
+        updatedBy: 'empeo Team',
+        updatedAt: '10/06/2026 16:32',
+        groupKey: 'same-day',
+        description: 'พนักงานออฟฟิศ',
+        timezone: 'Asia/Bangkok (UTC+07:00)',
+        color: '#bf5a5a',
+        attendanceRule: 'ตามเวลาทำงานในกะ',
+        flexibleEntryEnabled: false,
+        flexibleMinutes: 0,
+        minimumWorkHours: 8,
+        trackBreak: true,
+        shiftAllowanceEnabled: false,
+        shiftAllowanceAmount: 0,
+        prorateShiftAllowance: true,
+        holidayPremiumEnabled: false,
+        overtimePremiumEnabled: false,
+      },
+      {
+        id: 'WC002',
+        enabled: true,
+        code: 'S2',
+        name: 'กะเช้า 06.00-14.00',
+        type: 'กะเช้า',
+        time: '06:00-10:00 / 10:30-14:00',
+        company: 'ใช้กับทุกบริษัท',
+        updatedBy: 'empeo Team',
+        updatedAt: '10/06/2026 16:32',
+        groupKey: 'same-day',
+        description: 'พนักงานกะเช้า',
+        timezone: 'Asia/Bangkok (UTC+07:00)',
+        color: '#3b82f6',
+        attendanceRule: 'ตามเวลาทำงานในกะ',
+        flexibleEntryEnabled: false,
+        flexibleMinutes: 0,
+        minimumWorkHours: 8,
+        trackBreak: true,
+        shiftAllowanceEnabled: false,
+        shiftAllowanceAmount: 0,
+        prorateShiftAllowance: true,
+        holidayPremiumEnabled: false,
+        overtimePremiumEnabled: false,
+      },
+    ],
+  },
+  {
+    groupKey: 'overnight',
+    rows: [
+      {
+        id: 'WC003',
+        enabled: true,
+        code: 'S3',
+        name: 'กะบ่าย 14.00-22.00',
+        type: 'กะบ่าย',
+        time: '14:00-18:00 / 18:30-22:00',
+        company: 'ใช้กับทุกบริษัท',
+        updatedBy: 'empeo Team',
+        updatedAt: '10/06/2026 16:32',
+        groupKey: 'overnight',
+        description: 'พนักงานกะบ่าย',
+        timezone: 'Asia/Bangkok (UTC+07:00)',
+        color: '#f97316',
+        attendanceRule: 'ตามเวลาทำงานในกะ',
+        flexibleEntryEnabled: false,
+        flexibleMinutes: 0,
+        minimumWorkHours: 8,
+        trackBreak: true,
+        shiftAllowanceEnabled: false,
+        shiftAllowanceAmount: 0,
+        prorateShiftAllowance: true,
+        holidayPremiumEnabled: false,
+        overtimePremiumEnabled: false,
+      },
+    ],
+  },
+  {
+    groupKey: 'total-hours',
+    rows: [
+      {
+        id: 'WC004',
+        enabled: true,
+        code: 'S4',
+        name: 'กะดึก 22.00-06.00',
+        type: 'กะดึก',
+        time: '22:00-02:00 / 02:30-06:00',
+        company: 'ใช้กับทุกบริษัท',
+        updatedBy: 'empeo Team',
+        updatedAt: '10/06/2026 16:32',
+        groupKey: 'total-hours',
+        description: 'พนักงานกะดึก',
+        timezone: 'Asia/Bangkok (UTC+07:00)',
+        color: '#334155',
+        attendanceRule: 'ตามเวลาทำงานในกะ',
+        flexibleEntryEnabled: false,
+        flexibleMinutes: 0,
+        minimumWorkHours: 8,
+        trackBreak: true,
+        shiftAllowanceEnabled: false,
+        shiftAllowanceAmount: 0,
+        prorateShiftAllowance: true,
+        holidayPremiumEnabled: false,
+        overtimePremiumEnabled: false,
+      },
+    ],
+  },
+  { groupKey: 'combined', rows: [] },
+];
+
 export function readCustomShifts(): HrShiftRow[] {
   if (typeof window === 'undefined') return [];
 
@@ -131,7 +251,7 @@ export function readCustomShifts(): HrShiftRow[] {
 }
 
 export function getShiftGroups(customShifts: HrShiftRow[] = []) {
-  return BASE_SHIFT_GROUPS.map((group) => ({
+  return CANONICAL_SHIFT_GROUPS.map((group) => ({
     ...group,
     rows: [...group.rows, ...customShifts.filter((shift) => shift.groupKey === group.groupKey)],
   }));

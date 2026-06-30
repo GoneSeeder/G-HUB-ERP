@@ -97,12 +97,11 @@ export const hrSettingsGroups: HrSettingsGroup[] = [
     progress: '2 / 4 พร้อมใช้งาน',
     items: [
       {
-        label: 'การตั้งค่าพื้นฐาน',
+        label: 'มาสเตอร์',
         path: '/humansource/settings/company/general',
-        description: 'ค่าเริ่มต้นระบบ HR รหัสพนักงาน และประเภทพนักงาน',
+        description: 'ข้อมูลมาสเตอร์พื้นฐานของระบบ HR',
         children: [
-          { label: 'ค่าเริ่มต้นพนักงาน', path: '/humansource/settings/company/employee-defaults', description: 'รหัสพนักงาน วันที่เริ่มงาน และค่าเริ่มต้น' },
-          { label: 'รหัสเอกสารและ Running No.', path: '/humansource/settings/company/running-number', description: 'รูปแบบเลขเอกสารและเลขอ้างอิง' },
+          { label: 'การตั้งค่าพื้นฐาน', path: '/humansource/settings/company/general/basic', description: 'กำหนดรหัสพนักงานและค่าเริ่มต้น' },
           { label: 'ประเภทพนักงาน', path: '/humansource/organization/employee-type', description: 'รายเดือน รายวัน สัญญาจ้าง และ Part-time (ใช้กับ payroll และโควตาลา)' },
         ],
       },
