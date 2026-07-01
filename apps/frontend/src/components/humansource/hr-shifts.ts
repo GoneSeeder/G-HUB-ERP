@@ -26,6 +26,7 @@ export type HrShiftRow = {
   prorateShiftAllowance?: boolean;
   holidayPremiumEnabled?: boolean;
   overtimePremiumEnabled?: boolean;
+  overtimeEnabled?: boolean;
   effectiveDays?: string[];
 };
 

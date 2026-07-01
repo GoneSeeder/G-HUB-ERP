@@ -463,11 +463,12 @@ model HrCompany {
 }
 
 model HrJobLevel {
-  id     String  @id
-  nameTh String
-  nameEn String
-  rank   Int
-  active Boolean @default(true)
+  id          String  @id
+  nameTh      String
+  nameEn      String
+  rank        Int
+  description String  @default("")
+  active      Boolean @default(true)
 
   @@map("hr_job_level")
 }
@@ -792,11 +793,15 @@ model HrEmployee {
   departmentNodeId String
   positionId       String
   employeeTypeId   String
+  supervisorId     String?
+  supervisor       HrEmployee?  @relation("EmployeeSupervisor", fields: [supervisorId], references: [id], onDelete: SetNull)
+  directReports    HrEmployee[] @relation("EmployeeSupervisor")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   @@index([branchNodeId])
   @@index([departmentNodeId])
+  @@index([supervisorId])
   @@map("hr_employee")
 }
 

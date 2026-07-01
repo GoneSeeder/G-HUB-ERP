@@ -13,6 +13,10 @@ export class CreateJobLevelDto {
   rank!: number;
 
   @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
   @IsBoolean()
   active?: boolean;
 }
@@ -31,6 +35,10 @@ export class UpdateJobLevelDto {
   @IsInt()
   @Min(1)
   rank?: number;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 
   @IsOptional()
   @IsBoolean()

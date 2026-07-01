@@ -13,7 +13,7 @@ export class HumansourceJobLevelsService {
   async create(dto: CreateJobLevelDto) {
     const id = await this.nextId();
     return this.prisma.hrJobLevel.create({
-      data: { id, nameTh: dto.nameTh, nameEn: dto.nameEn, rank: dto.rank, active: true },
+      data: { id, nameTh: dto.nameTh, nameEn: dto.nameEn, rank: dto.rank, description: dto.description ?? '', active: true },
     });
   }
 

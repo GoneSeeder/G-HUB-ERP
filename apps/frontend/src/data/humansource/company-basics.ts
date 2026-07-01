@@ -57,6 +57,36 @@ export const AUTO_EMP_CODE_DEFAULT: AutoEmpCodeSetting = {
 };
 export const EMP_NEXT_NUMBER_KEY = 'g-hub.hr.emp-next-number';
 
+export function buildAutoEmpCode(s: AutoEmpCodeSetting): string {
+  if (s.mode === 'standard') {
+    const yy = String(new Date().getFullYear()).slice(-2);
+    return `${yy}${String(s.standardNextNumber).padStart(s.standardPadding, '0')}`;
+  }
+  const year = s.customWithYear ? String(new Date().getFullYear()) : '';
+  const num = String(s.customNextNumber).padStart(s.customPadding, '0');
+  return `${s.customPrefix}${year}${num}`;
+}
+
+export function readAutoEmpCodeSetting(): AutoEmpCodeSetting {
+  try {
+    const raw = localStorage.getItem(AUTO_EMP_CODE_KEY);
+    if (raw) return { ...AUTO_EMP_CODE_DEFAULT, ...(JSON.parse(raw) as Partial<AutoEmpCodeSetting>) };
+  } catch { /* ignore */ }
+  return AUTO_EMP_CODE_DEFAULT;
+}
+
+export function consumeAutoEmpCode(): string {
+  const setting = readAutoEmpCodeSetting();
+  const code = buildAutoEmpCode(setting);
+  const next: AutoEmpCodeSetting = setting.mode === 'standard'
+    ? { ...setting, standardNextNumber: setting.standardNextNumber + 1 }
+    : { ...setting, customNextNumber: setting.customNextNumber + 1 };
+  try {
+    localStorage.setItem(AUTO_EMP_CODE_KEY, JSON.stringify(next));
+  } catch { /* ignore */ }
+  return code;
+}
+
 export type MasterOption = { id: string; nameTh: string; nameEn?: string; active: boolean };
 
 export const PREFIX_OPTIONS_STORAGE_KEY      = 'g-hub.hr.master.prefixes';

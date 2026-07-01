@@ -52,22 +52,13 @@ const POSITIONS = [
   { id: 'P007', code: 'ST004', nameTh: 'ผู้อำนวยการ',   nameEn: 'Director',    level: 'Executive',  jobLevelId: 'JL-E',  companyId: '', employeeTypes: [], salaryMin: 90000,  salaryMax: 150000, overview: '', responsibilities: '', qualifications: '', hasBenefits: true,  active: true  },
 ];
 
-// ─── Shifts (base definitions, mirrors hr-shifts.ts BASE_SHIFT_GROUPS) ────────
-const BASE_SHIFTS = [
-  { id: 'WC001', code: 'WC001', name: 'สำนักงาน 08.30-17.30',  type: 'กะปกติ',     time: '08:30-12:00 / 13:00-17:30',     companyScope: 'ใช้กับทุกบริษัท', groupKey: 'same-day',    enabled: true,  color: '#8b5cf6', updatedBy: 'empeo Team' },
-  { id: 'WC002', code: 'WC002', name: 'สำนักงานครึ่งวัน',       type: 'กะพิเศษ',    time: '08:30-12:00 / 13:00-15:00',     companyScope: 'G-HUB Enterprise', groupKey: 'same-day',    enabled: true,  color: '#ec4899', updatedBy: 'HR Admin' },
-  { id: 'WC003', code: 'WC003', name: 'กะดึก 22.00-06.00',     type: 'กะข้ามวัน',  time: '22:00-02:00 / 03:00-06:00',     companyScope: 'Operations',        groupKey: 'overnight',   enabled: true,  color: '#f97316', updatedBy: 'HR Admin' },
-  { id: 'WC004', code: 'WC004', name: 'ภาคสนาม 8 ชั่วโมง',     type: 'ชั่วโมงรวม', time: 'ครบ 8 ชม. / พักยืดหยุ่น',      companyScope: 'ฝ่ายขาย',          groupKey: 'total-hours', enabled: false, color: '#22d3ee', updatedBy: 'HR Admin' },
-  { id: 'WC005', code: 'WC005', name: 'ควบเช้า-บ่าย',           type: 'ควบกะ',      time: '06:00-14:00 + 14:00-22:00',     companyScope: 'คลังสินค้า',        groupKey: 'combined',    enabled: false, color: '#06b6d4', updatedBy: 'HR Admin' },
-];
-
 // ─── Leave types seed (mirrors leave-types.ts LEAVE_TYPE_SEED) ─────────────────
 const CANONICAL_SHIFTS = [
   { id: 'WC001', code: 'S1', name: 'สำนักงาน 08.00-17.00', type: 'กะเช้า', time: '08:00-12:00 / 13:00-17:00', companyScope: 'ใช้กับทุกบริษัท', groupKey: 'same-day', enabled: true, description: 'พนักงานออฟฟิศ', timezone: 'Asia/Bangkok (UTC+07:00)', color: '#bf5a5a', attendanceRule: 'ตามเวลาทำงานในกะ', flexibleEntryEnabled: false, flexibleMinutes: 0, minimumWorkHours: 8, trackBreak: true, shiftAllowanceEnabled: false, shiftAllowanceAmount: 0, prorateShiftAllowance: true, holidayPremiumEnabled: false, overtimePremiumEnabled: false, updatedBy: 'empeo Team' },
   { id: 'WC002', code: 'S2', name: 'กะเช้า 06.00-14.00', type: 'กะเช้า', time: '06:00-10:00 / 10:30-14:00', companyScope: 'ใช้กับทุกบริษัท', groupKey: 'same-day', enabled: true, description: 'พนักงานกะเช้า', timezone: 'Asia/Bangkok (UTC+07:00)', color: '#3b82f6', attendanceRule: 'ตามเวลาทำงานในกะ', flexibleEntryEnabled: false, flexibleMinutes: 0, minimumWorkHours: 8, trackBreak: true, shiftAllowanceEnabled: false, shiftAllowanceAmount: 0, prorateShiftAllowance: true, holidayPremiumEnabled: false, overtimePremiumEnabled: false, updatedBy: 'empeo Team' },
   { id: 'WC003', code: 'S3', name: 'กะบ่าย 14.00-22.00', type: 'กะบ่าย', time: '14:00-18:00 / 18:30-22:00', companyScope: 'ใช้กับทุกบริษัท', groupKey: 'overnight', enabled: true, description: 'พนักงานกะบ่าย', timezone: 'Asia/Bangkok (UTC+07:00)', color: '#f97316', attendanceRule: 'ตามเวลาทำงานในกะ', flexibleEntryEnabled: false, flexibleMinutes: 0, minimumWorkHours: 8, trackBreak: true, shiftAllowanceEnabled: false, shiftAllowanceAmount: 0, prorateShiftAllowance: true, holidayPremiumEnabled: false, overtimePremiumEnabled: false, updatedBy: 'empeo Team' },
   { id: 'WC004', code: 'S4', name: 'กะดึก 22.00-06.00', type: 'กะดึก', time: '22:00-02:00 / 02:30-06:00', companyScope: 'ใช้กับทุกบริษัท', groupKey: 'total-hours', enabled: true, description: 'พนักงานกะดึก', timezone: 'Asia/Bangkok (UTC+07:00)', color: '#334155', attendanceRule: 'ตามเวลาทำงานในกะ', flexibleEntryEnabled: false, flexibleMinutes: 0, minimumWorkHours: 8, trackBreak: true, shiftAllowanceEnabled: false, shiftAllowanceAmount: 0, prorateShiftAllowance: true, holidayPremiumEnabled: false, overtimePremiumEnabled: false, updatedBy: 'empeo Team' },
-] satisfies typeof BASE_SHIFTS;
+];
 
 const _br = { payType: 'paid', countBasis: 'working-day', countHolidayAsLeave: false, minMinutes: 60, allowHalfDay: true, advanceDays: 7, backdateDays: 3, maxConsecutiveDays: null, requireAttachment: false, requireAttachmentOverDays: null, rounding: 'half', carryOver: false, carryOverCap: null, carryOverExpiryMonths: null };
 const _be = { gender: 'all', requirePassProbation: false, minTenureMonths: 0, positionIds: [], orgNodeIds: [], employeeIds: [] };
@@ -161,44 +152,49 @@ const BRANCH_DEPT_TO_NODE_ID: Record<string, string> = {
 type EmployeeSeed = {
   name: string; handle: string; position: string; department: string; branch: string;
   empType: string; status: string; salary: number; startDate: string;
+  supervisorHandle?: string;
 };
 const EMPLOYEE_SEED: EmployeeSeed[] = [
   { name: 'สมชาย ใจดี',          handle: 'somchai.j',   position: 'CEO',           department: 'ฝ่ายบุคคล', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 150000, startDate: '10/06/2019' },
-  { name: 'ประเสริฐ วงศ์ไพศาล', handle: 'prasert.w',   position: 'ผู้อำนวยการ',   department: 'Operations', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 110000, startDate: '01/02/2020' },
-  { name: 'กาญจนา ศรีสุข',       handle: 'kanjana.s',   position: 'ผู้จัดการ',     department: 'ฝ่ายบุคคล', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 68000,  startDate: '15/03/2020' },
-  { name: 'ธนกร รัตนชัย',        handle: 'thanakorn.r', position: 'ผู้จัดการ',     department: 'ฝ่ายบัญชี', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 65000,  startDate: '01/07/2020' },
-  { name: 'วิไล จันทร์เพ็ญ',     handle: 'wilai.c',     position: 'ผู้จัดการ',     department: 'ฝ่ายขาย',   branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 72000,  startDate: '12/09/2020' },
-  { name: 'อนุชา เทพประสิทธิ์', handle: 'anucha.t',    position: 'ผู้จัดการ',     department: 'IT',         branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 70000,  startDate: '03/01/2021' },
-  { name: 'พิมพ์ใจ งามตา',       handle: 'pimjai.n',    position: 'หัวหน้างาน',    department: 'ฝ่ายบุคคล', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 38000,  startDate: '20/05/2021' },
-  { name: 'ศักดิ์ชัย ยิ้มแย้ม', handle: 'sakchai.y',   position: 'หัวหน้างาน',    department: 'ฝ่ายบัญชี', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 40000,  startDate: '18/08/2021' },
-  { name: 'นภา สวยงาม',          handle: 'napa.s',      position: 'หัวหน้างาน',    department: 'ฝ่ายขาย',   branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 42000,  startDate: '02/02/2022' },
-  { name: 'วิชัย แข็งแรง',        handle: 'wichai.k',    position: 'หัวหน้างาน',    department: 'IT',         branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 41000,  startDate: '15/06/2022' },
-  { name: 'สุดา มีสุข',          handle: 'suda.m',      position: 'พนักงานบัญชี',  department: 'ฝ่ายบัญชี', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 28000,  startDate: '01/03/2022' },
-  { name: 'รัตนา ทองคำ',         handle: 'rattana.t',   position: 'พนักงานบัญชี',  department: 'ฝ่ายบัญชี', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 26000,  startDate: '10/10/2022' },
-  { name: 'มานพ สุขสันต์',       handle: 'manop.s',     position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 24000,  startDate: '05/05/2023' },
-  { name: 'จิราภรณ์ แสงทอง',     handle: 'jiraporn.s',  position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 23000,  startDate: '20/07/2023' },
-  { name: 'เอกพงษ์ ชัยมงคล',     handle: 'ekkapong.c',  position: 'พนักงานทั่วไป', department: 'IT',         branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 25000,  startDate: '01/09/2023' },
-  { name: 'สุภาพร ดวงดี',        handle: 'supaporn.d',  position: 'พนักงานทั่วไป', department: 'ฝ่ายบุคคล', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 22000,  startDate: '15/11/2023' },
-  { name: 'ชาญชัย ภักดี',        handle: 'chanchai.p',  position: 'พนักงานทั่วไป', department: 'Operations', branch: 'สำนักงานใหญ่',  empType: 'รายวัน',   status: 'ปกติ',        salary: 18000,  startDate: '02/01/2024' },
-  { name: 'ปรีดา ทองดี',         handle: 'preeda.t',    position: 'พนักงานทั่วไป', department: 'Operations', branch: 'สำนักงานใหญ่',  empType: 'รายวัน',   status: 'ปกติ',        salary: 17500,  startDate: '10/02/2024' },
-  { name: 'วรรณภา ใจซื่อ',       handle: 'wannapa.j',   position: 'พนักงานทั่วไป', department: 'Operations', branch: 'สำนักงานใหญ่',  empType: 'รายวัน',   status: 'ทดลองงาน',   salary: 17000,  startDate: '01/05/2026' },
-  { name: 'ธีรศักดิ์ คงทน',      handle: 'theerasak.k', position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ทดลองงาน',   salary: 22000,  startDate: '15/04/2026' },
-  { name: 'อรทัย พูนสุข',        handle: 'orathai.p',   position: 'พนักงานทั่วไป', department: 'ฝ่ายบุคคล', branch: 'สำนักงานใหญ่',  empType: 'พาร์ทไทม์', status: 'ปกติ',        salary: 14000,  startDate: '01/06/2025' },
-  { name: 'กิตติ มากมี',         handle: 'kitti.m',     position: 'พนักงานทั่วไป', department: 'Operations', branch: 'สำนักงานใหญ่',  empType: 'พาร์ทไทม์', status: 'ปกติ',        salary: 13000,  startDate: '10/08/2025' },
-  { name: 'สมหญิง รุ่งเรือง',    handle: 'somying.r',   position: 'พนักงานบัญชี',  department: 'ฝ่ายบัญชี', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ลาพักร้อน',  salary: 27000,  startDate: '03/03/2022' },
-  { name: 'ณัฐพล อินทร์',        handle: 'nattapon.i',  position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ลาออก',       salary: 24000,  startDate: '01/01/2021' },
-  { name: 'ภาณุพงศ์ ดอยคำ',      handle: 'panupong.d',  position: 'ผู้จัดการ',     department: 'ฝ่ายขาย',   branch: 'สาขาเชียงใหม่', empType: 'รายเดือน', status: 'ปกติ',        salary: 60000,  startDate: '01/04/2021' },
-  { name: 'มาลี ล้านนา',         handle: 'malee.l',     position: 'หัวหน้างาน',    department: 'ฝ่ายขาย',   branch: 'สาขาเชียงใหม่', empType: 'รายเดือน', status: 'ปกติ',        salary: 36000,  startDate: '12/07/2022' },
-  { name: 'สมพร ขุนเขา',         handle: 'somporn.k',   position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สาขาเชียงใหม่', empType: 'รายเดือน', status: 'ปกติ',        salary: 22000,  startDate: '05/09/2023' },
-  { name: 'ดวงใจ ไพรพนา',        handle: 'duangjai.p',  position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สาขาเชียงใหม่', empType: 'รายเดือน', status: 'ปกติ',        salary: 21000,  startDate: '18/01/2024' },
-  { name: 'ปิยะ เชียงดาว',       handle: 'piya.c',      position: 'พนักงานทั่วไป', department: 'ฝ่ายบุคคล', branch: 'สาขาเชียงใหม่', empType: 'รายวัน',   status: 'ปกติ',        salary: 16500,  startDate: '02/03/2024' },
-  { name: 'กนกวรรณ สันป่าตอง',   handle: 'kanokwan.s',  position: 'พนักงานบัญชี',  department: 'ฝ่ายบัญชี', branch: 'สาขาเชียงใหม่', empType: 'รายเดือน', status: 'ปกติ',        salary: 24000,  startDate: '10/06/2023' },
-  { name: 'ธวัช แม่ริม',         handle: 'thawat.m',    position: 'พนักงานทั่วไป', department: 'Operations', branch: 'สาขาเชียงใหม่', empType: 'รายวัน',   status: 'สิ้นสุดสัญญา', salary: 16000,  startDate: '01/01/2023' },
-  { name: 'อิสรา อันดามัน',      handle: 'isara.a',     position: 'ผู้จัดการ',     department: 'ฝ่ายขาย',   branch: 'สาขาภูเก็ต',    empType: 'รายเดือน', status: 'ปกติ',        salary: 58000,  startDate: '01/05/2022' },
-  { name: 'ชลธี ทะเลใส',         handle: 'chonlatee.t', position: 'หัวหน้างาน',    department: 'ฝ่ายขาย',   branch: 'สาขาภูเก็ต',    empType: 'รายเดือน', status: 'ปกติ',        salary: 35000,  startDate: '15/08/2023' },
-  { name: 'นรินทร์ หาดทราย',     handle: 'narin.h',     position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สาขาภูเก็ต',    empType: 'รายเดือน', status: 'ปกติ',        salary: 21000,  startDate: '20/02/2024' },
-  { name: 'พรทิพย์ เกาะแก้ว',    handle: 'porntip.k',   position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สาขาภูเก็ต',    empType: 'รายวัน',   status: 'ทดลองงาน',   salary: 16000,  startDate: '01/06/2026' },
+  { name: 'ประเสริฐ วงศ์ไพศาล', handle: 'prasert.w',   position: 'ผู้อำนวยการ',   department: 'Operations', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 110000, startDate: '01/02/2020', supervisorHandle: 'somchai.j' },
+  { name: 'กาญจนา ศรีสุข',       handle: 'kanjana.s',   position: 'ผู้จัดการ',     department: 'ฝ่ายบุคคล', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 68000,  startDate: '15/03/2020', supervisorHandle: 'prasert.w' },
+  { name: 'ธนกร รัตนชัย',        handle: 'thanakorn.r', position: 'ผู้จัดการ',     department: 'ฝ่ายบัญชี', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 65000,  startDate: '01/07/2020', supervisorHandle: 'prasert.w' },
+  { name: 'วิไล จันทร์เพ็ญ',     handle: 'wilai.c',     position: 'ผู้จัดการ',     department: 'ฝ่ายขาย',   branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 72000,  startDate: '12/09/2020', supervisorHandle: 'prasert.w' },
+  { name: 'อนุชา เทพประสิทธิ์', handle: 'anucha.t',    position: 'ผู้จัดการ',     department: 'IT',         branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 70000,  startDate: '03/01/2021', supervisorHandle: 'prasert.w' },
+  { name: 'พิมพ์ใจ งามตา',       handle: 'pimjai.n',    position: 'หัวหน้างาน',    department: 'ฝ่ายบุคคล', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 38000,  startDate: '20/05/2021', supervisorHandle: 'kanjana.s' },
+  { name: 'ศักดิ์ชัย ยิ้มแย้ม', handle: 'sakchai.y',   position: 'หัวหน้างาน',    department: 'ฝ่ายบัญชี', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 40000,  startDate: '18/08/2021', supervisorHandle: 'thanakorn.r' },
+  { name: 'นภา สวยงาม',          handle: 'napa.s',      position: 'หัวหน้างาน',    department: 'ฝ่ายขาย',   branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 42000,  startDate: '02/02/2022', supervisorHandle: 'wilai.c' },
+  { name: 'วิชัย แข็งแรง',        handle: 'wichai.k',    position: 'หัวหน้างาน',    department: 'IT',         branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 41000,  startDate: '15/06/2022', supervisorHandle: 'anucha.t' },
+  { name: 'สุดา มีสุข',          handle: 'suda.m',      position: 'พนักงานบัญชี',  department: 'ฝ่ายบัญชี', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 28000,  startDate: '01/03/2022', supervisorHandle: 'sakchai.y' },
+  { name: 'รัตนา ทองคำ',         handle: 'rattana.t',   position: 'พนักงานบัญชี',  department: 'ฝ่ายบัญชี', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 26000,  startDate: '10/10/2022', supervisorHandle: 'sakchai.y' },
+  { name: 'มานพ สุขสันต์',       handle: 'manop.s',     position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 24000,  startDate: '05/05/2023', supervisorHandle: 'napa.s' },
+  { name: 'จิราภรณ์ แสงทอง',     handle: 'jiraporn.s',  position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 23000,  startDate: '20/07/2023', supervisorHandle: 'napa.s' },
+  { name: 'เอกพงษ์ ชัยมงคล',     handle: 'ekkapong.c',  position: 'พนักงานทั่วไป', department: 'IT',         branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 25000,  startDate: '01/09/2023', supervisorHandle: 'wichai.k' },
+  { name: 'สุภาพร ดวงดี',        handle: 'supaporn.d',  position: 'พนักงานทั่วไป', department: 'ฝ่ายบุคคล', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ปกติ',        salary: 22000,  startDate: '15/11/2023', supervisorHandle: 'pimjai.n' },
+  { name: 'ชาญชัย ภักดี',        handle: 'chanchai.p',  position: 'พนักงานทั่วไป', department: 'Operations', branch: 'สำนักงานใหญ่',  empType: 'รายวัน',   status: 'ปกติ',        salary: 18000,  startDate: '02/01/2024', supervisorHandle: 'prasert.w' },
+  { name: 'ปรีดา ทองดี',         handle: 'preeda.t',    position: 'พนักงานทั่วไป', department: 'Operations', branch: 'สำนักงานใหญ่',  empType: 'รายวัน',   status: 'ปกติ',        salary: 17500,  startDate: '10/02/2024', supervisorHandle: 'prasert.w' },
+  { name: 'วรรณภา ใจซื่อ',       handle: 'wannapa.j',   position: 'พนักงานทั่วไป', department: 'Operations', branch: 'สำนักงานใหญ่',  empType: 'รายวัน',   status: 'ทดลองงาน',   salary: 17000,  startDate: '01/05/2026', supervisorHandle: 'prasert.w' },
+  { name: 'ธีรศักดิ์ คงทน',      handle: 'theerasak.k', position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ทดลองงาน',   salary: 22000,  startDate: '15/04/2026', supervisorHandle: 'napa.s' },
+  { name: 'อรทัย พูนสุข',        handle: 'orathai.p',   position: 'พนักงานทั่วไป', department: 'ฝ่ายบุคคล', branch: 'สำนักงานใหญ่',  empType: 'พาร์ทไทม์', status: 'ปกติ',        salary: 14000,  startDate: '01/06/2025', supervisorHandle: 'pimjai.n' },
+  { name: 'กิตติ มากมี',         handle: 'kitti.m',     position: 'พนักงานทั่วไป', department: 'Operations', branch: 'สำนักงานใหญ่',  empType: 'พาร์ทไทม์', status: 'ปกติ',        salary: 13000,  startDate: '10/08/2025', supervisorHandle: 'prasert.w' },
+  { name: 'สมหญิง รุ่งเรือง',    handle: 'somying.r',   position: 'พนักงานบัญชี',  department: 'ฝ่ายบัญชี', branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ลาพักร้อน',  salary: 27000,  startDate: '03/03/2022', supervisorHandle: 'sakchai.y' },
+  { name: 'ณัฐพล อินทร์',        handle: 'nattapon.i',  position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สำนักงานใหญ่',  empType: 'รายเดือน', status: 'ลาออก',       salary: 24000,  startDate: '01/01/2021', supervisorHandle: 'napa.s' },
+  { name: 'ภาณุพงศ์ ดอยคำ',      handle: 'panupong.d',  position: 'ผู้จัดการ',     department: 'ฝ่ายขาย',   branch: 'สาขาเชียงใหม่', empType: 'รายเดือน', status: 'ปกติ',        salary: 60000,  startDate: '01/04/2021', supervisorHandle: 'somchai.j' },
+  { name: 'มาลี ล้านนา',         handle: 'malee.l',     position: 'หัวหน้างาน',    department: 'ฝ่ายขาย',   branch: 'สาขาเชียงใหม่', empType: 'รายเดือน', status: 'ปกติ',        salary: 36000,  startDate: '12/07/2022', supervisorHandle: 'panupong.d' },
+  { name: 'สมพร ขุนเขา',         handle: 'somporn.k',   position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สาขาเชียงใหม่', empType: 'รายเดือน', status: 'ปกติ',        salary: 22000,  startDate: '05/09/2023', supervisorHandle: 'malee.l' },
+  { name: 'ดวงใจ ไพรพนา',        handle: 'duangjai.p',  position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สาขาเชียงใหม่', empType: 'รายเดือน', status: 'ปกติ',        salary: 21000,  startDate: '18/01/2024', supervisorHandle: 'malee.l' },
+  { name: 'ปิยะ เชียงดาว',       handle: 'piya.c',      position: 'พนักงานทั่วไป', department: 'ฝ่ายบุคคล', branch: 'สาขาเชียงใหม่', empType: 'รายวัน',   status: 'ปกติ',        salary: 16500,  startDate: '02/03/2024', supervisorHandle: 'panupong.d' },
+  { name: 'กนกวรรณ สันป่าตอง',   handle: 'kanokwan.s',  position: 'พนักงานบัญชี',  department: 'ฝ่ายบัญชี', branch: 'สาขาเชียงใหม่', empType: 'รายเดือน', status: 'ปกติ',        salary: 24000,  startDate: '10/06/2023', supervisorHandle: 'panupong.d' },
+  { name: 'ธวัช แม่ริม',         handle: 'thawat.m',    position: 'พนักงานทั่วไป', department: 'Operations', branch: 'สาขาเชียงใหม่', empType: 'รายวัน',   status: 'สิ้นสุดสัญญา', salary: 16000,  startDate: '01/01/2023', supervisorHandle: 'panupong.d' },
+  { name: 'อิสรา อันดามัน',      handle: 'isara.a',     position: 'ผู้จัดการ',     department: 'ฝ่ายขาย',   branch: 'สาขาภูเก็ต',    empType: 'รายเดือน', status: 'ปกติ',        salary: 58000,  startDate: '01/05/2022', supervisorHandle: 'somchai.j' },
+  { name: 'ชลธี ทะเลใส',         handle: 'chonlatee.t', position: 'หัวหน้างาน',    department: 'ฝ่ายขาย',   branch: 'สาขาภูเก็ต',    empType: 'รายเดือน', status: 'ปกติ',        salary: 35000,  startDate: '15/08/2023', supervisorHandle: 'isara.a' },
+  { name: 'นรินทร์ หาดทราย',     handle: 'narin.h',     position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สาขาภูเก็ต',    empType: 'รายเดือน', status: 'ปกติ',        salary: 21000,  startDate: '20/02/2024', supervisorHandle: 'chonlatee.t' },
+  { name: 'พรทิพย์ เกาะแก้ว',    handle: 'porntip.k',   position: 'พนักงานขาย',    department: 'ฝ่ายขาย',   branch: 'สาขาภูเก็ต',    empType: 'รายวัน',   status: 'ทดลองงาน',   salary: 16000,  startDate: '01/06/2026', supervisorHandle: 'chonlatee.t' },
 ];
+
+const HANDLE_TO_EMPLOYEE_ID: Record<string, string> = Object.fromEntries(
+  EMPLOYEE_SEED.map((e, i) => [e.handle, `EMP${String(i + 1).padStart(4, '0')}`]),
+);
 
 export async function seedHumanSource(prisma: PrismaClient): Promise<void> {
   // Org nodes — parent-first order guarantees the self-FK is satisfied.
@@ -252,6 +248,7 @@ export async function seedHumanSource(prisma: PrismaClient): Promise<void> {
       departmentNodeId: BRANCH_DEPT_TO_NODE_ID[`${e.branch}|${e.department}`] ?? 'org-ghub-wh',
       positionId: POSITION_NAME_TO_ID[e.position] ?? 'P001',
       employeeTypeId: EMPTYPE_NAME_TO_ID[e.empType] ?? 'ET001',
+      supervisorId: e.supervisorHandle ? HANDLE_TO_EMPLOYEE_ID[e.supervisorHandle] : null,
     };
     await prisma.hrEmployee.upsert({ where: { id: row.id }, update: row, create: row });
   }

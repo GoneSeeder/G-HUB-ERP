@@ -25,11 +25,11 @@ export type EmployeeDto = {
   departmentNodeId: string;
   positionId: string;
   employeeTypeId: string;
+  supervisorId: string | null;
 };
 
 type EmployeeRow = EmployeeDto & {
   payrollEmploymentTypeId?: string | null;
-  supervisorId?: string | null;
   shiftId?: string | null;
   title?: string;
   firstName?: string;
@@ -190,6 +190,7 @@ export class HumansourceEmployeesService {
       departmentNodeId: row.departmentNodeId,
       positionId: row.positionId,
       employeeTypeId: row.employeeTypeId,
+      supervisorId: row.supervisorId ?? null,
     };
   }
 
@@ -383,7 +384,11 @@ export class HumansourceEmployeesService {
       if (value !== undefined) data[key] = value;
     };
     assign('code', dto.employeeCode ?? dto.code);
-    assign('name', dto.name ?? this.composeName(dto));
+    if (dto.name !== undefined) {
+      assign('name', dto.name);
+    } else if (dto.title !== undefined || dto.firstName !== undefined || dto.lastName !== undefined) {
+      assign('name', this.composeName(dto));
+    }
     assign('email', dto.personalEmail ?? dto.email);
     assign('phone', dto.mobile ?? dto.phone);
     assign('position', resolved.position);

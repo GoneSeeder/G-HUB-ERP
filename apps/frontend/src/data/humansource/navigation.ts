@@ -65,7 +65,7 @@ export const hrNavigation: HrNavigationItem[] = [
   {
     key: 'payroll',
     label: 'เงินเดือน',
-    description: 'อยู่ในระหว่างพัฒนา',
+    description: 'ตัวอย่างหน้าจอ (mock) สำหรับพรีเซนต์ ยังไม่เปิดใช้งานจริง',
     color: '#10b981',
     icon: 'payroll',
     path: '/humansource/payroll',

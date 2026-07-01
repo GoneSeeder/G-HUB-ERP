@@ -3,6 +3,7 @@ export type JobLevel = {
   nameTh: string;
   nameEn: string;
   rank: number;   // 1 = highest
+  description?: string;
   active: boolean;
 };
 

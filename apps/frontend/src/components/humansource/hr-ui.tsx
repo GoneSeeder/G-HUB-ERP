@@ -119,6 +119,7 @@ export function HrCustomSelect({
   className,
   menuClassName,
   renderOption,
+  renderTrigger,
 }: {
   value: string;
   options: HrCustomSelectOption[];
@@ -127,6 +128,7 @@ export function HrCustomSelect({
   className?: string;
   menuClassName?: string;
   renderOption?: (option: NormalizedHrCustomSelectOption, selected: boolean) => ReactNode;
+  renderTrigger?: (option: NormalizedHrCustomSelectOption) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; left: number; minWidth: number }>({ left: 0, minWidth: 0 });
@@ -180,7 +182,9 @@ export function HrCustomSelect({
         onClick={() => open ? setOpen(false) : openMenu()}
       >
         <span className={`hr-custom-select__value${!value ? ' hr-custom-select__value--placeholder' : ''}`}>
-          {value ? (selectedOption?.label ?? value) : 'กรุณาเลือก'}
+          {value
+            ? (renderTrigger && selectedOption ? renderTrigger(selectedOption) : (selectedOption?.label ?? value))
+            : 'กรุณาเลือก'}
         </span>
         <span className="hr-custom-select__chevron" aria-hidden="true" />
       </button>

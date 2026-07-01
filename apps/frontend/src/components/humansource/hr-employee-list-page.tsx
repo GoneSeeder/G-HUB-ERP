@@ -17,6 +17,9 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { HrBadge, HrCustomSelect, HrDatePicker } from '@/components/humansource/hr-ui';
 import { employees, type Employee } from '@/data/humansource/mock';
 import { publicApiFetch } from '@/lib/api';
+import { readAutoEmpCodeSetting, consumeAutoEmpCode, buildAutoEmpCode } from '@/data/humansource/company-basics';
+import { EmployeeOrgChartTab } from './hr-employee-org-chart';
+import { SSO_HOSPITALS } from './hr-sso-hospitals';
 
 export function HrEmployeeListPage() {
   const [showAddEmployee, setShowAddEmployee] = useState(false);
@@ -1089,12 +1092,11 @@ function FilterPanel({
 // ─── Add Employee modal (multi-step) ──────────────────────────────────────────
 
 const ADD_STEPS = [
-  { id: 1, label: 'ข้อมูลจำเป็น', description: 'ระบุตัวตนและช่องทางติดต่อ' },
-  { id: 2, label: 'การจ้างงานและสิทธิ์', description: 'สังกัด วันเริ่มงาน และสิทธิ์พื้นฐาน' },
-  { id: 3, label: 'ที่อยู่และผู้ติดต่อ', description: 'ที่อยู่ปัจจุบันและกรณีฉุกเฉิน' },
-  { id: 4, label: 'ธนาคารและเงินเดือน', description: 'บัญชีรับเงินเดือนและกลุ่ม Payroll' },
-  { id: 5, label: 'ประกันสังคมและภาษี', description: 'ข้อมูลนำส่งและวิธีคำนวณภาษี' },
-  { id: 6, label: 'เอกสารและตรวจสอบ', description: 'เอกสารประกอบและสรุปก่อนสร้าง' },
+  { id: 1, label: 'ข้อมูลพนักงาน', description: 'ระบุตัวตนและช่องทางติดต่อ' },
+  { id: 2, label: 'การจ้างงาน', description: 'สังกัด วันเริ่มงาน และสิทธิ์พื้นฐาน' },
+  { id: 3, label: 'การติดต่อ', description: 'ที่อยู่ปัจจุบันและกรณีฉุกเฉิน' },
+  { id: 4, label: 'เงินเดือน', description: 'บัญชีรับเงินเดือนและกลุ่ม Payroll' },
+  { id: 5, label: 'ประกันสังคม', description: 'ข้อมูลนำส่งและวิธีคำนวณภาษี' },
 ];
 
 type EmployeeDraft = {
@@ -1110,31 +1112,66 @@ type EmployeeDraft = {
   idNumber: string;
   mobile: string;
   personalEmail: string;
+  workEmail: string;
+  workPhone: string;
+  sendLoginEmail: boolean;
+  sendOnboardingEmail: boolean;
+  lineId: string;
   company: string;
   branch: string;
   department: string;
+  level: string;
   position: string;
   supervisor: string;
+  status: string;
   employeeType: string;
   startDate: string;
   workSchedule: string;
+  contractEnd: string;
+  holidayCal: string;
+  licenseNo: string;
+  workforce: 'new' | 'replace' | '';
+  timeRecord: 'yes' | 'no';
+  contractType: string;
   currentAddress: string;
   subdistrict: string;
   district: string;
   province: string;
   postalCode: string;
-  emergencyName: string;
+  mailingSameAsRegistered: boolean;
+  mailingAddress: string;
+  mailingSubdistrict: string;
+  mailingDistrict: string;
+  mailingProvince: string;
+  mailingPostalCode: string;
+  emergencyFirstName: string;
+  emergencyLastName: string;
   emergencyRelationship: string;
   emergencyPhone: string;
+  payMethod: 'bank' | 'cash';
   bankName: string;
   bankBranch: string;
   bankAccountName: string;
   bankAccountNumber: string;
   payrollGroup: string;
   salaryRate: string;
-  socialSecurityStatus: string;
-  socialSecurityHospital: string;
   taxMethod: string;
+  ssoSendMoney: boolean;
+  ssoSendProvidentFund: boolean;
+  ssoIdNo: string;
+  ssoDocType: string;
+  ssoNationality: string;
+  ssoHospital1: string;
+  ssoHospital2: string;
+  ssoHospital3: string;
+  ssoTerminationReason: string;
+  ssoCardDate: string;
+  ssoNote: string;
+  ssoBranchCustom: boolean;
+  ssoBranch: string;
+  ssoKor20Custom: boolean;
+  ssoBusinessCode: string;
+  ssoContribRate: string;
   providentFund: string;
   documentIdCard: boolean;
   documentHouseRegistration: boolean;
@@ -1143,7 +1180,7 @@ type EmployeeDraft = {
 };
 
 const EMPTY_EMPLOYEE: EmployeeDraft = {
-  employeeCode: 'EMP-00600',
+  employeeCode: '',
   title: '',
   firstName: '',
   lastName: '',
@@ -1155,31 +1192,66 @@ const EMPTY_EMPLOYEE: EmployeeDraft = {
   idNumber: '',
   mobile: '',
   personalEmail: '',
-  company: 'G-HUB Enterprise',
-  branch: 'สำนักงานใหญ่',
+  workEmail: '',
+  workPhone: '',
+  sendLoginEmail: false,
+  sendOnboardingEmail: false,
+  lineId: '',
+  company: '',
+  branch: '',
   department: '',
+  level: '',
   position: '',
   supervisor: '',
+  status: 'ทดลองงาน',
   employeeType: 'พนักงานรายเดือน',
   startDate: '',
-  workSchedule: 'จันทร์ - ศุกร์ (08:30 - 17:30)',
+  workSchedule: '',
+  contractEnd: '',
+  holidayCal: '',
+  licenseNo: '',
+  workforce: '',
+  timeRecord: 'yes',
+  contractType: 'รายเดือน',
   currentAddress: '',
   subdistrict: '',
   district: '',
   province: '',
   postalCode: '',
-  emergencyName: '',
+  mailingSameAsRegistered: false,
+  mailingAddress: '',
+  mailingSubdistrict: '',
+  mailingDistrict: '',
+  mailingProvince: '',
+  mailingPostalCode: '',
+  emergencyFirstName: '',
+  emergencyLastName: '',
   emergencyRelationship: '',
   emergencyPhone: '',
+  payMethod: 'bank',
   bankName: '',
   bankBranch: '',
   bankAccountName: '',
   bankAccountNumber: '',
   payrollGroup: 'พนักงานรายเดือน',
   salaryRate: '',
-  socialSecurityStatus: 'ขึ้นทะเบียนผู้ประกันตนใหม่',
-  socialSecurityHospital: '',
-  taxMethod: 'คำนวณภาษีแบบเฉลี่ยทั้งปี',
+  taxMethod: 'บุคคลธรรมดา',
+  ssoSendMoney: true,
+  ssoSendProvidentFund: false,
+  ssoIdNo: '',
+  ssoDocType: 'บัตรประชาชน',
+  ssoNationality: 'ไทย',
+  ssoHospital1: '',
+  ssoHospital2: '',
+  ssoHospital3: '',
+  ssoTerminationReason: '',
+  ssoCardDate: '',
+  ssoNote: '',
+  ssoBranchCustom: false,
+  ssoBranch: '',
+  ssoKor20Custom: false,
+  ssoBusinessCode: '',
+  ssoContribRate: '',
   providentFund: 'ไม่เข้าร่วม',
   documentIdCard: false,
   documentHouseRegistration: false,
@@ -1317,6 +1389,13 @@ function AddEmployeeModal({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [onClose]);
 
+  useEffect(() => {
+    const setting = readAutoEmpCodeSetting();
+    if (setting.enabled) {
+      setDraft((current) => (current.employeeCode ? current : { ...current, employeeCode: buildAutoEmpCode(setting) }));
+    }
+  }, []);
+
   const update = <K extends keyof EmployeeDraft>(key: K, value: EmployeeDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
   };
@@ -1337,6 +1416,8 @@ function AddEmployeeModal({ onClose }: { onClose: () => void }) {
     }
 
     if (isLast) {
+      const setting = readAutoEmpCodeSetting();
+      if (setting.enabled) consumeAutoEmpCode();
       setCreated(true);
       return;
     }
@@ -1416,10 +1497,9 @@ function AddEmployeeModal({ onClose }: { onClose: () => void }) {
 
             {step === 1 && <StepPersonal draft={draft} update={update} errors={personalErrors} />}
             {step === 2 && <StepEmployment draft={draft} update={update} />}
-            {step === 3 && <StepAddress draft={draft} update={update} />}
+            {step === 3 && <StepAddress draft={draft} update={update} errors={personalErrors} />}
             {step === 4 && <StepPayroll draft={draft} update={update} />}
             {step === 5 && <StepTaxAndSocialSecurity draft={draft} update={update} />}
-            {step === 6 && <StepDocumentsAndReview draft={draft} update={update} />}
           </div>
         </main>
       </div>
@@ -1494,6 +1574,7 @@ function TextInput({
   error = false,
   inputMode,
   maxLength,
+  disabled = false,
 }: {
   placeholder?: string;
   value: string;
@@ -1502,13 +1583,14 @@ function TextInput({
   error?: boolean;
   inputMode?: 'text' | 'numeric' | 'email' | 'tel';
   maxLength?: number;
+  disabled?: boolean;
 }) {
   return (
     <div className={`flex h-11 items-center rounded-lg border bg-white transition focus-within:ring-4 ${
       error
         ? 'border-rose-500 focus-within:border-rose-500 focus-within:ring-rose-50'
         : 'border-slate-200 focus-within:border-indigo-400 focus-within:ring-indigo-50'
-    }`}>
+    } ${disabled ? 'bg-slate-50 opacity-70' : ''}`}>
       {prefix ? <span className="border-r border-slate-200 px-3 text-xs font-medium text-slate-400">{prefix}</span> : null}
       <input
         type="text"
@@ -1518,9 +1600,32 @@ function TextInput({
         inputMode={inputMode}
         maxLength={maxLength}
         aria-invalid={error}
-        className="min-w-0 flex-1 bg-transparent px-3 text-sm text-slate-800 outline-none placeholder:text-slate-400"
+        disabled={disabled}
+        className="min-w-0 flex-1 bg-transparent px-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed"
       />
     </div>
+  );
+}
+
+function CheckboxRow({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-400"
+      />
+      {label}
+    </label>
   );
 }
 
@@ -1718,21 +1823,61 @@ function StepPersonal({
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[180px_minmax(0,1fr)]">
+    </div>
+  );
+}
+
+function StepAddress({
+  draft,
+  update,
+  errors,
+}: {
+  draft: EmployeeDraft;
+  update: <K extends keyof EmployeeDraft>(key: K, value: EmployeeDraft[K]) => void;
+  errors: PersonalErrors;
+}) {
+  const mailingSame = draft.mailingSameAsRegistered;
+
+  return (
+    <div className="space-y-8">
+      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">ช่องทางติดต่อ</h3>
+          <h3 className="text-sm font-semibold text-slate-900">ข้อมูลติดต่อที่ทำงาน</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">ใช้สำหรับเข้าใช้ระบบและติดต่องานภายในองค์กร</p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FormRow label="อีเมลบริษัท (ชื่อผู้ใช้งาน)" hint="ใช้เป็นชื่อผู้ใช้งานสำหรับเข้าสู่ระบบ">
+            <TextInput
+              value={draft.workEmail}
+              onChange={(value) => update('workEmail', value)}
+              placeholder="กรอกอีเมลบริษัท"
+              inputMode="email"
+            />
+          </FormRow>
+          <FormRow label="เบอร์ที่ทำงาน">
+            <TextInput
+              value={draft.workPhone}
+              onChange={(value) => update('workPhone', value)}
+              placeholder="กรอกเบอร์ที่ทำงาน"
+              inputMode="tel"
+            />
+          </FormRow>
+          <div className="sm:col-span-2">
+            <CheckboxRow
+              checked={draft.sendLoginEmail}
+              onChange={(value) => update('sendLoginEmail', value)}
+              label="ให้ส่งอีเมลวิธีเข้าใช้ระบบ"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">ข้อมูลติดต่อส่วนตัว</h3>
           <p className="mt-1 text-xs leading-5 text-slate-500">ข้อมูลส่วนนี้ไม่บังคับ และสามารถเพิ่มภายหลังได้</p>
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
-          <FormRow label="เบอร์มือถือ" hint="ใช้สำหรับติดต่อพนักงาน" error={errors.mobile}>
-            <TextInput
-              value={draft.mobile}
-              onChange={(value) => update('mobile', value)}
-              placeholder="08X-XXX-XXXX"
-              inputMode="tel"
-              error={Boolean(errors.mobile)}
-            />
-          </FormRow>
           <FormRow
             label="อีเมลส่วนตัว"
             hint="ใช้สำหรับติดต่อพนักงานและเอกสารที่เกี่ยวข้อง"
@@ -1741,76 +1886,76 @@ function StepPersonal({
             <TextInput
               value={draft.personalEmail}
               onChange={(value) => update('personalEmail', value)}
-              placeholder="name@email.com"
+              placeholder="กรอกอีเมลส่วนตัว"
               inputMode="email"
               error={Boolean(errors.personalEmail)}
             />
           </FormRow>
+          <FormRow label="เบอร์มือถือ" hint="ใช้สำหรับติดต่อพนักงาน" error={errors.mobile}>
+            <TextInput
+              value={draft.mobile}
+              onChange={(value) => update('mobile', value)}
+              placeholder="กรอกเบอร์โทรศัพท์"
+              inputMode="tel"
+              error={Boolean(errors.mobile)}
+            />
+          </FormRow>
+          <div className="sm:col-span-2">
+            <CheckboxRow
+              checked={draft.sendOnboardingEmail}
+              onChange={(value) => update('sendOnboardingEmail', value)}
+              label="ส่งอีเมลให้เตรียมความพร้อมก่อนเริ่มงาน"
+            />
+          </div>
+          <FormRow label="ไลน์ไอดี">
+            <TextInput
+              value={draft.lineId}
+              onChange={(value) => update('lineId', value)}
+              placeholder="กรอกไลน์ไอดี"
+            />
+          </FormRow>
         </div>
       </section>
-    </div>
-  );
-}
 
-function ReviewRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid grid-cols-[140px_minmax(0,1fr)] gap-4 border-b border-slate-100 py-3 text-sm">
-      <dt className="text-slate-500">{label}</dt>
-      <dd className="font-medium text-slate-900">{value || 'ยังไม่ระบุ'}</dd>
-    </div>
-  );
-}
-
-function StepAddress({
-  draft,
-  update,
-}: {
-  draft: EmployeeDraft;
-  update: <K extends keyof EmployeeDraft>(key: K, value: EmployeeDraft[K]) => void;
-}) {
-  return (
-    <div className="space-y-8">
       <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">ที่อยู่ปัจจุบัน</h3>
+          <h3 className="text-sm font-semibold text-slate-900">ที่อยู่ตามทะเบียนบ้าน</h3>
           <p className="mt-1 text-xs leading-5 text-slate-500">ใช้สำหรับเอกสารพนักงานและการติดต่อจากบริษัท</p>
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <FormRow label="บ้านเลขที่ อาคาร ถนน และรายละเอียด">
-              <TextInput
-                value={draft.currentAddress}
-                onChange={(value) => update('currentAddress', value)}
-                placeholder="เช่น 99/9 อาคาร G-HUB ถนนรัชดาภิเษก"
-              />
-            </FormRow>
-          </div>
+          <FormRow label="ที่อยู่">
+            <TextInput
+              value={draft.currentAddress}
+              onChange={(value) => update('currentAddress', value)}
+              placeholder="กรอกที่อยู่"
+            />
+          </FormRow>
           <FormRow label="แขวง / ตำบล">
             <TextInput
               value={draft.subdistrict}
               onChange={(value) => update('subdistrict', value)}
-              placeholder="ระบุแขวงหรือตำบล"
+              placeholder="กรุณากรอกแขวง/ตำบล"
             />
           </FormRow>
           <FormRow label="เขต / อำเภอ">
             <TextInput
               value={draft.district}
               onChange={(value) => update('district', value)}
-              placeholder="ระบุเขตหรืออำเภอ"
+              placeholder="กรุณากรอกเขต/อำเภอ"
             />
           </FormRow>
           <FormRow label="จังหวัด">
             <TextInput
               value={draft.province}
               onChange={(value) => update('province', value)}
-              placeholder="ระบุจังหวัด"
+              placeholder="กรุณากรอกจังหวัด"
             />
           </FormRow>
           <FormRow label="รหัสไปรษณีย์">
             <TextInput
               value={draft.postalCode}
               onChange={(value) => update('postalCode', value.replace(/\D/g, '').slice(0, 5))}
-              placeholder="00000"
+              placeholder="กรอกรหัสไปรษณีย์"
               inputMode="numeric"
               maxLength={5}
             />
@@ -1818,17 +1963,82 @@ function StepAddress({
         </div>
       </section>
 
+      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">ที่อยู่ที่ติดต่อได้</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">ที่อยู่ปัจจุบันสำหรับจัดส่งเอกสารหรือพัสดุ</p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <CheckboxRow
+              checked={mailingSame}
+              onChange={(value) => update('mailingSameAsRegistered', value)}
+              label="เหมือนที่อยู่ตามทะเบียนบ้าน"
+            />
+          </div>
+          <FormRow label="ที่อยู่">
+            <TextInput
+              value={mailingSame ? draft.currentAddress : draft.mailingAddress}
+              onChange={(value) => update('mailingAddress', value)}
+              placeholder="กรอกที่อยู่"
+              disabled={mailingSame}
+            />
+          </FormRow>
+          <FormRow label="แขวง / ตำบล">
+            <TextInput
+              value={mailingSame ? draft.subdistrict : draft.mailingSubdistrict}
+              onChange={(value) => update('mailingSubdistrict', value)}
+              placeholder="กรุณากรอกแขวง/ตำบล"
+              disabled={mailingSame}
+            />
+          </FormRow>
+          <FormRow label="เขต / อำเภอ">
+            <TextInput
+              value={mailingSame ? draft.district : draft.mailingDistrict}
+              onChange={(value) => update('mailingDistrict', value)}
+              placeholder="กรุณากรอกเขต/อำเภอ"
+              disabled={mailingSame}
+            />
+          </FormRow>
+          <FormRow label="จังหวัด">
+            <TextInput
+              value={mailingSame ? draft.province : draft.mailingProvince}
+              onChange={(value) => update('mailingProvince', value)}
+              placeholder="กรุณากรอกจังหวัด"
+              disabled={mailingSame}
+            />
+          </FormRow>
+          <FormRow label="รหัสไปรษณีย์">
+            <TextInput
+              value={mailingSame ? draft.postalCode : draft.mailingPostalCode}
+              onChange={(value) => update('mailingPostalCode', value.replace(/\D/g, '').slice(0, 5))}
+              placeholder="กรอกรหัสไปรษณีย์"
+              inputMode="numeric"
+              maxLength={5}
+              disabled={mailingSame}
+            />
+          </FormRow>
+        </div>
+      </section>
+
       <section className="grid gap-6 lg:grid-cols-[180px_minmax(0,1fr)]">
         <div>
-          <h3 className="text-sm font-semibold text-slate-900">ผู้ติดต่อฉุกเฉิน</h3>
+          <h3 className="text-sm font-semibold text-slate-900">ผู้ติดต่อกรณีฉุกเฉิน</h3>
           <p className="mt-1 text-xs leading-5 text-slate-500">บุคคลที่บริษัทสามารถติดต่อได้เมื่อเกิดเหตุจำเป็น</p>
         </div>
         <div className="grid gap-5 sm:grid-cols-2">
-          <FormRow label="ชื่อผู้ติดต่อ">
+          <FormRow label="ชื่อ">
             <TextInput
-              value={draft.emergencyName}
-              onChange={(value) => update('emergencyName', value)}
-              placeholder="ชื่อและนามสกุล"
+              value={draft.emergencyFirstName}
+              onChange={(value) => update('emergencyFirstName', value)}
+              placeholder="กรอกชื่อผู้ติดต่อ"
+            />
+          </FormRow>
+          <FormRow label="นามสกุล">
+            <TextInput
+              value={draft.emergencyLastName}
+              onChange={(value) => update('emergencyLastName', value)}
+              placeholder="กรอกนามสกุลผู้ติดต่อ"
             />
           </FormRow>
           <FormRow label="ความสัมพันธ์">
@@ -1836,14 +2046,14 @@ function StepAddress({
               options={['บิดา', 'มารดา', 'คู่สมรส', 'พี่น้อง', 'ญาติ', 'อื่น ๆ']}
               value={draft.emergencyRelationship}
               onChange={(value) => update('emergencyRelationship', value)}
-              placeholder="เลือกความสัมพันธ์"
+              placeholder="กรุณาเลือก"
             />
           </FormRow>
-          <FormRow label="เบอร์โทรศัพท์">
+          <FormRow label="เบอร์มือถือ">
             <TextInput
               value={draft.emergencyPhone}
               onChange={(value) => update('emergencyPhone', value.replace(/\D/g, '').slice(0, 10))}
-              placeholder="0XX-XXX-XXXX"
+              placeholder="กรอกเบอร์โทรศัพท์ผู้ติดต่อ"
               inputMode="tel"
               maxLength={10}
             />
@@ -1851,6 +2061,226 @@ function StepAddress({
         </div>
       </section>
     </div>
+  );
+}
+
+const THAI_BANKS = [
+  { code: 'SCB',   nameTh: 'ธนาคารไทยพาณิชย์' },
+  { code: 'KBANK', nameTh: 'ธนาคารกสิกรไทย' },
+  { code: 'KTB',   nameTh: 'ธนาคารกรุงไทย' },
+  { code: 'BAY',   nameTh: 'ธนาคารกรุงศรีอยุธยา' },
+  { code: 'BBL',   nameTh: 'ธนาคารกรุงเทพ' },
+  { code: 'TTB',   nameTh: 'ธนาคารทีเอ็มบีธนชาต' },
+  { code: 'CIMB',  nameTh: 'ธนาคารซีไอเอ็มบี' },
+  { code: 'CITI',  nameTh: 'ธนาคารซิตี้แบงก์' },
+  { code: 'GHB',   nameTh: 'ธนาคารอาคารสงเคราะห์' },
+  { code: 'GSB',   nameTh: 'ธนาคารออมสิน' },
+  { code: 'UOB',   nameTh: 'ธนาคารยูโอบี' },
+];
+
+const BANK_LOGO_BASE = 'https://raw.githubusercontent.com/casperstack/thai-banks-logo/master/icons';
+
+function BankDropdown({
+  value,
+  onChange,
+  error,
+}: {
+  value: string;
+  onChange: (code: string) => void;
+  error?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 0 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const selectedBank = THAI_BANKS.find((b) => b.code === value || b.nameTh === value);
+
+  const filtered = query
+    ? THAI_BANKS.filter((b) => b.nameTh.includes(query) || b.code.toLowerCase().includes(query.toLowerCase()))
+    : THAI_BANKS;
+
+  const openMenu = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMenuPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width });
+    setOpen(true);
+    setTimeout(() => searchRef.current?.focus(), 50);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node) && e.target !== triggerRef.current) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={openMenu}
+        className={`hr-select-trigger w-full text-left ${error ? 'border-red-400 ring-1 ring-red-300' : ''}`}
+      >
+        {selectedBank ? (
+          <span className="flex items-center gap-2">
+            <img
+              src={`${BANK_LOGO_BASE}/${selectedBank.code}.png`}
+              alt={selectedBank.nameTh}
+              className="h-6 w-6 rounded-full object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+            <span className="text-slate-900">{selectedBank.nameTh}</span>
+          </span>
+        ) : (
+          <span className="text-slate-400">เลือกธนาคาร</span>
+        )}
+        <svg className="ml-auto h-4 w-4 flex-shrink-0 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
+      </button>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: 'absolute', top: menuPos.top, left: menuPos.left, width: menuPos.width, zIndex: 9999 }}
+          className="rounded-lg border border-slate-200 bg-white shadow-lg"
+        >
+          <div className="p-2 border-b border-slate-100">
+            <div className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100">
+              <svg className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" /></svg>
+              <input
+                ref={searchRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="ค้นหา"
+                className="w-full text-sm outline-none"
+              />
+            </div>
+          </div>
+          <div className="max-h-60 overflow-y-auto py-1">
+            {filtered.map((bank) => (
+              <button
+                key={bank.code}
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); onChange(bank.code); setOpen(false); setQuery(''); }}
+                className={`flex w-full items-center gap-3 px-3 py-2 text-sm ${bank.code === (selectedBank?.code) ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
+              >
+                <img
+                  src={`${BANK_LOGO_BASE}/${bank.code}.png`}
+                  alt={bank.nameTh}
+                  className="h-6 w-6 flex-shrink-0 rounded-full object-contain"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                <span>{bank.nameTh}</span>
+                {bank.code === selectedBank?.code && (
+                  <svg className="ml-auto h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
+
+const TAX_METHODS_PAYROLL = ['บุคคลธรรมดา', 'คงที่ 15% (International Business Center)', 'คงที่ 17% (Long-Term Resident Visa)', 'กำหนดเอง'];
+
+const SSO_DOC_TYPES = ['บัตรประชาชน', 'ใบอนุญาตทำงาน', 'ใบสำคัญคนต่างด้าว'];
+
+const SSO_TERMINATION_REASONS = [
+  'ลาออก/ละทิ้งหน้าที่โดยติดต่อนายจ้างภายใน 6 วัน',
+  'สิ้นสุดระยะเวลาการจ้าง',
+  'เลิกจ้าง/เกษียณก่อนกำหนด',
+  'เกษียณอายุ',
+  'ไล่ออก/ปลดออก/ละทิ้งหน้าที่โดยไม่ติดต่อตั้งแต่ 7 วัน',
+  'โอนย้ายสาขา',
+];
+
+const SSO_BRANCH_OPTIONS = [
+  'สาขากรุงเทพมหานคร', 'สาขานนทบุรี', 'สาขาปทุมธานี', 'สาขาสมุทรปราการ',
+  'สาขาเชียงใหม่', 'สาขาเชียงราย', 'สาขาขอนแก่น', 'สาขานครราชสีมา',
+  'สาขาอุดรธานี', 'สาขาภูเก็ต', 'สาขาสุราษฎร์ธานี', 'สาขาสงขลา',
+];
+
+const NATIONALITIES = [
+  'ไทย', 'พม่า', 'กัมพูชา', 'ลาว', 'เวียดนาม', 'มาเลเซีย', 'จีน', 'ญี่ปุ่น',
+  'เกาหลีใต้', 'อินเดีย', 'บังกลาเทศ', 'เนปาล', 'ศรีลังกา', 'ฟิลิปปินส์',
+  'อินโดนีเซีย', 'สิงคโปร์', 'สหรัฐอเมริกา', 'สหราชอาณาจักร', 'ฝรั่งเศส',
+  'เยอรมนี', 'ออสเตรเลีย', 'แคนาดา', 'รัสเซีย', 'ปากีสถาน', 'ไนจีเรีย',
+];
+
+function SearchableListDropdown({
+  value,
+  onChange,
+  options,
+  placeholder = 'ค้นหา...',
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 0 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const filtered = query ? options.filter((o) => o.toLowerCase().includes(query.toLowerCase())) : options;
+
+  const openMenu = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMenuPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width });
+    setOpen(true);
+    setTimeout(() => searchRef.current?.focus(), 50);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node) && e.target !== triggerRef.current) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+
+  return (
+    <>
+      <button ref={triggerRef} type="button" onClick={openMenu} className="hr-select-trigger w-full text-left">
+        <span className={value ? 'text-slate-900' : 'text-slate-400'}>{value || 'กรุณาเลือก'}</span>
+        <svg className="ml-auto h-4 w-4 flex-shrink-0 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
+      </button>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div ref={menuRef} style={{ position: 'absolute', top: menuPos.top, left: menuPos.left, width: menuPos.width, zIndex: 9999 }} className="rounded-lg border border-slate-200 bg-white shadow-lg">
+          <div className="p-2 border-b border-slate-100">
+            <input ref={searchRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={placeholder} className="w-full rounded-md border border-slate-200 px-3 py-1.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" />
+          </div>
+          <div className="max-h-56 overflow-y-auto">
+            {filtered.length === 0 && <p className="px-3 py-3 text-center text-xs text-slate-400">ไม่พบข้อมูล</p>}
+            {filtered.map((o) => (
+              <button key={o} type="button" onMouseDown={(e) => { e.preventDefault(); onChange(o); setOpen(false); setQuery(''); }}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-sm ${o === value ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}>
+                {o}
+                {o === value && <svg className="ml-auto h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
 
@@ -1862,71 +2292,74 @@ function StepPayroll({
   update: <K extends keyof EmployeeDraft>(key: K, value: EmployeeDraft[K]) => void;
 }) {
   return (
-    <div className="space-y-8">
-      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">บัญชีรับเงินเดือน</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">ข้อมูลสำหรับโอนเงินเดือนและออกเอกสารการจ่าย</p>
+    <div className="space-y-6">
+      {/* วิธีการชำระเงิน */}
+      <FormRow label="วิธีการชำระเงิน" required>
+        <div className="flex w-fit rounded-lg border border-slate-200 p-1">
+          {(['bank', 'cash'] as const).map((method) => (
+            <button
+              key={method}
+              type="button"
+              onClick={() => update('payMethod', method)}
+              className={`rounded-md px-5 py-1.5 text-sm font-medium transition ${
+                draft.payMethod === method ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              {method === 'bank' ? 'ธนาคาร' : 'เงินสด'}
+            </button>
+          ))}
         </div>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <FormRow label="ธนาคาร">
-            <SelectInput
-              options={['กสิกรไทย', 'กรุงเทพ', 'กรุงไทย', 'ไทยพาณิชย์', 'กรุงศรีอยุธยา', 'ทีทีบี', 'ออมสิน']}
-              value={draft.bankName}
-              onChange={(value) => update('bankName', value)}
-              placeholder="เลือกธนาคาร"
-            />
-          </FormRow>
-          <FormRow label="สาขาธนาคาร">
-            <TextInput
-              value={draft.bankBranch}
-              onChange={(value) => update('bankBranch', value)}
-              placeholder="ระบุสาขา"
-            />
-          </FormRow>
-          <FormRow label="ชื่อบัญชี">
-            <TextInput
-              value={draft.bankAccountName}
-              onChange={(value) => update('bankAccountName', value)}
-              placeholder="ชื่อตามหน้าสมุดบัญชี"
-            />
-          </FormRow>
-          <FormRow label="เลขที่บัญชี">
-            <TextInput
-              value={draft.bankAccountNumber}
-              onChange={(value) => update('bankAccountNumber', value.replace(/\D/g, '').slice(0, 15))}
-              placeholder="กรอกเฉพาะตัวเลข"
-              inputMode="numeric"
-              maxLength={15}
-            />
-          </FormRow>
-        </div>
-      </section>
+      </FormRow>
 
-      <section className="grid gap-6 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">ข้อมูล Payroll</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">กำหนดกลุ่มคำนวณและอัตราค่าจ้างเริ่มต้น</p>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <FormRow label="กลุ่มเงินเดือน">
-            <SelectInput
-              options={['พนักงานรายเดือน', 'พนักงานรายวัน', 'พนักงานชั่วคราว', 'ผู้บริหาร']}
-              value={draft.payrollGroup}
-              onChange={(value) => update('payrollGroup', value)}
-            />
-          </FormRow>
-          <FormRow label="อัตราค่าจ้าง" hint="สามารถปรับองค์ประกอบรายได้และรายการหักใน Payroll ภายหลัง">
-            <TextInput
-              value={draft.salaryRate}
-              onChange={(value) => update('salaryRate', value.replace(/[^\d.]/g, ''))}
-              placeholder="0.00"
-              prefix="THB"
-              inputMode="numeric"
-            />
-          </FormRow>
-        </div>
-      </section>
+      <div className="grid gap-x-10 gap-y-5 lg:grid-cols-2">
+        {draft.payMethod === 'bank' && (
+          <>
+            <FormRow label="บัญชีธนาคาร" required>
+              <BankDropdown
+                value={draft.bankName}
+                onChange={(code) => {
+                  const bank = THAI_BANKS.find((b) => b.code === code);
+                  update('bankName', bank?.nameTh ?? code);
+                }}
+              />
+            </FormRow>
+            <FormRow label="เลขที่บัญชีพนักงาน" required>
+              <TextInput
+                value={draft.bankAccountNumber}
+                onChange={(value) => update('bankAccountNumber', value.replace(/\D/g, '').slice(0, 15))}
+                placeholder="กรอกเฉพาะตัวเลข"
+                inputMode="numeric"
+                maxLength={15}
+              />
+            </FormRow>
+          </>
+        )}
+        <FormRow label="ประเภทการจ้าง" required>
+          <SelectInput
+            options={['รายเดือน', 'รายวัน', 'พาร์ทไทม์', 'ฝึกงาน']}
+            value={draft.payrollGroup}
+            onChange={(value) => update('payrollGroup', value)}
+            placeholder="กรุณาเลือก"
+          />
+        </FormRow>
+        <FormRow label="เงินเดือน" required>
+          <TextInput
+            value={draft.salaryRate}
+            onChange={(value) => update('salaryRate', value.replace(/[^\d.]/g, ''))}
+            placeholder="0"
+            prefix="฿"
+            inputMode="numeric"
+          />
+        </FormRow>
+        <FormRow label="การคำนวณภาษี" required>
+          <SelectInput
+            options={TAX_METHODS_PAYROLL}
+            value={draft.taxMethod}
+            onChange={(value) => update('taxMethod', value)}
+            placeholder="กรุณาเลือก"
+          />
+        </FormRow>
+      </div>
     </div>
   );
 }
@@ -1938,49 +2371,94 @@ function StepTaxAndSocialSecurity({
   draft: EmployeeDraft;
   update: <K extends keyof EmployeeDraft>(key: K, value: EmployeeDraft[K]) => void;
 }) {
+  const hospitalNames = SSO_HOSPITALS.map((h) => h.name);
+
   return (
     <div className="space-y-8">
-      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">ประกันสังคม</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">สถานะสำหรับจัดเตรียมการขึ้นทะเบียนและนำส่งเงินสมทบ</p>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <FormRow label="สถานะผู้ประกันตน">
-            <SelectInput
-              options={[
-                'ขึ้นทะเบียนผู้ประกันตนใหม่',
-                'โอนย้ายจากนายจ้างเดิม',
-                'เป็นผู้ประกันตนอยู่แล้ว',
-                'ไม่เข้าประกันสังคม',
-              ]}
-              value={draft.socialSecurityStatus}
-              onChange={(value) => update('socialSecurityStatus', value)}
-            />
-          </FormRow>
-          <FormRow label="สถานพยาบาล">
-            <TextInput
-              value={draft.socialSecurityHospital}
-              onChange={(value) => update('socialSecurityHospital', value)}
-              placeholder="ระบุสถานพยาบาล หากมี"
-            />
-          </FormRow>
-        </div>
-      </section>
+      <div>
+        <h3 className="text-base font-semibold text-slate-900">ข้อมูลประกันสังคม</h3>
+      </div>
 
-      <section className="grid gap-6 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">ภาษีและกองทุน</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">ค่าเริ่มต้นสำหรับการคำนวณ Payroll ของพนักงาน</p>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <FormRow label="วิธีคำนวณภาษี">
-            <SelectInput
-              options={['คำนวณภาษีแบบเฉลี่ยทั้งปี', 'คำนวณตามเงินได้จริงรายเดือน', 'ยังไม่หักภาษี']}
-              value={draft.taxMethod}
-              onChange={(value) => update('taxMethod', value)}
-            />
+      {/* Checkboxes */}
+      <div className="flex flex-col gap-3">
+        <label className="flex cursor-pointer items-center gap-2.5">
+          <input type="checkbox" checked={draft.ssoSendMoney} onChange={(e) => update('ssoSendMoney', e.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-indigo-600" />
+          <span className="text-sm text-slate-700">นำส่งเงินประกันสังคม</span>
+        </label>
+        <label className="flex cursor-pointer items-center gap-2.5">
+          <input type="checkbox" checked={draft.ssoSendProvidentFund} onChange={(e) => update('ssoSendProvidentFund', e.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-indigo-600" />
+          <span className="text-sm text-slate-700">นำส่งเงินกองทุนทดแทน (กก.20 ก)</span>
+        </label>
+      </div>
+
+      {/* Main SSO fields */}
+      <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
+        <FormRow label="รหัสประกันสังคม" required>
+          <TextInput value={draft.ssoIdNo} onChange={(v) => update('ssoIdNo', v.replace(/\D/g, '').slice(0, 13))} placeholder="กรอกรหัส 13 หลัก" inputMode="numeric" maxLength={13} />
+        </FormRow>
+        <FormRow label="เอกสารที่ใช้ยื่น">
+          <SelectInput options={SSO_DOC_TYPES} value={draft.ssoDocType} onChange={(v) => update('ssoDocType', v)} />
+        </FormRow>
+        <FormRow label="สัญชาติ">
+          <SearchableListDropdown value={draft.ssoNationality} onChange={(v) => update('ssoNationality', v)} options={NATIONALITIES} placeholder="ค้นหาสัญชาติ..." />
+        </FormRow>
+        <FormRow label="โรงพยาบาลลำดับที่ 1">
+          <SearchableListDropdown value={draft.ssoHospital1} onChange={(v) => update('ssoHospital1', v)} options={hospitalNames} placeholder="ค้นหาโรงพยาบาล..." />
+        </FormRow>
+        <FormRow label="โรงพยาบาลลำดับที่ 2">
+          <SearchableListDropdown value={draft.ssoHospital2} onChange={(v) => update('ssoHospital2', v)} options={hospitalNames} placeholder="ค้นหาโรงพยาบาล..." />
+        </FormRow>
+        <FormRow label="โรงพยาบาลลำดับที่ 3">
+          <SearchableListDropdown value={draft.ssoHospital3} onChange={(v) => update('ssoHospital3', v)} options={hospitalNames} placeholder="ค้นหาโรงพยาบาล..." />
+        </FormRow>
+        <FormRow label="วันที่รับบัตรรับรองสิทธิ์">
+          <TextInput value={draft.ssoCardDate} onChange={(v) => update('ssoCardDate', v)} placeholder="วว/ดด/ปปปป" />
+        </FormRow>
+        <FormRow label="เหตุผลการสิ้นสุดการเป็นผู้ประกันตน">
+          <SelectInput options={SSO_TERMINATION_REASONS} value={draft.ssoTerminationReason} onChange={(v) => update('ssoTerminationReason', v)} placeholder="กรุณาเลือก" />
+        </FormRow>
+      </div>
+
+      <FormRow label="หมายเหตุ">
+        <textarea value={draft.ssoNote} onChange={(e) => update('ssoNote', e.target.value)} rows={3} className="hr-textarea w-full" />
+      </FormRow>
+
+      {/* กำหนดสาขา SSO แยกเฉพาะบุคคลนี้ */}
+      <div className="space-y-3">
+        <label className="flex cursor-pointer items-center gap-2.5">
+          <input type="checkbox" checked={draft.ssoBranchCustom} onChange={(e) => update('ssoBranchCustom', e.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-indigo-600" />
+          <span className="text-sm font-medium text-indigo-600">กำหนดสาขาสำนักงานประกันสังคมแยกเฉพาะบุคคลนี้</span>
+        </label>
+        {draft.ssoBranchCustom && (
+          <FormRow label="สาขาสำนักงานประกันสังคม">
+            <SearchableListDropdown value={draft.ssoBranch} onChange={(v) => update('ssoBranch', v)} options={SSO_BRANCH_OPTIONS} placeholder="ค้นหาสาขา..." />
           </FormRow>
+        )}
+      </div>
+
+      {/* กำหนด กท.20 แยกเฉพาะบุคคลนี้ */}
+      <div className="space-y-3">
+        <label className="flex cursor-pointer items-center gap-2.5">
+          <input type="checkbox" checked={draft.ssoKor20Custom} onChange={(e) => update('ssoKor20Custom', e.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-indigo-600" />
+          <span className="text-sm font-medium text-indigo-600">กำหนด กท.20 แยกเฉพาะบุคคลนี้</span>
+          <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>
+        </label>
+        {draft.ssoKor20Custom && (
+          <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
+            <FormRow label="รหัสกิจการ">
+              <TextInput value={draft.ssoBusinessCode} onChange={(v) => update('ssoBusinessCode', v)} placeholder="" />
+            </FormRow>
+            <FormRow label="อัตราสมทบผู้ประกันตน">
+              <TextInput value={draft.ssoContribRate} onChange={(v) => update('ssoContribRate', v)} placeholder="" />
+            </FormRow>
+          </div>
+        )}
+      </div>
+
+      {/* ภาษีและกองทุน */}
+      <div className="border-t border-slate-200 pt-8">
+        <h3 className="mb-5 text-base font-semibold text-slate-900">ภาษีและกองทุน</h3>
+        <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
           <FormRow label="กองทุนสำรองเลี้ยงชีพ">
             <SelectInput
               options={['ไม่เข้าร่วม', 'เข้าร่วม 2%', 'เข้าร่วม 3%', 'เข้าร่วม 5%', 'กำหนดภายหลัง']}
@@ -1989,120 +2467,7 @@ function StepTaxAndSocialSecurity({
             />
           </FormRow>
         </div>
-      </section>
-    </div>
-  );
-}
-
-function DocumentUploadRow({
-  title,
-  description,
-  selected,
-  onChange,
-}: {
-  title: string;
-  description: string;
-  selected: boolean;
-  onChange: (selected: boolean) => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 py-4 last:border-b-0">
-      <div className="flex min-w-0 items-center gap-3">
-        <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
-          selected ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-600'
-        }`}>
-          {selected ? <CheckIcon className="h-4 w-4" /> : 'DOC'}
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-slate-900">{title}</p>
-          <p className="mt-0.5 text-xs text-slate-500">{selected ? 'เพิ่มเอกสารแล้ว' : description}</p>
-        </div>
       </div>
-      <button
-        type="button"
-        onClick={() => onChange(!selected)}
-        className={`h-9 rounded-lg px-3 text-xs font-semibold transition ${
-          selected
-            ? 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-            : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
-        }`}
-      >
-        {selected ? 'นำออก' : 'เลือกเอกสาร'}
-      </button>
-    </div>
-  );
-}
-
-function StepDocumentsAndReview({
-  draft,
-  update,
-}: {
-  draft: EmployeeDraft;
-  update: <K extends keyof EmployeeDraft>(key: K, value: EmployeeDraft[K]) => void;
-}) {
-  const fullName = `${draft.title} ${draft.firstName} ${draft.lastName}`.replace(/\s+/g, ' ').trim();
-  const documentCount = [
-    draft.documentIdCard,
-    draft.documentHouseRegistration,
-    draft.documentBankBook,
-    draft.documentEmploymentContract,
-  ].filter(Boolean).length;
-
-  return (
-    <div className="space-y-8">
-      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">เอกสารประกอบ</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">เพิ่มตอนนี้หรือกลับมาแนบในโปรไฟล์พนักงานภายหลังได้</p>
-        </div>
-        <div className="border-y border-slate-100">
-          <DocumentUploadRow
-            title="สำเนาบัตรประชาชน"
-            description="ใช้ยืนยันตัวตนและข้อมูลภาษี"
-            selected={draft.documentIdCard}
-            onChange={(value) => update('documentIdCard', value)}
-          />
-          <DocumentUploadRow
-            title="สำเนาทะเบียนบ้าน"
-            description="ใช้ประกอบข้อมูลที่อยู่"
-            selected={draft.documentHouseRegistration}
-            onChange={(value) => update('documentHouseRegistration', value)}
-          />
-          <DocumentUploadRow
-            title="สำเนาหน้าสมุดบัญชี"
-            description="ใช้ตรวจสอบบัญชีรับเงินเดือน"
-            selected={draft.documentBankBook}
-            onChange={(value) => update('documentBankBook', value)}
-          />
-          <DocumentUploadRow
-            title="สัญญาจ้างงาน"
-            description="เอกสารยืนยันเงื่อนไขการจ้าง"
-            selected={draft.documentEmploymentContract}
-            onChange={(value) => update('documentEmploymentContract', value)}
-          />
-        </div>
-      </section>
-
-      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">ตรวจสอบก่อนสร้าง</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">ย้อนกลับไปแก้ไขแต่ละขั้นได้ก่อนบันทึก</p>
-        </div>
-        <dl className="border-t border-slate-100">
-          <ReviewRow label="พนักงาน" value={fullName} />
-          <ReviewRow label="รหัสพนักงาน" value={draft.employeeCode} />
-          <ReviewRow label="สังกัด" value={[draft.company, draft.branch, draft.department].filter(Boolean).join(' / ')} />
-          <ReviewRow label="ตำแหน่ง" value={draft.position} />
-          <ReviewRow label="วันเริ่มงาน" value={draft.startDate} />
-          <ReviewRow
-            label="บัญชีเงินเดือน"
-            value={[draft.bankName, draft.bankAccountNumber].filter(Boolean).join(' / ')}
-          />
-          <ReviewRow label="ประกันสังคม" value={draft.socialSecurityStatus} />
-          <ReviewRow label="เอกสาร" value={`${documentCount} / 4 รายการ`} />
-        </dl>
-      </section>
-
     </div>
   );
 }
@@ -2114,90 +2479,122 @@ function StepEmployment({
   draft: EmployeeDraft;
   update: <K extends keyof EmployeeDraft>(key: K, value: EmployeeDraft[K]) => void;
 }) {
+  const cascade = useOrgCascadeData();
+  const [supervisorOpts, setSupervisorOpts] = useState<{ value: string; label: string }[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    publicApiFetch<Employee[]>('/api/humansource/employees')
+      .then((all) => {
+        if (!alive) return;
+        setSupervisorOpts(all.map((e) => ({ value: e.id, label: `${e.name} (${e.position})` })));
+      })
+      .catch(() => { /* keep empty options on failure */ });
+    return () => { alive = false; };
+  }, []);
+
+  function handleLevelChange(newLevelId: string) {
+    update('level', newLevelId);
+    if (!cascade.isPositionInLevel(draft.position, newLevelId)) update('position', '');
+  }
+  function handleBranchChange(newBranchId: string) {
+    update('branch', newBranchId);
+    if (!cascade.isDeptInBranch(draft.department, newBranchId)) update('department', '');
+  }
+
   return (
-    <div className="space-y-8">
-      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">สังกัดในองค์กร</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">ข้อมูลนี้กำหนดสายบังคับบัญชาและขอบเขตการมองเห็น</p>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <FormRow label="บริษัท" required>
-            <SelectInput
-              options={['G-HUB Enterprise', 'G-HUB Services']}
-              value={draft.company}
-              onChange={(value) => update('company', value)}
-            />
-          </FormRow>
-          <FormRow label="สาขา" required>
-            <SelectInput
-              options={['สำนักงานใหญ่', 'สาขาเชียงใหม่', 'สาขาภูเก็ต', 'สาขาขอนแก่น']}
-              value={draft.branch}
-              onChange={(value) => update('branch', value)}
-            />
-          </FormRow>
-          <FormRow label="แผนก" required>
-            <SelectInput
-              options={['ฝ่ายบุคคล', 'ฝ่ายบัญชี', 'ฝ่ายขาย', 'เทคโนโลยีสารสนเทศ', 'Operations']}
-              value={draft.department}
-              onChange={(value) => update('department', value)}
-              placeholder="เลือกแผนก"
-            />
-          </FormRow>
-          <FormRow label="ตำแหน่ง" required>
-            <SelectInput
-              options={['HR Officer', 'Accountant', 'Sales Executive', 'Software Engineer', 'Operations Officer']}
-              value={draft.position}
-              onChange={(value) => update('position', value)}
-              placeholder="เลือกตำแหน่ง"
-            />
-          </FormRow>
-          <div className="sm:col-span-2">
-            <FormRow label="ผู้บังคับบัญชา" hint="ใช้กำหนดผู้อนุมัติและลำดับในโครงสร้างองค์กร">
-              <SelectInput
-                options={['อนุภัทร ใจเที่ยงแท้', 'กิตติพงษ์ วัฒนชัย', 'ศิริพร พัฒนกิจ', 'ยังไม่กำหนด']}
-                value={draft.supervisor}
-                onChange={(value) => update('supervisor', value)}
-                placeholder="ค้นหาหรือเลือกผู้บังคับบัญชา"
-              />
-            </FormRow>
+    <div className="hr-pif-wrap">
+      <div className="hr-pif-body">
+
+        {/* ── ข้อมูลองค์กร ─────────────────────────────────── */}
+        <p className="hr-pif-section-title">ข้อมูลองค์กร</p>
+        <div className="hr-pif-grid">
+          <div className="hr-field">
+            <label className="hr-field__label">บริษัท<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={draft.company} onChange={(v) => update('company', v)} options={cascade.companyOpts} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">สังกัด<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={draft.department} onChange={(v) => update('department', v)} options={cascade.deptOptsForBranch(draft.branch)} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ระดับ<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={draft.level} onChange={handleLevelChange} options={cascade.levelOpts} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ตำแหน่ง<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={draft.position} onChange={(v) => update('position', v)} options={cascade.positionOptsForLevel(draft.level)} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">สถานที่ทำงาน</label>
+            <HrCustomSelect value={draft.branch} onChange={handleBranchChange} options={cascade.branchOpts} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">กะทำงาน<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={draft.workSchedule} onChange={(v) => update('workSchedule', v)} options={cascade.shiftOpts} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">วันเริ่มงาน<span className="hr-field__req">*</span></label>
+            <HrDatePicker value={draft.startDate} onChange={(v) => update('startDate', v)} variant="input" placeholder="วว/ดด/ปปปป" />
           </div>
         </div>
-      </section>
 
-      <section className="grid gap-6 border-b border-slate-200 pb-8 lg:grid-cols-[180px_minmax(0,1fr)]">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900">เงื่อนไขการจ้างงาน</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">ข้อมูลขั้นต่ำที่ระบบเวลาและ Payroll ต้องใช้</p>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <FormRow label="ประเภทพนักงาน" required>
-            <SelectInput
-              options={['พนักงานรายเดือน', 'พนักงานรายวัน', 'พนักงานชั่วคราว', 'พาร์ทไทม์']}
-              value={draft.employeeType}
-              onChange={(value) => update('employeeType', value)}
+        <hr className="hr-profile-divider" />
+
+        {/* ── ข้อมูลการจ้างงาน ──────────────────────────────── */}
+        <p className="hr-pif-section-title">ข้อมูลการจ้างงาน</p>
+        <div className="hr-pif-grid">
+          <div className="hr-field">
+            <label className="hr-field__label">สถานะ<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={draft.status} onChange={(v) => update('status', v)} options={EI_STATUS_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ประเภทพนักงาน<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={draft.employeeType} onChange={(v) => update('employeeType', v)} options={EI_EMPTYPE_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ผู้บังคับบัญชา</label>
+            <HrCustomSelect
+              value={draft.supervisor}
+              onChange={(v) => update('supervisor', v)}
+              options={[{ value: '', label: 'ไม่มี (สูงสุดในสายบังคับบัญชา)' }, ...supervisorOpts]}
             />
-          </FormRow>
-          <FormRow label="วันเริ่มงาน" required>
-            <TextInput value={draft.startDate} onChange={(value) => update('startDate', value)} placeholder="วว/ดด/ปปปป" />
-          </FormRow>
-          <div className="sm:col-span-2">
-            <FormRow label="ตารางการทำงาน" required>
-              <SelectInput
-                options={[
-                  'จันทร์ - ศุกร์ (08:30 - 17:30)',
-                  'จันทร์ - เสาร์ (08:00 - 17:00)',
-                  'กะหมุนเวียน',
-                  'ยังไม่กำหนด',
-                ]}
-                value={draft.workSchedule}
-                onChange={(value) => update('workSchedule', value)}
-              />
-            </FormRow>
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">วันสิ้นสุดสัญญาจ้าง</label>
+            <HrDatePicker value={draft.contractEnd} onChange={(v) => update('contractEnd', v)} variant="input" placeholder="วว/ดด/ปปปป" />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ปฏิทินวันหยุด</label>
+            <HrCustomSelect value={draft.holidayCal} onChange={(v) => update('holidayCal', v)} options={EI_HOLIDAY_OPTS} />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">เลขที่ใบขับขี่</label>
+            <input className="hr-field__ctrl" value={draft.licenseNo} onChange={(e) => update('licenseNo', e.target.value)} placeholder="กรอกเลขที่ใบขับขี่" />
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">ประเภทกำลังคน<span className="hr-field__req">*</span></label>
+            <div className="hr-pif-type-group">
+              <button type="button" className={`hr-pif-type-btn${draft.workforce === 'new' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => update('workforce', 'new')}>ใหม่</button>
+              <button type="button" className={`hr-pif-type-btn${draft.workforce === 'replace' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => update('workforce', 'replace')}>ทดแทน</button>
+            </div>
+          </div>
+          <div className="hr-field">
+            <label className="hr-field__label">บันทึกเวลาเข้าออก<span className="hr-field__req">*</span></label>
+            <div className="hr-pif-type-group">
+              <button type="button" className={`hr-pif-type-btn${draft.timeRecord === 'yes' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => update('timeRecord', 'yes')}>บันทึก</button>
+              <button type="button" className={`hr-pif-type-btn${draft.timeRecord === 'no' ? ' hr-pif-type-btn--active' : ''}`} onClick={() => update('timeRecord', 'no')}>ไม่บันทึก</button>
+            </div>
           </div>
         </div>
-      </section>
+        <div className="hr-pif-grid hr-pif-grid--full">
+          <div className="hr-field">
+            <label className="hr-field__label">ประเภทการจ้าง<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={draft.contractType} onChange={(v) => update('contractType', v)} options={EI_CONTRACT_OPTS} />
+          </div>
+        </div>
 
+      </div>
     </div>
   );
 }
@@ -3000,34 +3397,120 @@ function PersonalInfoForm({ employee, onDirtyChange }: { employee: Employee; onD
   );
 }
 
+// ─── Org cascade data (companies → branches → departments, job levels → positions, shifts) ──
+
+type OrgCascadeNode = { id: string; name: string; type: string; children: OrgCascadeNode[] };
+type OrgCascadeLevel = { id: string; nameTh: string; active?: boolean };
+type OrgCascadePosition = { id: string; nameTh: string; jobLevelId: string; active?: boolean };
+type OrgCascadeCompany = { id: string; tradeName: string; active?: boolean };
+type OrgCascadeShift = { id: string; name: string; time: string; code: string; enabled?: boolean };
+
+function useOrgCascadeData() {
+  const [levels, setLevels] = useState<OrgCascadeLevel[]>([]);
+  const [positions, setPositions] = useState<OrgCascadePosition[]>([]);
+  const [orgTree, setOrgTree] = useState<OrgCascadeNode[]>([]);
+  const [companies, setCompanies] = useState<OrgCascadeCompany[]>([]);
+  const [shifts, setShifts] = useState<OrgCascadeShift[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    Promise.all([
+      publicApiFetch<OrgCascadeLevel[]>('/api/humansource/job-levels').catch(() => [] as OrgCascadeLevel[]),
+      publicApiFetch<OrgCascadePosition[]>('/api/humansource/positions').catch(() => [] as OrgCascadePosition[]),
+      publicApiFetch<OrgCascadeNode[]>('/api/humansource/org-structure/tree').catch(() => [] as OrgCascadeNode[]),
+      publicApiFetch<OrgCascadeCompany[]>('/api/humansource/org-structure/companies').catch(() => [] as OrgCascadeCompany[]),
+      publicApiFetch<OrgCascadeShift[]>('/api/humansource/shifts').catch(() => [] as OrgCascadeShift[]),
+    ]).then(([lvl, pos, tree, cos, sh]) => {
+      if (!alive) return;
+      setLevels(lvl.filter((l) => l.active !== false));
+      setPositions(pos.filter((p) => p.active !== false));
+      setOrgTree(tree);
+      setCompanies(cos);
+      setShifts(sh.filter((s) => s.enabled !== false));
+    });
+    return () => { alive = false; };
+  }, []);
+
+  const branches = orgTree.flatMap((company) => company.children.filter((n) => n.type === 'branch'));
+  const companyOpts = companies.map((c) => ({ value: c.id, label: c.tradeName }));
+  const branchOpts = branches.map((b) => ({ value: b.id, label: b.name }));
+  const levelOpts = levels.map((l) => ({ value: l.id, label: l.nameTh }));
+  const shiftOpts = shifts.map((s) => ({ value: s.id, label: `${s.name} (${s.time})` }));
+
+  function deptOptsForBranch(branchId: string) {
+    const branch = branches.find((b) => b.id === branchId);
+    return (branch?.children ?? [])
+      .filter((n) => n.type === 'department' || n.type === 'team')
+      .map((d) => ({ value: d.id, label: d.name }));
+  }
+  function positionOptsForLevel(levelId: string) {
+    const filtered = levelId ? positions.filter((p) => p.jobLevelId === levelId) : positions;
+    return filtered.map((p) => ({ value: p.id, label: p.nameTh }));
+  }
+  function isPositionInLevel(positionId: string, levelId: string) {
+    return positions.some((p) => p.id === positionId && p.jobLevelId === levelId);
+  }
+  function isDeptInBranch(deptId: string, branchId: string) {
+    const branch = branches.find((b) => b.id === branchId);
+    return (branch?.children ?? []).some((d) => d.id === deptId);
+  }
+
+  return {
+    companyOpts, branchOpts, levelOpts, shiftOpts,
+    deptOptsForBranch, positionOptsForLevel, isPositionInLevel, isDeptInBranch,
+  };
+}
+
 // ─── Employment Info Form ────────────────────────────────────────────────────
 
-const EI_COMPANY_OPTS = [{ value: 'G-HUB Enterprise', label: 'G-HUB Enterprise' }, { value: 'G-HUB (Thailand)', label: 'G-HUB (Thailand)' }];
-const EI_DEPT_OPTS = ['ฝ่ายบุคคล', 'ฝ่ายบัญชี', 'ฝ่ายขาย', 'IT', 'Operations'].map((v) => ({ value: v, label: v }));
-const EI_LEVEL_OPTS = ['ระดับบริหาร', 'ระดับผู้จัดการ', 'ระดับหัวหน้างาน', 'ระดับพนักงาน', 'CEO (ประธานเจ้าหน้าที่บริหาร)'].map((v) => ({ value: v, label: v }));
-const EI_POSITION_OPTS = ['กรรมการผู้จัดการ', 'ผู้จัดการฝ่าย', 'หัวหน้างาน', 'พนักงาน', 'นักวิเคราะห์', 'นักบัญชี', 'เจ้าหน้าที่ขาย'].map((v) => ({ value: v, label: v }));
-const EI_LOCATION_OPTS = ['สำนักงานใหญ่', 'สาขาเชียงใหม่', 'สาขาภูเก็ต', 'Work from home'].map((v) => ({ value: v, label: v }));
-const EI_SHIFT_OPTS = ['ทำงาน 08:30 – 17:30', 'S2 - บ่าย 14:00-22:00', 'S3 - เช้า 06:00-14:00', 'S4 - กะดึก 22:00-06:00'].map((v) => ({ value: v, label: v }));
 const EI_STATUS_OPTS = ['ปกติ', 'ทดลองงาน', 'ลาพักร้อน', 'สิ้นสุดสัญญา', 'ลาออก'].map((v) => ({ value: v, label: v }));
 const EI_EMPTYPE_OPTS = ['รายเดือน', 'รายวัน', 'พาร์ทไทม์', 'ประจำ'].map((v) => ({ value: v, label: v }));
-const EI_SUPERVISOR_OPTS = ['สมหญิง ไพศาล', 'อนุภัทร ใจเที่ยงแท้', 'มณี ใจดี', 'สมศักดิ์ มั่งคั่ง'].map((v) => ({ value: v, label: v }));
 const EI_HOLIDAY_OPTS = ['วันหยุดพนักงานขาย', 'วันหยุดสำนักงาน', 'วันหยุดโรงงาน', 'กำหนดเอง'].map((v) => ({ value: v, label: v }));
 const EI_CONTRACT_OPTS = ['รายวัน', 'รายสัปดาห์', 'รายเดือน', 'โครงการ', 'ไม่มีกำหนด'].map((v) => ({ value: v, label: v }));
 const EI_BANK_OPTS = ['ธนาคารกสิกรไทย (KBANK)', 'ธนาคารไทยพาณิชย์ (SCB)', 'ธนาคารกรุงไทย (KTB)', 'ธนาคารกรุงเทพ (BBL)', 'ธนาคารทหารไทย (TTB)'].map((v) => ({ value: v, label: v }));
 
 function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; onDirtyChange?: (dirty: boolean) => void }) {
-  const [company, setCompany] = useState('G-HUB Enterprise');
-  const [dept, setDept] = useState(employee.department);
-  const [level, setLevel] = useState('CEO (ประธานเจ้าหน้าที่บริหาร)');
-  const [position, setPosition] = useState(employee.position);
+  const cascade = useOrgCascadeData();
+  const [company, setCompany] = useState(employee.companyId);
+  const [location, setLocation] = useState(employee.branchNodeId);
+  const [dept, setDept] = useState(employee.departmentNodeId);
+  const [level, setLevel] = useState('');
+  const [position, setPosition] = useState(employee.positionId);
   const [empCode, setEmpCode] = useState(employee.code);
-  const [location, setLocation] = useState(employee.branch);
-  const [shift, setShift] = useState(employee.schedule);
+  const [shift, setShift] = useState('');
   const [startDate, setStartDate] = useState(employee.startDate);
+
+  // Resolve level from the employee's current position once positions/levels load
+  useEffect(() => {
+    if (level) return;
+    const opts = cascade.positionOptsForLevel('');
+    if (!opts.length) return;
+    const found = cascade.levelOpts.find((l) => cascade.isPositionInLevel(position, l.value));
+    if (found) setLevel(found.value);
+  }, [cascade, position, level]);
+
+  // Resolve shift from the employee's schedule time string once shifts load
+  useEffect(() => {
+    if (shift || !cascade.shiftOpts.length) return;
+    const found = cascade.shiftOpts.find((s) => s.label.includes(employee.schedule));
+    if (found) setShift(found.value);
+  }, [cascade.shiftOpts, shift, employee.schedule]);
+
+  function handleLevelChange(newLevelId: string) {
+    setLevel(newLevelId);
+    markDirty();
+    if (!cascade.isPositionInLevel(position, newLevelId)) setPosition('');
+  }
+  function handleBranchChange(newBranchId: string) {
+    setLocation(newBranchId);
+    markDirty();
+    if (!cascade.isDeptInBranch(dept, newBranchId)) setDept('');
+  }
 
   const [status, setStatus] = useState(employee.status as string);
   const [empType, setEmpType] = useState(employee.empType);
-  const [supervisor, setSupervisor] = useState('');
+  const [supervisor, setSupervisor] = useState(employee.supervisorId ?? '');
+  const [supervisorOpts, setSupervisorOpts] = useState<{ value: string; label: string }[]>([]);
   const [contractEnd, setContractEnd] = useState('');
   const [holidayCal, setHolidayCal] = useState('วันหยุดพนักงานขาย');
   const [licenseNo, setLicenseNo] = useState('');
@@ -3041,6 +3524,34 @@ function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; o
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const dirtyRef = useRef(false);
 
+  useEffect(() => {
+    let alive = true;
+    publicApiFetch<Employee[]>('/api/humansource/employees')
+      .then((all) => {
+        if (!alive) return;
+        // Exclude self and anyone already reporting (directly or transitively) to self,
+        // to prevent supervisor-chain cycles.
+        const byId = new Map(all.map((e) => [e.id, e]));
+        const isDescendantOfSelf = (id: string): boolean => {
+          let current = byId.get(id);
+          const seen = new Set<string>();
+          while (current?.supervisorId && !seen.has(current.id)) {
+            if (current.supervisorId === employee.id) return true;
+            seen.add(current.id);
+            current = byId.get(current.supervisorId);
+          }
+          return false;
+        };
+        setSupervisorOpts(
+          all
+            .filter((e) => e.id !== employee.id && !isDescendantOfSelf(e.id))
+            .map((e) => ({ value: e.id, label: `${e.name} (${e.position})` })),
+        );
+      })
+      .catch(() => { /* keep empty options on failure */ });
+    return () => { alive = false; };
+  }, [employee.id]);
+
   function markDirty() {
     if (!dirtyRef.current) {
       dirtyRef.current = true;
@@ -3052,6 +3563,12 @@ function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; o
     setShowSaveConfirm(false);
     dirtyRef.current = false;
     onDirtyChange?.(false);
+    if (supervisor !== (employee.supervisorId ?? '')) {
+      publicApiFetch(`/api/humansource/employees/${employee.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ supervisorId: supervisor || null }),
+      }).catch(() => { /* non-blocking — rest of this form is still UI-only */ });
+    }
   }
 
   return (
@@ -3073,35 +3590,35 @@ function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; o
         <div className="hr-pif-grid">
           <div className="hr-field">
             <label className="hr-field__label">บริษัท<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={company} onChange={setCompany} options={EI_COMPANY_OPTS} />
+            <HrCustomSelect value={company} onChange={(v) => { setCompany(v); markDirty(); }} options={cascade.companyOpts} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">สังกัด<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={dept} onChange={setDept} options={EI_DEPT_OPTS} />
+            <HrCustomSelect value={dept} onChange={(v) => { setDept(v); markDirty(); }} options={cascade.deptOptsForBranch(location)} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">ระดับ<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={level} onChange={setLevel} options={EI_LEVEL_OPTS} />
+            <HrCustomSelect value={level} onChange={handleLevelChange} options={cascade.levelOpts} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">ตำแหน่ง<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={position} onChange={setPosition} options={EI_POSITION_OPTS} />
+            <HrCustomSelect value={position} onChange={(v) => { setPosition(v); markDirty(); }} options={cascade.positionOptsForLevel(level)} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">รหัสพนักงาน<span className="hr-field__req">*</span></label>
             <input className="hr-field__ctrl" value={empCode} onChange={(e) => setEmpCode(e.target.value)} placeholder="กรอกรหัสพนักงาน" />
           </div>
           <div className="hr-field">
-            <label className="hr-field__label">สถานที่ทำงาน</label>
-            <HrCustomSelect value={location} onChange={setLocation} options={EI_LOCATION_OPTS} />
+            <label className="hr-field__label">สถานที่ทำงาน<span className="hr-field__req">*</span></label>
+            <HrCustomSelect value={location} onChange={handleBranchChange} options={cascade.branchOpts} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">กะทำงาน<span className="hr-field__req">*</span></label>
-            <HrCustomSelect value={shift} onChange={setShift} options={EI_SHIFT_OPTS} />
+            <HrCustomSelect value={shift} onChange={(v) => { setShift(v); markDirty(); }} options={cascade.shiftOpts} />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">วันเริ่มงาน<span className="hr-field__req">*</span></label>
-            <HrDatePicker value={startDate} onChange={(v) => { setStartDate(v); markDirty(); }} />
+            <DatePicker value={startDate} onChange={(v) => { setStartDate(v); markDirty(); }} placeholder="วว/ดด/ปปปป" />
           </div>
         </div>
 
@@ -3120,11 +3637,15 @@ function EmploymentInfoForm({ employee, onDirtyChange }: { employee: Employee; o
           </div>
           <div className="hr-field">
             <label className="hr-field__label">ผู้บังคับบัญชา</label>
-            <HrCustomSelect value={supervisor} onChange={setSupervisor} options={EI_SUPERVISOR_OPTS} />
+            <HrCustomSelect
+              value={supervisor}
+              onChange={(v) => { setSupervisor(v); markDirty(); }}
+              options={[{ value: '', label: 'ไม่มี (สูงสุดในสายบังคับบัญชา)' }, ...supervisorOpts]}
+            />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">วันสิ้นสุดสัญญาจ้าง</label>
-            <HrDatePicker value={contractEnd} onChange={(v) => { setContractEnd(v); markDirty(); }} />
+            <DatePicker value={contractEnd} onChange={(v) => { setContractEnd(v); markDirty(); }} placeholder="วว/ดด/ปปปป" />
           </div>
           <div className="hr-field">
             <label className="hr-field__label">ปฏิทินวันหยุด</label>
@@ -3975,6 +4496,8 @@ function HrEmployeeProfileOverlay({
           <OverviewTab employee={employee} section={sideSection} onSection={setSideSection} />
         ) : tab === 'emp-shift' ? (
           <ShiftScheduleTab employee={employee} />
+        ) : tab === 'emp-org' ? (
+          <EmployeeOrgChartTab employee={employee} />
         ) : (
           <PlaceholderTab label={
             PROFILE_TABS.find((t) => t.key === tab)?.label

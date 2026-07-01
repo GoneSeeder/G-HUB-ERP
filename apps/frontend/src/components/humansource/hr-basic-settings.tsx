@@ -14,6 +14,7 @@ import {
   RUNNING_NUMBER_SEED,
   AUTO_EMP_CODE_KEY,
   AUTO_EMP_CODE_DEFAULT,
+  buildAutoEmpCode,
   type AutoEmpCodeSetting,
   type EmployeeDefaults,
   type RunningNumberConfig,
@@ -124,15 +125,7 @@ function ConfirmDelete({
 
 // ─── Auto Employee Code Setting Card ─────────────────────────────────────────
 
-function buildEmpCodePreview(s: AutoEmpCodeSetting): string {
-  if (s.mode === 'standard') {
-    const yy = String(new Date().getFullYear()).slice(-2);
-    return `${yy}${String(s.standardNextNumber).padStart(s.standardPadding, '0')}`;
-  }
-  const year = s.customWithYear ? String(new Date().getFullYear()) : '';
-  const num = String(s.customNextNumber).padStart(s.customPadding, '0');
-  return `${s.customPrefix}${year}${num}`;
-}
+const buildEmpCodePreview = buildAutoEmpCode;
 
 function AutoEmpCodeCard({ accent }: { accent: string }) {
   const [setting, setSetting] = useState<AutoEmpCodeSetting>(AUTO_EMP_CODE_DEFAULT);

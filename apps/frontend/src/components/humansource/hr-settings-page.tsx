@@ -59,6 +59,7 @@ type ShiftForm = {
   prorateShiftAllowance: boolean;
   holidayPremiumEnabled: boolean;
   overtimePremiumEnabled: boolean;
+  overtimeEnabled: boolean;
   effectiveDays: string[];
   enabled: boolean;
 };
@@ -95,6 +96,7 @@ const EMPTY_SHIFT_FORM: ShiftForm = {
   prorateShiftAllowance: true,
   holidayPremiumEnabled: false,
   overtimePremiumEnabled: false,
+  overtimeEnabled: false,
   effectiveDays: ['mon', 'tue', 'wed', 'thu', 'fri'],
   enabled: true,
 };
@@ -947,35 +949,52 @@ function shiftRowToForm(row: ShiftRow): ShiftForm {
     prorateShiftAllowance: row.prorateShiftAllowance ?? true,
     holidayPremiumEnabled: row.holidayPremiumEnabled ?? false,
     overtimePremiumEnabled: row.overtimePremiumEnabled ?? false,
+    overtimeEnabled: row.overtimeEnabled ?? false,
     effectiveDays: row.effectiveDays ?? ['mon', 'tue', 'wed', 'thu', 'fri'],
     enabled: row.enabled,
   };
 }
 
 function ShiftTypeIcon({ type, color }: { type: 'morning' | 'day' | 'night' | 'rotation'; color: string }) {
+  if (type === 'morning') {
+    // cloud-sun: sun top-right + cloud bottom-left
+    return (
+      <svg className="hr-shift-type-icon" viewBox="0 0 24 24" aria-hidden="true" style={{ color }}>
+        {/* sun */}
+        <circle cx="15.5" cy="8.5" r="2.8" fill="currentColor" />
+        <path d="M15.5 3.5v1.5M20.5 8.5h-1.5M19 5l-1.1 1.1M12 5l1.1 1.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+        {/* cloud */}
+        <path d="M6.5 20a3.5 3.5 0 0 1 0-7h.3A4.5 4.5 0 0 1 15.5 15.5a3 3 0 0 1-1 5.5H6.5z" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  if (type === 'day') {
+    // full sun with 8 rays
+    return (
+      <svg className="hr-shift-type-icon" viewBox="0 0 24 24" aria-hidden="true" style={{ color }}>
+        <circle cx="12" cy="12" r="4" fill="currentColor" />
+        <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
+      </svg>
+    );
+  }
+
   if (type === 'night') {
+    // crescent moon
     return (
-      <svg className="hr-shift-type-icon" viewBox="0 0 24 24" aria-hidden="true" style={{ color }}>
-        <path d="M20.2 15.8A7.8 7.8 0 0 1 8.2 3.8 8 8 0 1 0 20.2 15.8Z" />
+      <svg className="hr-shift-type-icon" viewBox="0 0 24 24" aria-hidden="true" style={{ color }} fill="currentColor">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
       </svg>
     );
   }
 
-  if (type === 'rotation') {
-    return (
-      <svg className="hr-shift-type-icon" viewBox="0 0 24 24" aria-hidden="true" style={{ color }}>
-        <path d="M20 11a8 8 0 0 0-14.9-4" />
-        <path d="M4 5v5h5" />
-        <path d="M4 13a8 8 0 0 0 14.9 4" />
-        <path d="M20 19v-5h-5" />
-      </svg>
-    );
-  }
-
+  // rotation
   return (
-    <svg className="hr-shift-type-icon" viewBox="0 0 24 24" aria-hidden="true" style={{ color }}>
-      <circle cx="12" cy="12" r={type === 'morning' ? '3.2' : '3.6'} />
-      <path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" />
+    <svg className="hr-shift-type-icon" viewBox="0 0 24 24" aria-hidden="true" style={{ color }} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 11a8 8 0 0 0-14.9-4" />
+      <path d="M4 5v5h5" />
+      <path d="M4 13a8 8 0 0 0 14.9 4" />
+      <path d="M20 19v-5h-5" />
     </svg>
   );
 }
@@ -1331,51 +1350,46 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
                   </div>
                 </div>
 
-                {/* บริษัท full-width */}
-                <ShiftFormField label="บริษัท*">
-                  <HrCustomSelect
-                    label="บริษัท"
-                    value={form.company}
-                    options={companyOptions}
-                    onChange={(company) => setForm({ ...form, company })}
-                  />
-                </ShiftFormField>
-
-                {/* inline rows: ประเภทกะ / สีประจำกะ / เขตเวลา / รายละเอียด */}
-                <ShiftFormField label="Time Zone*">
-                  <HrCustomSelect
-                    label="Time Zone"
-                    value={form.timezone}
-                    options={TIMEZONE_OPTIONS}
-                    onChange={(timezone) => setForm({ ...form, timezone })}
-                  />
-                </ShiftFormField>
-
-                <div className="hr-shift-basic-grid__full">
-                  <ShiftFormField label="รายละเอียด">
-                    <textarea
-                      value={form.description}
-                      onChange={(event) => setForm({ ...form, description: event.target.value })}
-                      className="hr-shift-control"
-                      placeholder="รายละเอียดเพิ่มเติม"
+                {/* บริษัท + Time Zone แถวเดียวกัน */}
+                <div className="hr-shift-basic-grid">
+                  <ShiftFormField label="บริษัท*">
+                    <HrCustomSelect
+                      label="บริษัท"
+                      value={form.company}
+                      options={companyOptions}
+                      onChange={(company) => setForm({ ...form, company })}
+                    />
+                  </ShiftFormField>
+                  <ShiftFormField label="Time Zone*">
+                    <HrCustomSelect
+                      label="Time Zone"
+                      value={form.timezone}
+                      options={TIMEZONE_OPTIONS}
+                      onChange={(timezone) => setForm({ ...form, timezone })}
                     />
                   </ShiftFormField>
                 </div>
 
+                <ShiftFormField label="รายละเอียด">
+                  <textarea
+                    value={form.description}
+                    onChange={(event) => setForm({ ...form, description: event.target.value })}
+                    className="hr-shift-control"
+                    placeholder="รายละเอียดเพิ่มเติม"
+                  />
+                </ShiftFormField>
+
+                {/* ประเภทกะ / สีประจำกะ / ขอทำงานล่วงเวลา */}
                 <div className="hr-shift-compact-rows hr-shift-basic-grid__full">
                   <div className="hr-shift-inline-row">
                     <span className="hr-shift-inline-row__label">ประเภทกะ</span>
-                    <div className="hr-shift-type-select">
-                      <span className="hr-shift-type-select__overlay" aria-hidden="true">
-                        <ShiftTypeSelectLabel groupKey={form.groupKey} />
-                      </span>
+                    <div style={{ width: '9rem', flexShrink: 0 }}>
                       <HrCustomSelect
                         label="ประเภทกะ"
                         value={form.groupKey}
-                        className="hr-shift-type-select__control"
-                        menuClassName="hr-shift-type-select__menu"
                         options={SHIFT_TYPE_OPTIONS.map((o) => ({ value: o.key, label: SHIFT_TYPE_SELECT_META[o.key].label }))}
                         onChange={(v) => setForm({ ...form, groupKey: v as ShiftGroupKey })}
+                        renderTrigger={(option) => <ShiftTypeSelectLabel groupKey={option.value as ShiftGroupKey} />}
                         renderOption={(option) => <ShiftTypeSelectLabel groupKey={option.value as ShiftGroupKey} />}
                       />
                     </div>
@@ -1385,23 +1399,12 @@ function ShiftSettingsBoard({ accent }: { accent: string }) {
                     <ShiftColorPicker value={form.color} onChange={(color) => setForm({ ...form, color })} />
                   </div>
                   <div className="hr-shift-inline-row">
-                    <span className="hr-shift-inline-row__label">เขตเวลา</span>
-                    <div className="w-56 shrink-0">
-                      <HrCustomSelect
-                        label="เขตเวลา"
-                        value={form.timezone}
-                        options={TIMEZONE_OPTIONS}
-                        onChange={(timezone) => setForm({ ...form, timezone })}
-                      />
-                    </div>
-                  </div>
-                  <div className="hr-shift-inline-row">
-                    <span className="hr-shift-inline-row__label">รายละเอียด</span>
-                    <input
-                      value={form.description}
-                      onChange={(event) => setForm({ ...form, description: event.target.value })}
-                      className="hr-shift-control min-w-0 flex-1"
-                      placeholder="รายละเอียดเพิ่มเติม"
+                    <span className="hr-shift-inline-row__label">ขอทำงานล่วงเวลา</span>
+                    <ShiftToggle
+                      checked={form.overtimeEnabled}
+                      onChange={(overtimeEnabled) => setForm({ ...form, overtimeEnabled })}
+                      ariaLabel="ขอทำงานล่วงเวลา"
+                      accent={accent}
                     />
                   </div>
                 </div>

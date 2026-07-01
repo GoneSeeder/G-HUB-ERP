@@ -1,5 +1,5 @@
-import { HrUnderDevelopmentPage } from '@/components/humansource/hr-under-development-page';
+import { PayrollRunsBoard } from '@/components/humansource/hr-payroll-runs';
 
 export default function HumansourcePayrollRoute() {
-  return <HrUnderDevelopmentPage title="เงินเดือน" />;
+  return <PayrollRunsBoard />;
 }

@@ -96,20 +96,6 @@ function ChipOptionGroup({
   );
 }
 
-const JOB_LEVEL_DETAILS: Record<string, { description: string; skills: string }> = {
-  CEO: { description: 'ประธานเจ้าหน้าที่บริหาร', skills: '' },
-  E: { description: 'ผู้อำนวยการ', skills: '' },
-  M: { description: 'ผู้จัดการ', skills: '' },
-  O3: { description: 'หัวหน้างาน', skills: '' },
-  O2: { description: 'เจ้าหน้าที่อาวุโส', skills: '' },
-  O1: { description: 'เจ้าหน้าที่', skills: '' },
-  T: { description: 'พนักงานชั่วคราว', skills: '' },
-  P: { description: 'นักศึกษาฝึกงาน', skills: '' },
-};
-
-const getJobLevelDetail = (level: JobLevel) =>
-  JOB_LEVEL_DETAILS[level.nameTh] ?? JOB_LEVEL_DETAILS[level.nameEn] ?? { description: '', skills: '' };
-
 const getPositionAccentVars = (accent: string): CSSProperties => ({
   '--hr-position-accent': accent,
   '--hr-position-accent-soft': `${accent}14`,
@@ -212,6 +198,15 @@ function JobLevelDrawer({
               </Field>
               <Field label="ชื่อระดับ (EN)" required>
                 <input className="hr-leave-input" value={draft.nameEn} onChange={(e) => upd({ nameEn: e.target.value })} placeholder="Manager" />
+              </Field>
+              <Field label="คำอธิบาย" full>
+                <textarea
+                  className="hr-leave-input hr-leave-textarea"
+                  value={draft.description ?? ''}
+                  onChange={(e) => upd({ description: e.target.value })}
+                  placeholder="เช่น ผู้จัดการ"
+                  rows={3}
+                />
               </Field>
             </div>
           </div>
@@ -447,7 +442,7 @@ function JobLevelsBoard({ accent }: { accent: string }) {
     .filter((l) => !search || l.nameTh.includes(search) || l.nameEn.toLowerCase().includes(search.toLowerCase()));
 
   const openAdd = () =>
-    setModal({ id: '', nameTh: '', nameEn: '', rank: levels.length > 0 ? Math.max(...levels.map((l) => l.rank)) + 1 : 1, active: true });
+    setModal({ id: '', nameTh: '', nameEn: '', rank: levels.length > 0 ? Math.max(...levels.map((l) => l.rank)) + 1 : 1, description: '', active: true });
 
   const openEdit = (l: JobLevel) => setModal({ ...l });
 
@@ -498,13 +493,13 @@ function JobLevelsBoard({ accent }: { accent: string }) {
       if (!draft.id) {
         const created = await publicApiFetch<JobLevel>('/api/humansource/job-levels', {
           method: 'POST',
-          body: JSON.stringify({ nameTh: draft.nameTh, nameEn: draft.nameEn, rank: draft.rank, active: true }),
+          body: JSON.stringify({ nameTh: draft.nameTh, nameEn: draft.nameEn, rank: draft.rank, description: draft.description ?? '', active: true }),
         });
         setLevels((ls) => [...ls, created]);
       } else {
         const updated = await publicApiFetch<JobLevel>(`/api/humansource/job-levels/${draft.id}`, {
           method: 'PATCH',
-          body: JSON.stringify({ nameTh: draft.nameTh, nameEn: draft.nameEn, rank: draft.rank, active: true }),
+          body: JSON.stringify({ nameTh: draft.nameTh, nameEn: draft.nameEn, rank: draft.rank, description: draft.description ?? '', active: true }),
         });
         setLevels((ls) => ls.map((l) => (l.id === updated.id ? updated : l)));
       }
@@ -553,25 +548,23 @@ function JobLevelsBoard({ accent }: { accent: string }) {
           <colgroup>
             <col className="hr-position-level-col--name" />
             <col className="hr-position-level-col--name-en" />
-            <col className="hr-position-level-col--desc" />
-            <col className="hr-position-level-col--skills" />
+            <col className="hr-position-level-col--desc-wide" />
             <col className="hr-position-level-col--actions" />
           </colgroup>
           <thead>
             <tr>
-              {['ชื่อระดับ', 'ชื่อระดับ (EN)', 'คำอธิบาย', 'ทักษะประจำระดับตำแหน่ง', ''].map((h) => (
+              {['ชื่อระดับ', 'ชื่อระดับ (EN)', 'คำอธิบาย', ''].map((h) => (
                 <th key={h}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="hr-position-empty">กำลังโหลด...</td></tr>
+              <tr><td colSpan={4} className="hr-position-empty">กำลังโหลด...</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={5} className="hr-position-empty">{search ? 'ไม่พบระดับที่ค้นหา' : 'ยังไม่มีระดับตำแหน่ง'}</td></tr>
+              <tr><td colSpan={4} className="hr-position-empty">{search ? 'ไม่พบระดับที่ค้นหา' : 'ยังไม่มีระดับตำแหน่ง'}</td></tr>
             ) : (
               filtered.map((l) => {
-                const detail = getJobLevelDetail(l);
                 return (
                 <tr
                   key={l.id}
@@ -590,8 +583,7 @@ function JobLevelsBoard({ accent }: { accent: string }) {
                     </span>
                   </td>
                   <td><span className="hr-settings-table__secondary">{l.nameEn}</span></td>
-                  <td><span className="hr-settings-table__primary">{detail.description}</span></td>
-                  <td><span className="hr-settings-table__secondary">{detail.skills}</span></td>
+                  <td><span className="hr-settings-table__primary">{l.description}</span></td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <div className="hr-position-row-actions">
                       <button type="button" className="hr-position-action" onClick={() => openEdit(l)} title="แก้ไข">
